@@ -1,1 +1,22 @@
 .env
+
+# Docker
+.dockerignore
+bundle_cache/
+postgres_data/
+
+# Rails generated (standard)
+backend/log/*
+backend/storage/*
+backend/tmp/*
+!backend/log/.keep
+!backend/storage/.keep
+!backend/tmp/.keep
+
+# Rails credentials
+backend/config/master.key
+backend/config/credentials*.yml.enc
+
+# Local tools
+backend/.rubocop.yml
+backend/.ruby-version
