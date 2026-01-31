@@ -1,0 +1,28 @@
+# gets RUBY_VERSION from .env but falls back to this version if it's missing
+ARG RUBY_VERSION=3.3
+FROM ruby:${RUBY_VERSION}-slim-bookworm
+ARG RUBY_VERSION
+
+# Install system dependencies for Rails, bundler, Postgres client, and scripts
+RUN apt-get update -qq && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    libyaml-dev \
+    postgresql-client \
+    curl bash git nodejs \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean \
+    && truncate -s 0 /var/log/*.log
+
+WORKDIR /backend
+# Copie bootstrap scripts
+COPY entrypoint.sh wait-for-it.sh* ./
+RUN chmod +x entrypoint.sh wait-for-it.sh*
+
+# Copy app code
+COPY . .
+# Now init-rails.sh is at /backend/init-rails.sh, rails app at /backend/rails
+
+ENTRYPOINT ["./entrypoint.sh"]
+CMD ["bundle","exec","rails", "server", "-b", "0.0.0.0","-p","3000"]

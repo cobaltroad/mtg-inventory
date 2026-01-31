@@ -1,0 +1,60 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: mtg_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB_NAME}
+      POSTGRES_USER: ${POSTGRES_USER_NAME}
+      POSTGRES_PASSWORD: ${POSTGRES_USER_PASSWORD}
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.backend
+      args:
+        RUBY_VERSION: ${RUBY_VERSION}
+    container_name: mtg_backend
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      RUBY_VERSION: ${RUBY_VERSION}
+      BUNDLE_PATH: /bundle
+      RAILS_ENV: development
+      DB_HOST: db
+      DB_USER: ${POSTGRES_USER_NAME}
+      DB_PASS: ${POSTGRES_USER_PASSWORD}
+      DB_NAME: ${POSTGRES_DB_NAME}
+      DATABASE_URL: ${POSTGRES_DB_URL}
+    volumes:
+      - ./backend:/backend  # Rails code
+      - bundle_cache:/bundle       # Gems
+
+  # Frontend stub (add later)
+  frontend:
+    build:
+      context: ./frontend
+    container_name: mtg_frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app  # Vite hot reload
+    environment:
+      VITE_API_URL: http://localhost:3001
+
+volumes:
+  postgres_data:
+  bundle_cache:
