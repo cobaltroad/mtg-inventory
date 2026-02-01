@@ -15,7 +15,9 @@ class CollectionItemIntegrationTest < ActionDispatch::IntegrationTest
   # Scenario 3 -- same card can exist in both inventory and wishlist
   # ---------------------------------------------------------------------------
   test "POST to inventory and wishlist for the same card both succeed" do
-    post "/api/inventory", params: { card_id: "dual_card", quantity: 2 }, as: :json
+    MTG::Card.stub(:find, true) do
+      post "/api/inventory", params: { card_id: "dual_card", quantity: 2 }, as: :json
+    end
     assert_response :created
 
     post "/api/wishlist", params: { card_id: "dual_card", quantity: 1 }, as: :json
@@ -35,7 +37,9 @@ class CollectionItemIntegrationTest < ActionDispatch::IntegrationTest
   # Scenario 4 -- PATCH updates quantity without creating duplicates
   # ---------------------------------------------------------------------------
   test "PATCH /api/inventory/:id updates quantity without duplicating the row" do
-    post "/api/inventory", params: { card_id: "patch_card", quantity: 1 }, as: :json
+    MTG::Card.stub(:find, true) do
+      post "/api/inventory", params: { card_id: "patch_card", quantity: 1 }, as: :json
+    end
     assert_response :created
     item_id = JSON.parse(response.body)["id"]
 
@@ -118,5 +122,33 @@ class CollectionItemIntegrationTest < ActionDispatch::IntegrationTest
     card_ids = items.map { |i| i["card_id"] }
     assert_includes card_ids, "my_wish"
     assert_not_includes card_ids, "their_wish"
+  end
+
+  # ---------------------------------------------------------------------------
+  # Issue #9 -- SDK validation end-to-end
+  # ---------------------------------------------------------------------------
+  test "POST /api/inventory with a valid card_id persists the item end-to-end" do
+    MTG::Card.stub(:find, true) do
+      post "/api/inventory", params: { card_id: "e2e_valid_card", quantity: 1 }, as: :json
+    end
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "e2e_valid_card", body["card_id"]
+    assert_equal "inventory", body["collection_type"]
+    assert_equal 1, body["quantity"]
+  end
+
+  test "POST /api/inventory with a duplicate card_id returns incremented quantity" do
+    CollectionItem.create!(user: @user, card_id: "e2e_dup_card", collection_type: "inventory", quantity: 2)
+
+    MTG::Card.stub(:find, true) do
+      post "/api/inventory", params: { card_id: "e2e_dup_card", quantity: 1 }, as: :json
+    end
+
+    assert_response :ok
+    body = JSON.parse(response.body)
+    assert_equal "e2e_dup_card", body["card_id"]
+    assert_equal 3, body["quantity"]
   end
 end
