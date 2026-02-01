@@ -1,6 +1,8 @@
 class InventoryController < ApplicationController
   include CollectionItemActions
 
+  before_action :validate_card_with_sdk, only: [ :create ]
+
   # Transfers a card from the user's wishlist to their inventory.
   # If an inventory row already exists for the card, its quantity is
   # incremented by the wishlist quantity.  The entire operation runs in a
@@ -37,6 +39,17 @@ class InventoryController < ApplicationController
   end
 
   private
+
+  # Verify the card exists in the MTG SDK before we persist anything.
+  # When card_id is blank we let the model validation surface that error
+  # instead of hitting the SDK with an empty string.
+  def validate_card_with_sdk
+    return if card_id_param.blank?
+
+    MTG::Card.find(card_id_param)
+  rescue ArgumentError
+    render json: { error: "Card not found in MTG database" }, status: :unprocessable_entity
+  end
 
   def collection_type
     "inventory"
