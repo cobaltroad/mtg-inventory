@@ -17,6 +17,8 @@ Rails.application.routes.draw do
     end
 
     resources :wishlist, only: [ :index, :create, :update, :destroy ]
+
+    get "cards/search", to: "card_search#index"
   end
 
   # Test/development-only probe route to verify current_user resolution.
