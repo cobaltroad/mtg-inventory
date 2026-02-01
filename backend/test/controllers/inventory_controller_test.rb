@@ -44,7 +44,9 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   # #create -- adds item or increments quantity on duplicate
   # ---------------------------------------------------------------------------
   test "POST /api/inventory creates a new inventory item" do
-    post "/api/inventory", params: { card_id: "new_card", quantity: 3 }, as: :json
+    MTG::Card.stub(:find, true) do
+      post "/api/inventory", params: { card_id: "new_card", quantity: 3 }, as: :json
+    end
 
     assert_response :created
     body = JSON.parse(response.body)
@@ -57,7 +59,9 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   test "POST /api/inventory increments quantity when card already exists in inventory" do
     CollectionItem.create!(user: @user, card_id: "existing_card", collection_type: "inventory", quantity: 2)
 
-    post "/api/inventory", params: { card_id: "existing_card", quantity: 3 }, as: :json
+    MTG::Card.stub(:find, true) do
+      post "/api/inventory", params: { card_id: "existing_card", quantity: 3 }, as: :json
+    end
 
     assert_response :ok
     body = JSON.parse(response.body)
@@ -75,9 +79,31 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "POST /api/inventory returns unprocessable_entity for zero quantity" do
-    post "/api/inventory", params: { card_id: "bad_qty", quantity: 0 }, as: :json
+    MTG::Card.stub(:find, true) do
+      post "/api/inventory", params: { card_id: "bad_qty", quantity: 0 }, as: :json
+    end
 
     assert_response :unprocessable_entity
+  end
+
+  test "POST /api/inventory validates card via MTG SDK before persisting" do
+    MTG::Card.stub(:find, true) do
+      post "/api/inventory", params: { card_id: "sdk_valid_card", quantity: 1 }, as: :json
+    end
+
+    assert_response :created
+    assert CollectionItem.exists?(user: @user, card_id: "sdk_valid_card", collection_type: "inventory")
+  end
+
+  test "POST /api/inventory returns 422 when card ID is not found in MTG SDK" do
+    stub_sdk_find_raises do
+      post "/api/inventory", params: { card_id: "nonexistent_card", quantity: 1 }, as: :json
+    end
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_includes body["error"], "Card not found"
+    assert_equal 0, CollectionItem.where(user: @user, card_id: "nonexistent_card").count
   end
 
   # ---------------------------------------------------------------------------
@@ -157,5 +183,17 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     post "/api/inventory/move_from_wishlist", params: { card_id: "nonexistent" }, as: :json
 
     assert_response :not_found
+  end
+
+  private
+
+  # Temporarily replaces MTG::Card.find so that it raises ArgumentError,
+  # matching the SDK's behaviour when a card ID does not exist.
+  def stub_sdk_find_raises
+    original = MTG::Card.method(:find)
+    MTG::Card.define_singleton_method(:find) { |*_| raise ArgumentError, "Resource not found" }
+    yield
+  ensure
+    MTG::Card.define_singleton_method(:find, original)
   end
 end
