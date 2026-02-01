@@ -44,17 +44,9 @@ if [ -z "${RAILS_MASTER_KEY+x}" ] || [ -z "$RAILS_MASTER_KEY" ] || [ ${#RAILS_MA
   echo "     docker compose exec backend bin/rails credentials:edit"
 else
   bin/rails runner "
-    begin
-      creds = Rails.application.credentials.to_h
-      creds.reject! { |k,v| k.to_s =~ /pass|key|token|secret/i }
-      if creds.empty?
-        warn '⚠️  EMPTY/BOOTSTRAP credentials found.  Detach and run:'
-        warn '     docker compose exec backend bin/rails credentials:edit'
-      else
-        puts YAML.dump(creds)
-      end
-    rescue
-      warn '⚠️  Missing key/file (add RAILS_MASTER_KEY to .env)'
+    unless Rails.application.credentials.to_h.include?(:secret_key_base)
+      warn '⚠️  EMPTY/BOOTSTRAP credentials found.  Detach and run:'
+      warn '     docker compose exec backend bin/rails credentials:edit'
     end
   " >&2 || true
 fi

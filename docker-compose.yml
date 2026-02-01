@@ -24,7 +24,7 @@ services:
         RUBY_VERSION: ${RUBY_VERSION}
     container_name: mtg_backend
     ports:
-      - "3001:3001"
+      - "3000:3000"
     depends_on:
       db:
         condition: service_healthy
@@ -53,17 +53,18 @@ services:
       dockerfile: Dockerfile.frontend
     container_name: mtg_frontend
     ports:
-      - "5173:5173"
+      - "3001:3000"
     depends_on:
       - backend
     environment:
-      VITE_API_URL: http://localhost:3001
+      VITE_API_URL: http://backend:3000
     # Remove volumes: and command: in production since it will use the built-app
     # and does not require hot reload
     volumes:
       - ./frontend:/frontend  # Vite hot reload
-      - /frontend/node_modules
+      - frontend_node_modules:/frontend/node_modules
 
 volumes:
   postgres_data:
   bundle_cache:
+  frontend_node_modules:
