@@ -47,19 +47,22 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Frontend stub (add later)
   frontend:
     build:
       context: ./frontend
+      dockerfile: Dockerfile.frontend
     container_name: mtg_frontend
     ports:
       - "5173:5173"
     depends_on:
       - backend
-    volumes:
-      - ./frontend:/app  # Vite hot reload
     environment:
       VITE_API_URL: http://localhost:3001
+    # Remove volumes: and command: in production since it will use the built-app
+    # and does not require hot reload
+    volumes:
+      - ./frontend:/frontend  # Vite hot reload
+      - /frontend/node_modules
 
 volumes:
   postgres_data:
