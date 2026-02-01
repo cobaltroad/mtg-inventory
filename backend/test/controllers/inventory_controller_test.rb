@@ -1,0 +1,161 @@
+require "test_helper"
+
+class InventoryControllerTest < ActionDispatch::IntegrationTest
+  # ---------------------------------------------------------------------------
+  # Setup -- ensure the seeded default user exists; all requests will be
+  # scoped to that user via ApplicationController#current_user.
+  # ---------------------------------------------------------------------------
+  setup do
+    User.delete_all
+    load Rails.root.join("db", "seeds.rb")
+    @user = User.find_by!(email: User::DEFAULT_EMAIL)
+  end
+
+  # ---------------------------------------------------------------------------
+  # #index -- returns only current_user's inventory items
+  # ---------------------------------------------------------------------------
+  test "GET /api/inventory returns only current user's inventory items" do
+    CollectionItem.create!(user: @user, card_id: "my_card", collection_type: "inventory", quantity: 2)
+
+    other_user = User.create!(email: "other@example.com", name: "Other")
+    CollectionItem.create!(user: other_user, card_id: "their_card", collection_type: "inventory", quantity: 1)
+
+    get "/api/inventory"
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    assert_equal 1, items.size
+    assert_equal "my_card", items.first["card_id"]
+  end
+
+  test "GET /api/inventory does not return wishlist items" do
+    CollectionItem.create!(user: @user, card_id: "inv_card", collection_type: "inventory", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "wish_card", collection_type: "wishlist", quantity: 1)
+
+    get "/api/inventory"
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    assert_equal 1, items.size
+    assert_equal "inv_card", items.first["card_id"]
+  end
+
+  # ---------------------------------------------------------------------------
+  # #create -- adds item or increments quantity on duplicate
+  # ---------------------------------------------------------------------------
+  test "POST /api/inventory creates a new inventory item" do
+    post "/api/inventory", params: { card_id: "new_card", quantity: 3 }, as: :json
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "new_card", body["card_id"]
+    assert_equal "inventory", body["collection_type"]
+    assert_equal 3, body["quantity"]
+    assert_equal @user.id, body["user_id"]
+  end
+
+  test "POST /api/inventory increments quantity when card already exists in inventory" do
+    CollectionItem.create!(user: @user, card_id: "existing_card", collection_type: "inventory", quantity: 2)
+
+    post "/api/inventory", params: { card_id: "existing_card", quantity: 3 }, as: :json
+
+    assert_response :ok
+    body = JSON.parse(response.body)
+    assert_equal "existing_card", body["card_id"]
+    assert_equal 5, body["quantity"]
+
+    # Only one row should exist
+    assert_equal 1, CollectionItem.where(user: @user, card_id: "existing_card", collection_type: "inventory").count
+  end
+
+  test "POST /api/inventory returns unprocessable_entity for missing card_id" do
+    post "/api/inventory", params: { quantity: 1 }, as: :json
+
+    assert_response :unprocessable_entity
+  end
+
+  test "POST /api/inventory returns unprocessable_entity for zero quantity" do
+    post "/api/inventory", params: { card_id: "bad_qty", quantity: 0 }, as: :json
+
+    assert_response :unprocessable_entity
+  end
+
+  # ---------------------------------------------------------------------------
+  # #update -- updates quantity on an existing item
+  # ---------------------------------------------------------------------------
+  test "PATCH /api/inventory/:id updates quantity" do
+    item = CollectionItem.create!(user: @user, card_id: "update_card", collection_type: "inventory", quantity: 1)
+
+    patch "/api/inventory/#{item.id}", params: { quantity: 5 }, as: :json
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    assert_equal 5, body["quantity"]
+    assert_equal 1, CollectionItem.where(user: @user, card_id: "update_card", collection_type: "inventory").count
+  end
+
+  test "PATCH /api/inventory/:id returns not_found for another user's item" do
+    other_user = User.create!(email: "other_update@example.com", name: "Other")
+    item = CollectionItem.create!(user: other_user, card_id: "other_card", collection_type: "inventory", quantity: 1)
+
+    patch "/api/inventory/#{item.id}", params: { quantity: 10 }, as: :json
+
+    assert_response :not_found
+  end
+
+  test "PATCH /api/inventory/:id returns unprocessable_entity for invalid quantity" do
+    item = CollectionItem.create!(user: @user, card_id: "bad_update", collection_type: "inventory", quantity: 1)
+
+    patch "/api/inventory/#{item.id}", params: { quantity: -1 }, as: :json
+
+    assert_response :unprocessable_entity
+  end
+
+  # ---------------------------------------------------------------------------
+  # #destroy -- removes item
+  # ---------------------------------------------------------------------------
+  test "DELETE /api/inventory/:id removes the item" do
+    item = CollectionItem.create!(user: @user, card_id: "delete_card", collection_type: "inventory", quantity: 1)
+
+    delete "/api/inventory/#{item.id}"
+
+    assert_response :success
+    assert_equal 0, CollectionItem.where(id: item.id).count
+  end
+
+  test "DELETE /api/inventory/:id returns not_found for another user's item" do
+    other_user = User.create!(email: "other_delete@example.com", name: "Other")
+    item = CollectionItem.create!(user: other_user, card_id: "cant_delete", collection_type: "inventory", quantity: 1)
+
+    delete "/api/inventory/#{item.id}"
+
+    assert_response :not_found
+    assert_equal 1, CollectionItem.where(id: item.id).count
+  end
+
+  # ---------------------------------------------------------------------------
+  # move_from_wishlist -- moves item from wishlist to inventory
+  # ---------------------------------------------------------------------------
+  test "POST /api/inventory/move_from_wishlist moves wishlist item to inventory" do
+    wish_item = CollectionItem.create!(user: @user, card_id: "move_card", collection_type: "wishlist", quantity: 4)
+
+    post "/api/inventory/move_from_wishlist", params: { card_id: "move_card" }, as: :json
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "move_card", body["card_id"]
+    assert_equal "inventory", body["collection_type"]
+    assert_equal 4, body["quantity"]
+
+    # Wishlist row must be gone
+    assert_equal 0, CollectionItem.where(user: @user, card_id: "move_card", collection_type: "wishlist").count
+    # Inventory row must exist
+    assert_equal 1, CollectionItem.where(user: @user, card_id: "move_card", collection_type: "inventory").count
+  end
+
+  test "POST /api/inventory/move_from_wishlist returns not_found when card not in wishlist" do
+    post "/api/inventory/move_from_wishlist", params: { card_id: "nonexistent" }, as: :json
+
+    assert_response :not_found
+  end
+end
