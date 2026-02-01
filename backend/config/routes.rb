@@ -5,6 +5,20 @@ Rails.application.routes.draw do
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
 
+  # Collection resources — inventory and wishlist are independent scoped
+  # views over the same collection_items table.  Using scope rather than
+  # namespace so controllers live at the top level (matching the existing
+  # flat-controller convention in this app).
+  scope "/api" do
+    resources :inventory, only: [ :index, :create, :update, :destroy ] do
+      collection do
+        post :move_from_wishlist
+      end
+    end
+
+    resources :wishlist, only: [ :index, :create, :update, :destroy ]
+  end
+
   # Test/development-only probe route to verify current_user resolution.
   # Never exposed in production.
   if Rails.env.test? || Rails.env.development?

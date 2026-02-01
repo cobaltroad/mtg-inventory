@@ -4,6 +4,8 @@ class User < ApplicationRecord
   # is defined in exactly one place.
   DEFAULT_EMAIL = "default@mtg-inventory.local"
 
+  has_many :collection_items, dependent: :destroy
+
   validates :email, presence: true, uniqueness: true
   validates :name, presence: true
 end
