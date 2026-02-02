@@ -28,5 +28,11 @@ module Backend
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+
+    # Honour the PUBLIC_BASE_PATH env var so that generated URLs (redirects,
+    # url_for, etc.) include the same prefix the frontend already uses via
+    # SvelteKit's paths.base.  When the var is absent (local dev without
+    # Docker) ENV returns nil, which is Rails' default — no behaviour change.
+    config.relative_url_root = ENV["PUBLIC_BASE_PATH"]
   end
 end

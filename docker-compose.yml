@@ -41,6 +41,7 @@ services:
       DB_PASS: ${POSTGRES_USER_PASSWORD}
       DB_NAME: ${POSTGRES_DB_NAME}
       DATABASE_URL: ${POSTGRES_DB_URL}
+      PUBLIC_BASE_PATH: ${PUBLIC_BASE_PATH}
     volumes:
       - ./backend:/backend  # Rails code
       - bundle_cache:/bundle       # Gems
