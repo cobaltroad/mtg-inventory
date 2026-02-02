@@ -361,6 +361,168 @@ describe('PrintingModal', () => {
 
 			expect(mockFetch).toHaveBeenCalledTimes(2);
 		});
+
+		it('displays error message on 4xx client errors', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: false,
+						status: 404,
+						json: () => Promise.resolve({ error: 'Not found' })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByText(/Unable to load printings/i)).toBeInTheDocument();
+			});
+		});
+
+		it('displays error message on 5xx server errors', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: false,
+						status: 500,
+						json: () => Promise.resolve({ error: 'Internal server error' })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByText(/Unable to load printings/i)).toBeInTheDocument();
+			});
+		});
+	});
+
+	// ---------------------------------------------------------------------------
+	// HTTP 304 Not Modified Handling (Issue #23)
+	// ---------------------------------------------------------------------------
+	describe('HTTP 304 Not Modified Handling', () => {
+		it('displays cached printings on 304 response without error', async () => {
+			// Simulate 304 Not Modified with cached response body
+			// In real browsers, fetch API returns cached response automatically
+			const mockFetch = vi.fn().mockImplementation((url: string) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: false, // 304 sets ok to false
+						status: 304,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS }) // Browser returns cached data
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByText(/Core Set 2021/)).toBeInTheDocument();
+			});
+
+			// Verify all printings are displayed
+			expect(screen.getByText(/Magic 2010/)).toBeInTheDocument();
+			expect(screen.getByText(/Limited Edition Alpha/)).toBeInTheDocument();
+
+			// Verify no error state is shown
+			expect(screen.queryByText(/Unable to load printings/i)).not.toBeInTheDocument();
+		});
+
+		it('does not show error state for 304 responses', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: false,
+						status: 304,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			// Verify error container is not displayed
+			expect(screen.queryByText(/Unable to load printings/i)).not.toBeInTheDocument();
+			expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
+		});
+
+		it('parses cached JSON data from 304 response', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: false,
+						status: 304,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				const printingItems = screen.getAllByTestId('printing-item');
+				expect(printingItems).toHaveLength(3);
+			});
+		});
+
+		it('handles first request (200) followed by subsequent request (304)', async () => {
+			let firstRequest = true;
+			const mockFetch = vi.fn().mockImplementation((url: string) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					if (firstRequest) {
+						firstRequest = false;
+						return Promise.resolve({
+							ok: true,
+							status: 200,
+							json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
+						});
+					}
+					// Subsequent request returns 304 with cached data
+					return Promise.resolve({
+						ok: false,
+						status: 304,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			// First render - should get 200 OK
+			const { unmount } = render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByText(/Core Set 2021/)).toBeInTheDocument();
+			});
+
+			unmount();
+
+			// Second render - should get 304 Not Modified
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByText(/Core Set 2021/)).toBeInTheDocument();
+			});
+
+			// Verify no error on second request
+			expect(screen.queryByText(/Unable to load printings/i)).not.toBeInTheDocument();
+		});
 	});
 
 	// ---------------------------------------------------------------------------

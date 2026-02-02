@@ -32,17 +32,22 @@
 	let hoveredPrinting: Printing | null = $state(null);
 	let dialogElement = $state<HTMLDialogElement>();
 
+	function isResponseSuccessful(response: Response): boolean {
+		// 304 Not Modified is considered successful - browser returns cached data automatically
+		return response.ok || response.status === 304;
+	}
+
 	async function fetchPrintings() {
 		loading = true;
 		error = false;
 		try {
 			const res = await fetch(`${API_BASE}/api/cards/${card.id}/printings`);
-			if (!res.ok) {
+			if (!isResponseSuccessful(res)) {
 				throw new Error('Failed to fetch printings');
 			}
 			const data = await res.json();
 			printings = data.printings || [];
-		} catch (err) {
+		} catch {
 			error = true;
 			printings = [];
 		} finally {
@@ -108,7 +113,7 @@
 			{:else}
 				<div class="modal-body">
 					<div class="printings-list" data-testid="printings-list">
-						{#each printings as printing}
+						{#each printings as printing (printing.id)}
 							<div
 								class="printing-item"
 								data-testid="printing-item"
