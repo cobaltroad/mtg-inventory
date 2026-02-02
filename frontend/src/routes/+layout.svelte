@@ -2,6 +2,8 @@
 	import favicon from '$lib/assets/favicon.svg';
 
 	let { children } = $props();
+
+  export const trailingSlash = 'ignore';
 </script>
 
 <svelte:head>

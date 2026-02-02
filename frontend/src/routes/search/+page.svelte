@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { base } from '$app/paths';
-	const API_BASE = import.meta.env.VITE_API_URL || base;
+	// API requests use the base path and are proxied by hooks.server.ts
+	const API_BASE = base;
 
 	interface Card {
 		id: string;

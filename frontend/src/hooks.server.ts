@@ -22,8 +22,8 @@ function filterHeaders(source: Headers): Headers {
  * SvelteKit server hook.
  *
  * Any request whose path starts with `/api/` is proxied to the Rails backend
- * (located at VITE_API_URL inside the Docker network).  All other requests
- * pass through to SvelteKit's normal route resolution.
+ * (located at VITE_API_URL inside the Docker network) at the PUBLIC_API_PATH.
+ * All other requests pass through to SvelteKit's normal route resolution.
  */
 export const handle: Handle = async ({ event, resolve }) => {
 	if (!event.url.pathname.startsWith('/api/')) {
@@ -31,7 +31,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	const backendBase = process.env.VITE_API_URL || 'http://localhost:3000';
-	const targetUrl = `${backendBase}${event.url.pathname}${event.url.search}`;
+	const apiPath = process.env.API_BASE_PATH || '';
+	const targetUrl = `${backendBase}${apiPath}${event.url.pathname}${event.url.search}`;
 
 	// Forward request headers, stripping hop-by-hop headers that came in on
 	// the client → SvelteKit leg (e.g. host, connection).

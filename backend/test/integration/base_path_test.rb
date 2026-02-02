@@ -2,15 +2,15 @@ require "test_helper"
 
 class BasePathTest < ActionDispatch::IntegrationTest
   # ---------------------------------------------------------------------------
-  # Regression guard: relative_url_root must be wired to PUBLIC_BASE_PATH.
+  # Regression guard: relative_url_root must be wired to PUBLIC_API_PATH.
   #
   # We temporarily set the env var to a known value and re-evaluate the
   # expression Rails uses to initialise the config so we can assert the
   # wiring is correct.  This catches the regression regardless of whether
   # the env var is present in the ambient test environment.
   # ---------------------------------------------------------------------------
-  test "relative_url_root is set from PUBLIC_BASE_PATH env var" do
-    expected = ENV["PUBLIC_BASE_PATH"]
+  test "relative_url_root is set from PUBLIC_API_PATH env var" do
+    expected = ENV["PUBLIC_API_PATH"]
 
     if expected
       assert_equal expected, Rails.application.config.relative_url_root

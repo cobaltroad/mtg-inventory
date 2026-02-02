@@ -58,11 +58,13 @@ describe('hooks.server – handle', () => {
 	beforeEach(() => {
 		originalFetch = globalThis.fetch;
 		process.env.VITE_API_URL = 'http://backend:3000';
+		process.env.API_BASE_PATH = '/projects/mtg-api';
 	});
 
 	afterEach(() => {
 		globalThis.fetch = originalFetch;
 		delete process.env.VITE_API_URL;
+		delete process.env.API_BASE_PATH;
 		vi.restoreAllMocks();
 	});
 
@@ -79,10 +81,10 @@ describe('hooks.server – handle', () => {
 
 		const result = await handle({ event, resolve } as any);
 
-		// fetch was called exactly once with the full backend URL
+		// fetch was called exactly once with the full backend URL including API_BASE_PATH
 		expect(stubFetch).toHaveBeenCalledTimes(1);
 		expect(stubFetch).toHaveBeenCalledWith(
-			'http://backend:3000/api/cards/search?q=bolt',
+			'http://backend:3000/projects/mtg-api/api/cards/search?q=bolt',
 			expect.objectContaining({ method: 'GET' })
 		);
 
@@ -119,7 +121,7 @@ describe('hooks.server – handle', () => {
 
 		expect(stubFetch).toHaveBeenCalledTimes(1);
 		expect(stubFetch).toHaveBeenCalledWith(
-			'http://backend:3000/api/inventory',
+			'http://backend:3000/projects/mtg-api/api/inventory',
 			expect.objectContaining({
 				method: 'POST',
 				body: requestBody
@@ -198,7 +200,28 @@ describe('hooks.server – handle', () => {
 		await handle({ event, resolve } as any);
 
 		expect(stubFetch).toHaveBeenCalledWith(
-			'http://localhost:3000/api/health',
+			'http://localhost:3000/projects/mtg-api/api/health',
+			expect.any(Object)
+		);
+	});
+
+	// -----------------------------------------------------------------------
+	// 6. API_BASE_PATH defaults to empty string when not set
+	// -----------------------------------------------------------------------
+	it('uses empty API_BASE_PATH when the env var is not set', async () => {
+		delete process.env.API_BASE_PATH;
+
+		const backendResponse = makeBackendResponse();
+		const stubFetch = vi.fn().mockResolvedValue(backendResponse);
+		globalThis.fetch = stubFetch;
+
+		const resolve = vi.fn();
+		const event = makeEvent({ pathname: '/api/status' });
+
+		await handle({ event, resolve } as any);
+
+		expect(stubFetch).toHaveBeenCalledWith(
+			'http://backend:3000/api/status',
 			expect.any(Object)
 		);
 	});

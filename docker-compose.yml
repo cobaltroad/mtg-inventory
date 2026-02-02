@@ -41,16 +41,23 @@ services:
       DB_PASS: ${POSTGRES_USER_PASSWORD}
       DB_NAME: ${POSTGRES_DB_NAME}
       DATABASE_URL: ${POSTGRES_DB_URL}
-      PUBLIC_BASE_PATH: ${PUBLIC_BASE_PATH}
+      PUBLIC_API_PATH: ${PUBLIC_API_PATH}
     volumes:
       - ./backend:/backend  # Rails code
       - bundle_cache:/bundle       # Gems
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-public"
+      - "traefik.http.routers.mtg-api.rule=Host(`cobaltroad.com`) && PathPrefix(`/projects/mtg/api`)"
+      - "traefik.http.routers.mtg-api.service=mtg-api-service"
+      - "traefik.http.services.mtg-api-service.loadbalancer.server.port=3000"
     logging:
       options:
         max-size: "10m"
         max-file: "3"
     networks:
       - mtg
+      - traefik-public
 
   frontend:
     build:
@@ -63,7 +70,9 @@ services:
       - backend
     environment:
       NODE_ENV: development
+      APP_DOMAIN: ${APP_DOMAIN}
       PUBLIC_BASE_PATH: ${PUBLIC_BASE_PATH}
+      API_BASE_PATH: ${PUBLIC_API_PATH}
       VITE_API_URL: http://backend:3000
     # Remove volumes: and command: in production since it will use the built-app
     # and does not require hot reload
@@ -72,11 +81,11 @@ services:
       - frontend_node_modules:/frontend/node_modules
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.mtg-app.rule=Host(`cobaltroad.com`) && PathPrefix(`/projects/mtg-inventory`)"
-      - "traefik.http.routers.mtg-app.service=mtg-service"
-      - "traefik.http.services.mtg-service.loadbalancer.server.port=3000"
-      - "traefik.http.middlewares.mtg-strip.stripprefix.prefixes=/projects/mtg-inventory"
-      - "traefik.http.routers.mtg-app.middlewares=mtg-strip"
+      - "traefik.docker.network=traefik-public"
+      - "traefik.http.routers.mtg.rule=Host(`cobaltroad.com`) && PathPrefix(`/projects/mtg`)"
+      - "traefik.http.routers.mtg.priority=100"
+      - "traefik.http.routers.mtg.service=mtg-service"
+      - "traefik.http.services.mtg-service.loadbalancer.server.port=5173"
     networks:
       - mtg
       - traefik-public

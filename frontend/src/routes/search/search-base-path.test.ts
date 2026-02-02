@@ -1,19 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/svelte';
 
-// ---------------------------------------------------------------------------
-// Mock $app/paths BEFORE importing the component so it picks up the value.
-// This must live in its own file: vi.mock is hoisted per-module, and the
-// existing search.test.ts deliberately does NOT mock $app/paths (it relies on
-// the default empty-string stub).  A second vi.mock in the same file would
-// conflict.
-// ---------------------------------------------------------------------------
-vi.mock('$app/paths', () => ({
-	base: process.env.PUBLIC_BASE_PATH || ''
-}));
-
-const BASE = process.env.PUBLIC_BASE_PATH || '';
-
 import SearchPage from './+page.svelte';
 
 // ---------------------------------------------------------------------------
@@ -48,13 +35,13 @@ function createFetchSpy() {
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
-describe('Card Search Page – base path propagation', () => {
+describe('Card Search Page – API path behavior', () => {
 	beforeEach(() => {
 		cleanup();
 		vi.restoreAllMocks();
 	});
 
-	it('prefixes the search fetch URL with the PUBLIC_BASE_PATH base', async () => {
+	it('makes search requests to /api/cards/search without a client-side prefix', async () => {
 		const fetchSpy = createFetchSpy();
 		vi.stubGlobal('fetch', fetchSpy);
 
@@ -70,15 +57,16 @@ describe('Card Search Page – base path propagation', () => {
 			expect(screen.getByText('Basepath Bolt')).toBeDefined();
 		});
 
-		// The search fetch must have been called with the base-path prefix
+		// The search fetch should be called with just /api/cards/search (no prefix)
+		// The server-side hooks.server.ts handles adding the API_BASE_PATH
 		const searchCall = fetchSpy.mock.calls.find(
 			(call) => typeof call[0] === 'string' && call[0].includes('/api/cards/search')
 		);
 		expect(searchCall).toBeDefined();
-		expect(searchCall![0]).toMatch(new RegExp(`^${BASE}/api/cards/search`));
+		expect(searchCall![0]).toMatch(/^\/api\/cards\/search/);
 	});
 
-	it('prefixes the add-to-inventory POST URL with the PUBLIC_BASE_PATH base', async () => {
+	it('makes inventory POST requests to /api/inventory without a client-side prefix', async () => {
 		const fetchSpy = createFetchSpy();
 		vi.stubGlobal('fetch', fetchSpy);
 
@@ -103,7 +91,8 @@ describe('Card Search Page – base path propagation', () => {
 			expect(screen.getByText(/In Inventory: 1/)).toBeDefined();
 		});
 
-		// The inventory POST must have been called with the base-path prefix
+		// The inventory POST should be called with just /api/inventory (no prefix)
+		// The server-side hooks.server.ts handles adding the API_BASE_PATH
 		const inventoryCall = fetchSpy.mock.calls.find(
 			(call) =>
 				typeof call[0] === 'string' &&
@@ -111,6 +100,6 @@ describe('Card Search Page – base path propagation', () => {
 				(call[1] as RequestInit)?.method === 'POST'
 		);
 		expect(inventoryCall).toBeDefined();
-		expect(inventoryCall![0]).toMatch(new RegExp(`^${BASE}/api/inventory`));
+		expect(inventoryCall![0]).toMatch(/^\/api\/inventory$/);
 	});
 });
