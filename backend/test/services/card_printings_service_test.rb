@@ -23,10 +23,24 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
   # Core functionality tests
   # ---------------------------------------------------------------------------
-  test "fetches all printings for a card from Scryfall" do
+  test "fetches all printings for a card from Scryfall using two-step API flow" do
     card_id = "f3c42c51-2e0f-4c5e-b1b1-6e3e6e5e3e5e"
-    scryfall_response = {
+    oracle_id = "4457ed35-7c10-48c8-9776-456485fdf070"
+    prints_search_uri = "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A#{oracle_id}&unique=prints"
+
+    # Step 1: Stub the card endpoint to return prints_search_uri
+    card_response = {
+      "id" => card_id,
+      "name" => "Lightning Bolt",
+      "oracle_id" => oracle_id,
+      "prints_search_uri" => prints_search_uri
+    }
+    stub_scryfall_card_request(card_id, card_response)
+
+    # Step 2: Stub the prints_search_uri endpoint to return all printings
+    printings_response = {
       "object" => "list",
+      "has_more" => false,
       "data" => [
         {
           "id" => "f3c42c51-2e0f-4c5e-b1b1-6e3e6e5e3e5e",
@@ -48,11 +62,14 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
         }
       ]
     }
-
-    stub_scryfall_printings_request(card_id, scryfall_response)
+    stub_prints_search_request(prints_search_uri, printings_response)
 
     service = CardPrintingsService.new(card_id: card_id)
     results = service.call
+
+    # Verify both API calls were made
+    assert_requested :get, scryfall_card_url(card_id), times: 1
+    assert_requested :get, prints_search_uri, times: 1
 
     assert_equal 2, results.size
     # Results should be sorted newest first (M10 2009, then Alpha 1993)
@@ -66,7 +83,9 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
 
   test "formats card printing data correctly" do
     card_id = "test-card-id"
-    response = scryfall_printings_response_with_cards([
+    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+
+    stub_two_step_flow(card_id, prints_search_uri, [
       {
         id: "abc123",
         name: "Test Card",
@@ -77,8 +96,6 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
         released_at: "2020-09-25"
       }
     ])
-
-    stub_scryfall_printings_request(card_id, response)
 
     service = CardPrintingsService.new(card_id: card_id)
     results = service.call
@@ -96,7 +113,9 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
 
   test "sorts printings by release date, newest first" do
     card_id = "multi-printing-card"
-    response = scryfall_printings_response_with_cards([
+    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+
+    stub_two_step_flow(card_id, prints_search_uri, [
       {
         id: "old-printing",
         name: "Card Name",
@@ -126,8 +145,6 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
       }
     ])
 
-    stub_scryfall_printings_request(card_id, response)
-
     service = CardPrintingsService.new(card_id: card_id)
     results = service.call
 
@@ -139,8 +156,19 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
 
   test "handles card with no image_uris by using nil" do
     card_id = "no-image-card"
+    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+
+    # Stub card endpoint
+    card_response = {
+      "id" => card_id,
+      "prints_search_uri" => prints_search_uri
+    }
+    stub_scryfall_card_request(card_id, card_response)
+
+    # Stub prints search with card that has no image_uris
     response = {
       "object" => "list",
+      "has_more" => false,
       "data" => [
         {
           "id" => "no-image-id",
@@ -153,8 +181,7 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
         }
       ]
     }
-
-    stub_scryfall_printings_request(card_id, response)
+    stub_prints_search_request(prints_search_uri, response)
 
     service = CardPrintingsService.new(card_id: card_id)
     results = service.call
@@ -168,7 +195,9 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
   test "caches printings results for identical card_id" do
     card_id = "cached-card"
-    response = scryfall_printings_response_with_cards([
+    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+
+    stub_two_step_flow(card_id, prints_search_uri, [
       {
         id: "print1",
         name: "Cached Card",
@@ -180,8 +209,6 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
       }
     ])
 
-    stub_scryfall_printings_request(card_id, response)
-
     service1 = CardPrintingsService.new(card_id: card_id)
     results1 = service1.call
 
@@ -189,26 +216,26 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
     service2 = CardPrintingsService.new(card_id: card_id)
     results2 = service2.call
 
-    # Should only make one HTTP request (second uses cache)
-    assert_requested :get, scryfall_printings_url(card_id), times: 1
+    # Should only make one set of HTTP requests (second uses cache)
+    assert_requested :get, scryfall_card_url(card_id), times: 1
+    assert_requested :get, prints_search_uri, times: 1
     assert_equal results1, results2, "Expected identical results from cache"
   end
 
   test "different card_ids generate separate cache entries" do
     card_id1 = "card-one"
     card_id2 = "card-two"
+    prints_search_uri1 = "https://api.scryfall.com/cards/search?q=one"
+    prints_search_uri2 = "https://api.scryfall.com/cards/search?q=two"
 
-    response1 = scryfall_printings_response_with_cards([
+    stub_two_step_flow(card_id1, prints_search_uri1, [
       { id: "1", name: "Card One", set: "tst", set_name: "Test",
         collector_number: "1", image_url: "http://example.com/1.jpg", released_at: "2020-01-01" }
     ])
-    response2 = scryfall_printings_response_with_cards([
+    stub_two_step_flow(card_id2, prints_search_uri2, [
       { id: "2", name: "Card Two", set: "tst", set_name: "Test",
         collector_number: "2", image_url: "http://example.com/2.jpg", released_at: "2020-01-01" }
     ])
-
-    stub_scryfall_printings_request(card_id1, response1)
-    stub_scryfall_printings_request(card_id2, response2)
 
     service1 = CardPrintingsService.new(card_id: card_id1)
     results1 = service1.call
@@ -216,18 +243,20 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
     service2 = CardPrintingsService.new(card_id: card_id2)
     results2 = service2.call
 
-    assert_requested :get, scryfall_printings_url(card_id1), times: 1
-    assert_requested :get, scryfall_printings_url(card_id2), times: 1
+    assert_requested :get, scryfall_card_url(card_id1), times: 1
+    assert_requested :get, scryfall_card_url(card_id2), times: 1
+    assert_requested :get, prints_search_uri1, times: 1
+    assert_requested :get, prints_search_uri2, times: 1
     refute_equal results1, results2, "Expected different results for different cards"
   end
 
   # ---------------------------------------------------------------------------
   # Error handling tests
   # ---------------------------------------------------------------------------
-  test "handles empty results from API" do
+  test "handles card not found (404) from first API call" do
     card_id = "nonexistent-card"
 
-    stub_request(:get, scryfall_printings_url(card_id))
+    stub_request(:get, scryfall_card_url(card_id))
       .to_return(
         status: 404,
         body: '{"object":"error","code":"not_found"}',
@@ -240,10 +269,35 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
     assert_empty results
   end
 
-  test "raises NetworkError on connection failure" do
+  test "handles empty printings search results" do
+    card_id = "no-printings-card"
+    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+
+    # Card exists but has no printings
+    card_response = {
+      "id" => card_id,
+      "prints_search_uri" => prints_search_uri
+    }
+    stub_scryfall_card_request(card_id, card_response)
+
+    # Prints search returns empty data
+    printings_response = {
+      "object" => "list",
+      "has_more" => false,
+      "data" => []
+    }
+    stub_prints_search_request(prints_search_uri, printings_response)
+
+    service = CardPrintingsService.new(card_id: card_id)
+    results = service.call
+
+    assert_empty results
+  end
+
+  test "raises NetworkError on connection failure in first API call" do
     card_id = "network-error-card"
 
-    stub_request(:get, scryfall_printings_url(card_id))
+    stub_request(:get, scryfall_card_url(card_id))
       .to_raise(SocketError.new("Connection refused"))
 
     service = CardPrintingsService.new(card_id: card_id)
@@ -253,10 +307,30 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
     end
   end
 
-  test "raises TimeoutError on request timeout" do
+  test "raises NetworkError on connection failure in second API call" do
+    card_id = "network-error-card"
+    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+
+    card_response = {
+      "id" => card_id,
+      "prints_search_uri" => prints_search_uri
+    }
+    stub_scryfall_card_request(card_id, card_response)
+
+    stub_request(:get, prints_search_uri)
+      .to_raise(SocketError.new("Connection refused"))
+
+    service = CardPrintingsService.new(card_id: card_id)
+
+    assert_raises(CardPrintingsService::NetworkError) do
+      service.call
+    end
+  end
+
+  test "raises TimeoutError on request timeout in first API call" do
     card_id = "timeout-card"
 
-    stub_request(:get, scryfall_printings_url(card_id))
+    stub_request(:get, scryfall_card_url(card_id))
       .to_timeout
 
     service = CardPrintingsService.new(card_id: card_id)
@@ -266,10 +340,10 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
     end
   end
 
-  test "raises RateLimitError on 429 response" do
+  test "raises RateLimitError on 429 response in first API call" do
     card_id = "rate-limited-card"
 
-    stub_request(:get, scryfall_printings_url(card_id))
+    stub_request(:get, scryfall_card_url(card_id))
       .to_return(
         status: 429,
         body: '{"object":"error","code":"rate_limit"}',
@@ -283,10 +357,10 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
     end
   end
 
-  test "raises InvalidResponseError on non-JSON response" do
+  test "raises InvalidResponseError on non-JSON response in first API call" do
     card_id = "bad-response-card"
 
-    stub_request(:get, scryfall_printings_url(card_id))
+    stub_request(:get, scryfall_card_url(card_id))
       .to_return(
         status: 200,
         body: "Not JSON",
@@ -300,21 +374,108 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
     end
   end
 
-  private
+  test "handles pagination when has_more is true" do
+    card_id = "paginated-card"
+    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+    next_page_uri = "https://api.scryfall.com/cards/search?q=test&page=2"
 
-  # Helper to build Scryfall printings API URL
-  def scryfall_printings_url(card_id)
-    "https://api.scryfall.com/cards/#{card_id}/prints"
+    # Stub card endpoint
+    card_response = {
+      "id" => card_id,
+      "prints_search_uri" => prints_search_uri
+    }
+    stub_scryfall_card_request(card_id, card_response)
+
+    # First page of printings
+    first_page_response = {
+      "object" => "list",
+      "has_more" => true,
+      "next_page" => next_page_uri,
+      "data" => [
+        {
+          "id" => "card1",
+          "name" => "Test Card",
+          "set" => "set1",
+          "set_name" => "Set 1",
+          "collector_number" => "1",
+          "image_uris" => { "normal" => "https://example.com/1.jpg" },
+          "released_at" => "2020-01-01"
+        }
+      ]
+    }
+    stub_prints_search_request(prints_search_uri, first_page_response)
+
+    # Second page of printings
+    second_page_response = {
+      "object" => "list",
+      "has_more" => false,
+      "data" => [
+        {
+          "id" => "card2",
+          "name" => "Test Card",
+          "set" => "set2",
+          "set_name" => "Set 2",
+          "collector_number" => "2",
+          "image_uris" => { "normal" => "https://example.com/2.jpg" },
+          "released_at" => "2019-01-01"
+        }
+      ]
+    }
+    stub_prints_search_request(next_page_uri, second_page_response)
+
+    service = CardPrintingsService.new(card_id: card_id)
+    results = service.call
+
+    # Should have results from both pages
+    assert_equal 2, results.size
+    assert_equal "card1", results[0][:id]
+    assert_equal "card2", results[1][:id]
+
+    # Verify all API calls were made
+    assert_requested :get, scryfall_card_url(card_id), times: 1
+    assert_requested :get, prints_search_uri, times: 1
+    assert_requested :get, next_page_uri, times: 1
   end
 
-  # Helper to stub Scryfall printings API request
-  def stub_scryfall_printings_request(card_id, response_body)
-    stub_request(:get, scryfall_printings_url(card_id))
+  private
+
+  # Helper to build Scryfall card API URL
+  def scryfall_card_url(card_id)
+    "https://api.scryfall.com/cards/#{card_id}"
+  end
+
+  # Helper to stub Scryfall card API request (first step)
+  def stub_scryfall_card_request(card_id, response_body)
+    stub_request(:get, scryfall_card_url(card_id))
       .to_return(
         status: 200,
         body: response_body.to_json,
         headers: { "Content-Type" => "application/json" }
       )
+  end
+
+  # Helper to stub Scryfall prints search API request (second step)
+  def stub_prints_search_request(prints_search_uri, response_body)
+    stub_request(:get, prints_search_uri)
+      .to_return(
+        status: 200,
+        body: response_body.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+  end
+
+  # Helper to stub the complete two-step flow
+  def stub_two_step_flow(card_id, prints_search_uri, cards = [])
+    # Step 1: Card endpoint returns prints_search_uri
+    card_response = {
+      "id" => card_id,
+      "prints_search_uri" => prints_search_uri
+    }
+    stub_scryfall_card_request(card_id, card_response)
+
+    # Step 2: Prints search endpoint returns card data
+    printings_response = scryfall_printings_response_with_cards(cards)
+    stub_prints_search_request(prints_search_uri, printings_response)
   end
 
   # Helper to create a Scryfall response with multiple card printings
@@ -340,6 +501,7 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
 
     {
       "object" => "list",
+      "has_more" => false,
       "data" => formatted_cards
     }
   end

@@ -26,6 +26,10 @@ class CardPrintingsService
   # Fetches all printings for a specific card from Scryfall API.
   # Returns array of printings sorted by release date (newest first).
   #
+  # API Flow:
+  # 1. Fetch card at /cards/{id} to get prints_search_uri
+  # 2. Fetch all printings from prints_search_uri (handles pagination automatically)
+  #
   # Caching strategy:
   # - External API results are cached by card_id
   # - Cache TTL: 24 hours by default (configurable via CARD_PRINTINGS_CACHE_TTL)
@@ -50,20 +54,66 @@ class CardPrintingsService
     "card_printings:#{@card_id}"
   end
 
-  # Fetches all printings for a card from the Scryfall API
+  # Fetches all printings for a card from the Scryfall API using two-step flow:
+  # 1. Fetch card to get prints_search_uri
+  # 2. Fetch prints from the prints_search_uri (with pagination support)
   def fetch_printings_from_scryfall
-    uri = build_printings_uri
-    response = make_http_request(uri)
-    parse_and_format_response(response)
+    prints_search_uri = fetch_prints_search_uri
+    return [] unless prints_search_uri
+
+    fetch_all_printings_pages(prints_search_uri)
   rescue SocketError, Errno::ECONNREFUSED, Errno::EHOSTUNREACH => e
     raise NetworkError, "Network error while connecting to Scryfall API: #{e.message}"
   rescue Net::OpenTimeout, Net::ReadTimeout => e
     raise TimeoutError, "Request to Scryfall API timeout: #{e.message}"
   end
 
-  # Builds the Scryfall API printings URI
-  def build_printings_uri
-    URI("#{SCRYFALL_API_BASE}/cards/#{@card_id}/prints")
+  # Fetches the prints_search_uri from the card endpoint
+  # Returns nil if card is not found or prints_search_uri is missing
+  def fetch_prints_search_uri
+    card_uri = build_card_uri
+    card_response = make_http_request(card_uri)
+    return nil if card_response.code.to_i == 404
+
+    card_data = parse_json_response(card_response)
+    card_data["prints_search_uri"]
+  end
+
+  # Builds the Scryfall API card URI
+  def build_card_uri
+    URI("#{SCRYFALL_API_BASE}/cards/#{@card_id}")
+  end
+
+  # Fetches all pages of printings, handling pagination
+  def fetch_all_printings_pages(initial_uri)
+    all_printings = []
+    current_uri = initial_uri
+
+    loop do
+      uri = URI(current_uri)
+      response = make_http_request(uri)
+      data = parse_json_response(response)
+
+      # Extract and format printings from current page
+      if data["data"].is_a?(Array)
+        printings = data["data"].map { |card| format_printing(card) }
+        all_printings.concat(printings)
+      end
+
+      # Check if there are more pages
+      break unless data["has_more"] == true && data["next_page"]
+
+      current_uri = data["next_page"]
+    end
+
+    sort_printings_by_date(all_printings)
+  end
+
+  # Parses JSON response and raises error if invalid
+  def parse_json_response(response)
+    JSON.parse(response.body)
+  rescue JSON::ParserError => e
+    raise InvalidResponseError, "Invalid JSON response from Scryfall API: #{e.message}"
   end
 
   # Makes HTTP GET request to Scryfall API with appropriate headers
@@ -98,28 +148,12 @@ class CardPrintingsService
     when 200
       # Success - continue processing
     when 404
-      # Not found - will return empty results
+      # Not found - handled by caller
     when 429
       raise RateLimitError, "Scryfall API rate limit exceeded. Please try again later."
     else
       raise InvalidResponseError, "Scryfall API returned unexpected status: #{response.code}"
     end
-  end
-
-  # Parses JSON response and formats printings
-  def parse_and_format_response(response)
-    return [] if response.code.to_i == 404
-
-    begin
-      data = JSON.parse(response.body)
-    rescue JSON::ParserError => e
-      raise InvalidResponseError, "Invalid JSON response from Scryfall API: #{e.message}"
-    end
-
-    return [] unless data["data"].is_a?(Array)
-
-    printings = data["data"].map { |card| format_printing(card) }
-    sort_printings_by_date(printings)
   end
 
   # Maps Scryfall card data to our expected format for a printing
