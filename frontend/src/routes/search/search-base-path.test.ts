@@ -8,9 +8,22 @@ import SearchPage from './+page.svelte';
 // ---------------------------------------------------------------------------
 const MOCK_CARD = { id: 'card-base-1', name: 'Basepath Bolt', mana_cost: '{R}' };
 
+const MOCK_PRINTINGS = [
+	{
+		id: 'print-1',
+		name: 'Basepath Bolt',
+		set: 'm21',
+		set_name: 'Core Set 2021',
+		collector_number: '125',
+		image_url: 'https://example.com/m21-bolt.jpg',
+		released_at: '2020-07-03'
+	}
+];
+
 /**
  * Build a fetch stub that:
  *  - responds to /api/cards/search with a single card
+ *  - responds to /api/cards/{id}/printings with printings data
  *  - responds to POST /api/inventory with a success payload
  * We capture every call so we can assert on the full URL later.
  */
@@ -22,11 +35,17 @@ function createFetchSpy() {
 				json: () => Promise.resolve({ cards: [MOCK_CARD] })
 			});
 		}
+		if (typeof url === 'string' && url.includes('/printings')) {
+			return Promise.resolve({
+				ok: true,
+				json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
+			});
+		}
 		if (typeof url === 'string' && url.includes('/api/inventory') && opts?.method === 'POST') {
 			return Promise.resolve({
 				ok: true,
 				json: () =>
-					Promise.resolve({ card_id: MOCK_CARD.id, quantity: 1, collection_type: 'inventory' })
+					Promise.resolve({ card_id: 'print-1', quantity: 1, collection_type: 'inventory' })
 			});
 		}
 		return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
@@ -84,12 +103,35 @@ describe('Card Search Page – API path behavior', () => {
 			expect(screen.getByText('Basepath Bolt')).toBeDefined();
 		});
 
-		// Click "Add to Inventory"
+		// Click on the card name to open the printing modal
+		const cardNameBtn = screen.getByText('Basepath Bolt');
+		await fireEvent.click(cardNameBtn);
+
+		// Wait for modal to open and printings to load
+		await waitFor(() => {
+			expect(screen.getByRole('dialog')).toBeInTheDocument();
+		});
+
+		// Hover over a printing to select it and reveal the Add to Inventory button
+		await waitFor(() => {
+			const printingItems = screen.getAllByTestId('printing-item');
+			expect(printingItems.length).toBeGreaterThan(0);
+		});
+
+		const printingItems = screen.getAllByTestId('printing-item');
+		await fireEvent.mouseEnter(printingItems[0]);
+
+		// Wait for the Add to Inventory button to appear
+		await waitFor(() => {
+			expect(screen.getByRole('button', { name: /add to inventory/i })).toBeInTheDocument();
+		});
+
+		// Click "Add to Inventory" in the modal
 		const addBtn = screen.getByRole('button', { name: /add to inventory/i });
 		await fireEvent.click(addBtn);
 
 		await waitFor(() => {
-			expect(screen.getByText(/In Inventory: 1/)).toBeDefined();
+			expect(screen.getByText(/Added to inventory/i)).toBeDefined();
 		});
 
 		// The inventory POST should be called with just /api/inventory (no prefix)
