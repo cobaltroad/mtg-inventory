@@ -5,8 +5,10 @@ import { render, screen, cleanup } from '@testing-library/svelte';
 // Mock $app/paths so we can control `base` in tests
 // ---------------------------------------------------------------------------
 vi.mock('$app/paths', () => ({
-	base: '/projects/mtg-inventory'
+	base: process.env.PUBLIC_BASE_PATH || ''
 }));
+
+const BASE = process.env.PUBLIC_BASE_PATH || '';
 
 // Import AFTER the mock is registered so the component picks it up
 import HomePage from './+page.svelte';
@@ -24,6 +26,6 @@ describe('Home Page', () => {
 		render(HomePage);
 
 		const link = screen.getByRole('link', { name: /search cards/i });
-		expect(link).toHaveAttribute('href', '/projects/mtg-inventory/search');
+		expect(link).toHaveAttribute('href', `${BASE}/search`);
 	});
 });

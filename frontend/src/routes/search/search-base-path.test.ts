@@ -9,8 +9,10 @@ import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/sv
 // conflict.
 // ---------------------------------------------------------------------------
 vi.mock('$app/paths', () => ({
-	base: '/projects/mtg-inventory'
+	base: process.env.PUBLIC_BASE_PATH || ''
 }));
+
+const BASE = process.env.PUBLIC_BASE_PATH || '';
 
 import SearchPage from './+page.svelte';
 
@@ -73,7 +75,7 @@ describe('Card Search Page – base path propagation', () => {
 			(call) => typeof call[0] === 'string' && call[0].includes('/api/cards/search')
 		);
 		expect(searchCall).toBeDefined();
-		expect(searchCall![0]).toMatch(/^\/projects\/mtg-inventory\/api\/cards\/search/);
+		expect(searchCall![0]).toMatch(new RegExp(`^${BASE}/api/cards/search`));
 	});
 
 	it('prefixes the add-to-inventory POST URL with the PUBLIC_BASE_PATH base', async () => {
@@ -109,6 +111,6 @@ describe('Card Search Page – base path propagation', () => {
 				(call[1] as RequestInit)?.method === 'POST'
 		);
 		expect(inventoryCall).toBeDefined();
-		expect(inventoryCall![0]).toMatch(/^\/projects\/mtg-inventory\/api\/inventory/);
+		expect(inventoryCall![0]).toMatch(new RegExp(`^${BASE}/api/inventory`));
 	});
 });
