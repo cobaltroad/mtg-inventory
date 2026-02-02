@@ -8,7 +8,7 @@ export default defineConfig({
 		conditions: ['browser'],
 		alias: {
 			'$app/paths': path.resolve(__dirname, 'src/__mocks__/app/paths.ts'),
-			'$lib': path.resolve(__dirname, 'src/lib')
+			$lib: path.resolve(__dirname, 'src/lib')
 		}
 	},
 	test: {

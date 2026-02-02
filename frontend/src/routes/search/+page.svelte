@@ -71,7 +71,14 @@
 <h1>Card Search</h1>
 
 <div class="search-form">
-	<input type="text" bind:value={query} placeholder="Search for a card..." onkeydown={(e) => { if (e.key === 'Enter') handleSearch(); }} />
+	<input
+		type="text"
+		bind:value={query}
+		placeholder="Search for a card..."
+		onkeydown={(e) => {
+			if (e.key === 'Enter') handleSearch();
+		}}
+	/>
 	<button onclick={handleSearch} disabled={searching}>Search</button>
 </div>
 

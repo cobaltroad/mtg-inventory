@@ -84,7 +84,12 @@
 {#if open}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-	<dialog bind:this={dialogElement} aria-labelledby="modal-title" onclick={handleBackdropClick} data-testid="modal-backdrop">
+	<dialog
+		bind:this={dialogElement}
+		aria-labelledby="modal-title"
+		onclick={handleBackdropClick}
+		data-testid="modal-backdrop"
+	>
 		<div class="modal-content" onclick={(e) => e.stopPropagation()} role="document">
 			<div class="modal-header">
 				<h2 id="modal-title">{card.name} - Printings</h2>
@@ -130,7 +135,10 @@
 
 					{#if hoveredPrinting && hoveredPrinting.image_url}
 						<div class="image-preview-area">
-							<img src={hoveredPrinting.image_url} alt="{hoveredPrinting.name} from {hoveredPrinting.set_name}" />
+							<img
+								src={hoveredPrinting.image_url}
+								alt="{hoveredPrinting.name} from {hoveredPrinting.set_name}"
+							/>
 						</div>
 					{/if}
 				</div>
@@ -190,7 +198,9 @@
 		padding: 0.25rem 0.5rem;
 		line-height: 1;
 		border-radius: 4px;
-		transition: background 0.2s, color 0.2s;
+		transition:
+			background 0.2s,
+			color 0.2s;
 	}
 
 	.close-button:hover {
@@ -222,7 +232,9 @@
 		cursor: pointer;
 		font-size: 0.875rem;
 		font-weight: 500;
-		transition: background 0.2s, color 0.2s;
+		transition:
+			background 0.2s,
+			color 0.2s;
 	}
 
 	.error-container button:hover {
@@ -252,7 +264,9 @@
 		border-radius: 6px;
 		margin-bottom: 0.5rem;
 		cursor: pointer;
-		transition: background 0.2s, border-color 0.2s;
+		transition:
+			background 0.2s,
+			border-color 0.2s;
 	}
 
 	.printing-item:hover {

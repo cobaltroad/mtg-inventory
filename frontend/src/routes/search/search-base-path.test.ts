@@ -25,7 +25,8 @@ function createFetchSpy() {
 		if (typeof url === 'string' && url.includes('/api/inventory') && opts?.method === 'POST') {
 			return Promise.resolve({
 				ok: true,
-				json: () => Promise.resolve({ card_id: MOCK_CARD.id, quantity: 1, collection_type: 'inventory' })
+				json: () =>
+					Promise.resolve({ card_id: MOCK_CARD.id, quantity: 1, collection_type: 'inventory' })
 			});
 		}
 		return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });

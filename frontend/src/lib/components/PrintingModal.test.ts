@@ -101,9 +101,18 @@ describe('PrintingModal', () => {
 		});
 
 		it('shows loading indicator during data fetch', async () => {
-			const mockFetch = vi.fn().mockImplementation(
-				() => new Promise((resolve) => setTimeout(() => resolve({ ok: true, json: () => Promise.resolve({ printings: MOCK_PRINTINGS }) }), 100))
-			);
+			const mockFetch = vi
+				.fn()
+				.mockImplementation(
+					() =>
+						new Promise((resolve) =>
+							setTimeout(
+								() =>
+									resolve({ ok: true, json: () => Promise.resolve({ printings: MOCK_PRINTINGS }) }),
+								100
+							)
+						)
+				);
 			vi.stubGlobal('fetch', mockFetch);
 
 			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
@@ -118,7 +127,9 @@ describe('PrintingModal', () => {
 			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
 
 			await waitFor(() => {
-				expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/api/cards/card-123/printings'));
+				expect(mockFetch).toHaveBeenCalledWith(
+					expect.stringContaining('/api/cards/card-123/printings')
+				);
 			});
 		});
 	});
@@ -182,7 +193,7 @@ describe('PrintingModal', () => {
 				set_name: `Set ${i}`,
 				collector_number: `${i}`,
 				image_url: `https://example.com/set${i}.jpg`,
-				released_at: `2020-${String(i % 12 + 1).padStart(2, '0')}-01`
+				released_at: `2020-${String((i % 12) + 1).padStart(2, '0')}-01`
 			}));
 
 			const mockFetch = mockFetchForPrintings(manyPrintings);

@@ -68,7 +68,8 @@ describe('Card Search Page', () => {
 				callCount++;
 				return Promise.resolve({
 					ok: true,
-					json: () => Promise.resolve({ card_id: 'card-1', quantity: 1, collection_type: 'inventory' })
+					json: () =>
+						Promise.resolve({ card_id: 'card-1', quantity: 1, collection_type: 'inventory' })
 				});
 			}
 			return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
@@ -96,7 +97,8 @@ describe('Card Search Page', () => {
 			if (typeof url === 'string' && url.includes('/api/inventory') && opts?.method === 'POST') {
 				return Promise.resolve({
 					ok: true,
-					json: () => Promise.resolve({ card_id: 'card-1', quantity: 1, collection_type: 'inventory' })
+					json: () =>
+						Promise.resolve({ card_id: 'card-1', quantity: 1, collection_type: 'inventory' })
 				});
 			}
 			return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
