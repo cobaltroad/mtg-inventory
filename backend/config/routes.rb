@@ -9,7 +9,7 @@ Rails.application.routes.draw do
   # views over the same collection_items table.  Using scope rather than
   # namespace so controllers live at the top level (matching the existing
   # flat-controller convention in this app).
-  scope "/api" do
+  scope ENV.fetch("PUBLIC_API_PATH", "/api") do
     resources :inventory, only: [ :index, :create, :update, :destroy ] do
       collection do
         post :move_from_wishlist

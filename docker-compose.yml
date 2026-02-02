@@ -41,6 +41,7 @@ services:
       DB_PASS: ${POSTGRES_USER_PASSWORD}
       DB_NAME: ${POSTGRES_DB_NAME}
       DATABASE_URL: ${POSTGRES_DB_URL}
+      APP_DOMAIN: ${APP_DOMAIN}
       PUBLIC_API_PATH: ${PUBLIC_API_PATH}
     volumes:
       - ./backend:/backend  # Rails code
@@ -49,6 +50,7 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik-public"
       - "traefik.http.routers.mtg-api.rule=Host(`cobaltroad.com`) && PathPrefix(`/projects/mtg/api`)"
+      - "traefik.http.routers.mtg-api.priority=110"
       - "traefik.http.routers.mtg-api.service=mtg-api-service"
       - "traefik.http.services.mtg-api-service.loadbalancer.server.port=3000"
     logging:
