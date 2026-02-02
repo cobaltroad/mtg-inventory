@@ -29,7 +29,7 @@
 	let printings: Printing[] = $state([]);
 	let loading = $state(false);
 	let error = $state(false);
-	let hoveredPrinting: Printing | null = $state(null);
+	let selectedPrinting: Printing | null = $state(null);
 	let dialogElement = $state<HTMLDialogElement>();
 
 	function isResponseSuccessful(response: Response): boolean {
@@ -119,30 +119,23 @@
 								data-testid="printing-item"
 								role="button"
 								tabindex="0"
-								onmouseenter={() => (hoveredPrinting = printing)}
-								onmouseleave={() => (hoveredPrinting = null)}
-								onfocus={() => (hoveredPrinting = printing)}
-								onblur={() => (hoveredPrinting = null)}
+								onmouseenter={() => (selectedPrinting = printing)}
+								onfocus={() => (selectedPrinting = printing)}
 							>
 								<div class="printing-info">
 									<span class="set-name">{printing.set_name}</span>
 									<span class="set-code">({printing.set.toUpperCase()})</span>
 									<span class="collector-number">#{printing.collector_number}</span>
 								</div>
-								{#if hoveredPrinting === printing && printing.image_url}
-									<div class="card-preview">
-										<img src={printing.image_url} alt="{printing.name} from {printing.set_name}" />
-									</div>
-								{/if}
 							</div>
 						{/each}
 					</div>
 
-					{#if hoveredPrinting && hoveredPrinting.image_url}
+					{#if selectedPrinting && selectedPrinting.image_url}
 						<div class="image-preview-area">
 							<img
-								src={hoveredPrinting.image_url}
-								alt="{hoveredPrinting.name} from {hoveredPrinting.set_name}"
+								src={selectedPrinting.image_url}
+								alt="{selectedPrinting.name} from {selectedPrinting.set_name}"
 							/>
 						</div>
 					{/if}
@@ -302,21 +295,6 @@
 		font-size: 0.875rem;
 	}
 
-	.card-preview {
-		position: absolute;
-		left: 100%;
-		top: 0;
-		margin-left: 1rem;
-		z-index: 100;
-		pointer-events: none;
-	}
-
-	.card-preview img {
-		width: 250px;
-		border-radius: 8px;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-	}
-
 	.image-preview-area {
 		position: sticky;
 		top: 0;
@@ -348,10 +326,6 @@
 
 		.image-preview-area {
 			width: 100%;
-		}
-
-		.card-preview {
-			display: none;
 		}
 	}
 </style>
