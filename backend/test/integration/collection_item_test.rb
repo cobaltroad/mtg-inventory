@@ -1,4 +1,5 @@
 require "test_helper"
+require "webmock/minitest"
 
 # ---------------------------------------------------------------------------
 # Cross-cutting integration tests that exercise inventory and wishlist
@@ -9,18 +10,32 @@ class CollectionItemIntegrationTest < ActionDispatch::IntegrationTest
     User.delete_all
     load Rails.root.join("db", "seeds.rb")
     @user = User.find_by!(email: User::DEFAULT_EMAIL)
+    WebMock.reset!
+  end
+
+  def api_path(path)
+    "#{ENV.fetch('PUBLIC_API_PATH', '/api')}#{path}"
+  end
+
+  def stub_valid_card(card_id)
+    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+      .to_return(
+        status: 200,
+        body: { id: card_id, name: "Test Card" }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
   end
 
   # ---------------------------------------------------------------------------
   # Scenario 3 -- same card can exist in both inventory and wishlist
   # ---------------------------------------------------------------------------
   test "POST to inventory and wishlist for the same card both succeed" do
-    MTG::Card.stub(:find, true) do
-      post "/api/inventory", params: { card_id: "dual_card", quantity: 2 }, as: :json
-    end
+    stub_valid_card("dual_card")
+
+    post api_path("/inventory"), params: { card_id: "dual_card", quantity: 2 }, as: :json
     assert_response :created
 
-    post "/api/wishlist", params: { card_id: "dual_card", quantity: 1 }, as: :json
+    post api_path("/wishlist"), params: { card_id: "dual_card", quantity: 1 }, as: :json
     assert_response :created
 
     # Both rows exist independently
@@ -37,13 +52,13 @@ class CollectionItemIntegrationTest < ActionDispatch::IntegrationTest
   # Scenario 4 -- PATCH updates quantity without creating duplicates
   # ---------------------------------------------------------------------------
   test "PATCH /api/inventory/:id updates quantity without duplicating the row" do
-    MTG::Card.stub(:find, true) do
-      post "/api/inventory", params: { card_id: "patch_card", quantity: 1 }, as: :json
-    end
+    stub_valid_card("patch_card")
+
+    post api_path("/inventory"), params: { card_id: "patch_card", quantity: 1 }, as: :json
     assert_response :created
     item_id = JSON.parse(response.body)["id"]
 
-    patch "/api/inventory/#{item_id}", params: { quantity: 10 }, as: :json
+    patch api_path("/inventory/#{item_id}"), params: { quantity: 10 }, as: :json
     assert_response :success
 
     body = JSON.parse(response.body)
@@ -56,11 +71,11 @@ class CollectionItemIntegrationTest < ActionDispatch::IntegrationTest
   # ---------------------------------------------------------------------------
   test "POST /api/inventory/move_from_wishlist transfers card from wishlist to inventory" do
     # Seed a wishlist item
-    post "/api/wishlist", params: { card_id: "transfer_card", quantity: 3 }, as: :json
+    post api_path("/wishlist"), params: { card_id: "transfer_card", quantity: 3 }, as: :json
     assert_response :created
 
     # Move it
-    post "/api/inventory/move_from_wishlist", params: { card_id: "transfer_card" }, as: :json
+    post api_path("/inventory/move_from_wishlist"), params: { card_id: "transfer_card" }, as: :json
     assert_response :created
     body = JSON.parse(response.body)
 
@@ -79,7 +94,7 @@ class CollectionItemIntegrationTest < ActionDispatch::IntegrationTest
     # Seed wishlist
     CollectionItem.create!(user: @user, card_id: "overlap_card", collection_type: "wishlist", quantity: 2)
 
-    post "/api/inventory/move_from_wishlist", params: { card_id: "overlap_card" }, as: :json
+    post api_path("/inventory/move_from_wishlist"), params: { card_id: "overlap_card" }, as: :json
     assert_response :created
 
     body = JSON.parse(response.body)
@@ -100,7 +115,7 @@ class CollectionItemIntegrationTest < ActionDispatch::IntegrationTest
     CollectionItem.create!(user: @user, card_id: "mine", collection_type: "inventory", quantity: 1)
     CollectionItem.create!(user: other_user, card_id: "theirs", collection_type: "inventory", quantity: 1)
 
-    get "/api/inventory"
+    get api_path("/inventory")
     assert_response :success
 
     items = JSON.parse(response.body)
@@ -115,7 +130,7 @@ class CollectionItemIntegrationTest < ActionDispatch::IntegrationTest
     CollectionItem.create!(user: @user, card_id: "my_wish", collection_type: "wishlist", quantity: 1)
     CollectionItem.create!(user: other_user, card_id: "their_wish", collection_type: "wishlist", quantity: 1)
 
-    get "/api/wishlist"
+    get api_path("/wishlist")
     assert_response :success
 
     items = JSON.parse(response.body)
@@ -128,9 +143,9 @@ class CollectionItemIntegrationTest < ActionDispatch::IntegrationTest
   # Issue #9 -- SDK validation end-to-end
   # ---------------------------------------------------------------------------
   test "POST /api/inventory with a valid card_id persists the item end-to-end" do
-    MTG::Card.stub(:find, true) do
-      post "/api/inventory", params: { card_id: "e2e_valid_card", quantity: 1 }, as: :json
-    end
+    stub_valid_card("e2e_valid_card")
+
+    post api_path("/inventory"), params: { card_id: "e2e_valid_card", quantity: 1 }, as: :json
 
     assert_response :created
     body = JSON.parse(response.body)
@@ -142,9 +157,9 @@ class CollectionItemIntegrationTest < ActionDispatch::IntegrationTest
   test "POST /api/inventory with a duplicate card_id returns incremented quantity" do
     CollectionItem.create!(user: @user, card_id: "e2e_dup_card", collection_type: "inventory", quantity: 2)
 
-    MTG::Card.stub(:find, true) do
-      post "/api/inventory", params: { card_id: "e2e_dup_card", quantity: 1 }, as: :json
-    end
+    stub_valid_card("e2e_dup_card")
+
+    post api_path("/inventory"), params: { card_id: "e2e_dup_card", quantity: 1 }, as: :json
 
     assert_response :ok
     body = JSON.parse(response.body)

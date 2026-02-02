@@ -25,7 +25,8 @@ class BasePathTest < ActionDispatch::IntegrationTest
   # request pipeline and confirms the existing 422 validation still fires.
   # ---------------------------------------------------------------------------
   test "API routes still match correctly when relative_url_root is configured" do
-    get "/api/cards/search"
+    api_path = "#{ENV.fetch('PUBLIC_API_PATH', '/api')}/cards/search"
+    get api_path
 
     assert_response :unprocessable_entity
   end

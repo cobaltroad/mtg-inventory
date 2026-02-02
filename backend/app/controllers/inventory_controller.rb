@@ -40,15 +40,15 @@ class InventoryController < ApplicationController
 
   private
 
-  # Verify the card exists in the MTG SDK before we persist anything.
+  # Verify the card exists in Scryfall before we persist anything.
   # When card_id is blank we let the model validation surface that error
-  # instead of hitting the SDK with an empty string.
+  # instead of hitting Scryfall with an empty string.
   def validate_card_with_sdk
     return if card_id_param.blank?
 
-    MTG::Card.find(card_id_param)
-  rescue ArgumentError
-    render json: { error: "Card not found in MTG database" }, status: :unprocessable_entity
+    CardValidatorService.new(card_id_param).validate!
+  rescue CardValidatorService::CardNotFoundError => e
+    render json: { error: e.message }, status: :unprocessable_entity
   end
 
   def collection_type

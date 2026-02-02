@@ -1,6 +1,10 @@
 require "test_helper"
 
 class CardSearchControllerTest < ActionDispatch::IntegrationTest
+  def api_path(path)
+    "#{ENV.fetch('PUBLIC_API_PATH', '/api')}#{path}"
+  end
+
   # ---------------------------------------------------------------------------
   # #index -- returns search results from CardSearchService
   # ---------------------------------------------------------------------------
@@ -16,7 +20,7 @@ class CardSearchControllerTest < ActionDispatch::IntegrationTest
     CardSearchService.stub(:new, Object.new.tap { |svc|
       svc.define_singleton_method(:call) { sample_cards }
     }) do
-      get "/api/cards/search", params: { q: "Lightning Bolt" }
+      get api_path("/cards/search"), params: { q: "Lightning Bolt" }
     end
 
     assert_response :success
@@ -39,7 +43,7 @@ class CardSearchControllerTest < ActionDispatch::IntegrationTest
         fake_service
       end
 
-      get "/api/cards/search", params: { q: "Lightning Bolt", treatments: expected_treatments }
+      get api_path("/cards/search"), params: { q: "Lightning Bolt", treatments: expected_treatments }
 
       # Restore original method
       CardSearchService.define_singleton_method(:new, original_new)
@@ -54,7 +58,7 @@ class CardSearchControllerTest < ActionDispatch::IntegrationTest
   # #index -- validation
   # ---------------------------------------------------------------------------
   test "GET /api/cards/search without q returns 422" do
-    get "/api/cards/search"
+    get api_path("/cards/search")
 
     assert_response :unprocessable_entity
     body = JSON.parse(response.body)

@@ -11,6 +11,10 @@ class WishlistControllerTest < ActionDispatch::IntegrationTest
     @user = User.find_by!(email: User::DEFAULT_EMAIL)
   end
 
+  def api_path(path)
+    "#{ENV.fetch('PUBLIC_API_PATH', '/api')}#{path}"
+  end
+
   # ---------------------------------------------------------------------------
   # #index -- returns only current_user's wishlist items
   # ---------------------------------------------------------------------------
@@ -20,7 +24,7 @@ class WishlistControllerTest < ActionDispatch::IntegrationTest
     other_user = User.create!(email: "other_wish@example.com", name: "Other")
     CollectionItem.create!(user: other_user, card_id: "their_wish", collection_type: "wishlist", quantity: 1)
 
-    get "/api/wishlist"
+    get api_path("/wishlist")
 
     assert_response :success
     items = JSON.parse(response.body)
@@ -32,7 +36,7 @@ class WishlistControllerTest < ActionDispatch::IntegrationTest
     CollectionItem.create!(user: @user, card_id: "inv_only", collection_type: "inventory", quantity: 1)
     CollectionItem.create!(user: @user, card_id: "wish_only", collection_type: "wishlist", quantity: 1)
 
-    get "/api/wishlist"
+    get api_path("/wishlist")
 
     assert_response :success
     items = JSON.parse(response.body)
@@ -44,7 +48,7 @@ class WishlistControllerTest < ActionDispatch::IntegrationTest
   # #create -- adds item or increments quantity on duplicate
   # ---------------------------------------------------------------------------
   test "POST /api/wishlist creates a new wishlist item" do
-    post "/api/wishlist", params: { card_id: "new_wish", quantity: 1 }, as: :json
+    post api_path("/wishlist"), params: { card_id: "new_wish", quantity: 1 }, as: :json
 
     assert_response :created
     body = JSON.parse(response.body)
@@ -57,7 +61,7 @@ class WishlistControllerTest < ActionDispatch::IntegrationTest
   test "POST /api/wishlist increments quantity when card already exists in wishlist" do
     CollectionItem.create!(user: @user, card_id: "dup_wish", collection_type: "wishlist", quantity: 2)
 
-    post "/api/wishlist", params: { card_id: "dup_wish", quantity: 1 }, as: :json
+    post api_path("/wishlist"), params: { card_id: "dup_wish", quantity: 1 }, as: :json
 
     assert_response :ok
     body = JSON.parse(response.body)
@@ -66,13 +70,13 @@ class WishlistControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "POST /api/wishlist returns unprocessable_entity for missing card_id" do
-    post "/api/wishlist", params: { quantity: 1 }, as: :json
+    post api_path("/wishlist"), params: { quantity: 1 }, as: :json
 
     assert_response :unprocessable_entity
   end
 
   test "POST /api/wishlist returns unprocessable_entity for zero quantity" do
-    post "/api/wishlist", params: { card_id: "zero_wish", quantity: 0 }, as: :json
+    post api_path("/wishlist"), params: { card_id: "zero_wish", quantity: 0 }, as: :json
 
     assert_response :unprocessable_entity
   end
@@ -83,7 +87,7 @@ class WishlistControllerTest < ActionDispatch::IntegrationTest
   test "PATCH /api/wishlist/:id updates quantity" do
     item = CollectionItem.create!(user: @user, card_id: "update_wish", collection_type: "wishlist", quantity: 1)
 
-    patch "/api/wishlist/#{item.id}", params: { quantity: 7 }, as: :json
+    patch api_path("/wishlist/#{item.id}"), params: { quantity: 7 }, as: :json
 
     assert_response :success
     body = JSON.parse(response.body)
@@ -94,7 +98,7 @@ class WishlistControllerTest < ActionDispatch::IntegrationTest
     other_user = User.create!(email: "other_wish_up@example.com", name: "Other")
     item = CollectionItem.create!(user: other_user, card_id: "cant_update", collection_type: "wishlist", quantity: 1)
 
-    patch "/api/wishlist/#{item.id}", params: { quantity: 10 }, as: :json
+    patch api_path("/wishlist/#{item.id}"), params: { quantity: 10 }, as: :json
 
     assert_response :not_found
   end
@@ -102,7 +106,7 @@ class WishlistControllerTest < ActionDispatch::IntegrationTest
   test "PATCH /api/wishlist/:id returns unprocessable_entity for invalid quantity" do
     item = CollectionItem.create!(user: @user, card_id: "bad_wish_qty", collection_type: "wishlist", quantity: 1)
 
-    patch "/api/wishlist/#{item.id}", params: { quantity: 0 }, as: :json
+    patch api_path("/wishlist/#{item.id}"), params: { quantity: 0 }, as: :json
 
     assert_response :unprocessable_entity
   end
@@ -113,7 +117,7 @@ class WishlistControllerTest < ActionDispatch::IntegrationTest
   test "DELETE /api/wishlist/:id removes the item" do
     item = CollectionItem.create!(user: @user, card_id: "del_wish", collection_type: "wishlist", quantity: 1)
 
-    delete "/api/wishlist/#{item.id}"
+    delete api_path("/wishlist/#{item.id}")
 
     assert_response :success
     assert_equal 0, CollectionItem.where(id: item.id).count
@@ -123,7 +127,7 @@ class WishlistControllerTest < ActionDispatch::IntegrationTest
     other_user = User.create!(email: "other_wish_del@example.com", name: "Other")
     item = CollectionItem.create!(user: other_user, card_id: "cant_del_wish", collection_type: "wishlist", quantity: 1)
 
-    delete "/api/wishlist/#{item.id}"
+    delete api_path("/wishlist/#{item.id}")
 
     assert_response :not_found
     assert_equal 1, CollectionItem.where(id: item.id).count
