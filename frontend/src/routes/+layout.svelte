@@ -3,7 +3,7 @@
 
 	let { children } = $props();
 
-  export const trailingSlash = 'ignore';
+	export const trailingSlash = 'ignore';
 </script>
 
 <svelte:head>

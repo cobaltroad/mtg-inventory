@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { base } from '$app/paths';
+	import PrintingModal from '$lib/components/PrintingModal.svelte';
 	// API requests use the base path and are proxied by hooks.server.ts
 	const API_BASE = base;
 
@@ -15,6 +16,8 @@
 	let results: Card[] = $state([]);
 	let searching = $state(false);
 	let cardStates: Map<string, { state: AddState; quantity: number }> = $state(new Map());
+	let selectedCard: Card | null = $state(null);
+	let modalOpen = $state(false);
 
 	async function handleSearch() {
 		if (!query.trim()) return;
@@ -53,12 +56,29 @@
 			cardStates = new Map(cardStates).set(cardId, { state: 'error', quantity: 0 });
 		}
 	}
+
+	function openPrintingsModal(card: Card) {
+		selectedCard = card;
+		modalOpen = true;
+	}
+
+	function closePrintingsModal() {
+		modalOpen = false;
+		selectedCard = null;
+	}
 </script>
 
 <h1>Card Search</h1>
 
 <div class="search-form">
-	<input type="text" bind:value={query} placeholder="Search for a card..." onkeydown={(e) => { if (e.key === 'Enter') handleSearch(); }} />
+	<input
+		type="text"
+		bind:value={query}
+		placeholder="Search for a card..."
+		onkeydown={(e) => {
+			if (e.key === 'Enter') handleSearch();
+		}}
+	/>
 	<button onclick={handleSearch} disabled={searching}>Search</button>
 </div>
 
@@ -71,7 +91,9 @@
 		{#each results as card}
 			{@const cs = getCardState(card.id)}
 			<li class="result-row">
-				<span class="card-name">{card.name}</span>
+				<button class="card-name-button" onclick={() => openPrintingsModal(card)}>
+					{card.name}
+				</button>
 				{#if card.mana_cost}
 					<span class="mana-cost">{card.mana_cost}</span>
 				{/if}
@@ -90,6 +112,10 @@
 			</li>
 		{/each}
 	</ul>
+{/if}
+
+{#if selectedCard}
+	<PrintingModal card={selectedCard} bind:open={modalOpen} onclose={closePrintingsModal} />
 {/if}
 
 <style>
@@ -136,9 +162,22 @@
 		border-bottom: 1px solid #eee;
 	}
 
-	.card-name {
+	.card-name-button {
 		font-weight: 600;
 		flex: 1;
+		text-align: left;
+		background: none;
+		border: none;
+		padding: 0;
+		color: #3b82f6;
+		cursor: pointer;
+		font-size: 1rem;
+		transition: color 0.2s;
+	}
+
+	.card-name-button:hover {
+		color: #1d4ed8;
+		text-decoration: underline;
 	}
 
 	.mana-cost {
