@@ -1,5 +1,6 @@
 <script lang="ts">
-	const API_BASE = import.meta.env.VITE_API_URL || '';
+	import { base } from '$app/paths';
+	const API_BASE = import.meta.env.VITE_API_URL || base;
 
 	interface Card {
 		id: string;
