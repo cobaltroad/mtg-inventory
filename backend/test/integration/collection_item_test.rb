@@ -7,6 +7,7 @@ require "webmock/minitest"
 # ---------------------------------------------------------------------------
 class CollectionItemIntegrationTest < ActionDispatch::IntegrationTest
   setup do
+    CollectionItem.delete_all
     User.delete_all
     load Rails.root.join("db", "seeds.rb")
     @user = User.find_by!(email: User::DEFAULT_EMAIL)

@@ -6,6 +6,7 @@ class WishlistControllerTest < ActionDispatch::IntegrationTest
   # scoped to that user via ApplicationController#current_user.
   # ---------------------------------------------------------------------------
   setup do
+    CollectionItem.delete_all
     User.delete_all
     load Rails.root.join("db", "seeds.rb")
     @user = User.find_by!(email: User::DEFAULT_EMAIL)

@@ -7,6 +7,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   # scoped to that user via ApplicationController#current_user.
   # ---------------------------------------------------------------------------
   setup do
+    CollectionItem.delete_all
     User.delete_all
     load Rails.root.join("db", "seeds.rb")
     @user = User.find_by!(email: User::DEFAULT_EMAIL)
@@ -205,6 +206,22 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     post api_path("/inventory/move_from_wishlist"), params: { card_id: "nonexistent" }, as: :json
 
     assert_response :not_found
+  end
+
+  # ---------------------------------------------------------------------------
+  # Error handling for missing default user
+  # ---------------------------------------------------------------------------
+  test "POST /api/inventory returns clear error when default user is missing from database" do
+    User.delete_all
+    stub_valid_card("test_card")
+
+    post api_path("/inventory"), params: { card_id: "test_card", quantity: 1 }, as: :json
+
+    assert_response :internal_server_error
+    body = JSON.parse(response.body)
+    assert_includes body["error"], "default user"
+    assert_includes body["error"], "was not found"
+    assert_includes body["error"], "db:seed"
   end
 
   private

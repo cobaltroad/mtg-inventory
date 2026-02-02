@@ -6,6 +6,7 @@ class SeedsTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
   test "seed creates exactly one user with non-null email and name" do
     # Wipe any users that test fixtures or other tests may have inserted
+    CollectionItem.delete_all
     User.delete_all
 
     # Execute the seed file
@@ -24,6 +25,7 @@ class SeedsTest < ActiveSupport::TestCase
   # Scenario 2 -- seed is idempotent
   # ---------------------------------------------------------------------------
   test "running seed twice does not create a duplicate user" do
+    CollectionItem.delete_all
     User.delete_all
 
     load Rails.root.join("db", "seeds.rb")

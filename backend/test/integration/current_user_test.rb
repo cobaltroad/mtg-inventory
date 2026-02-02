@@ -5,6 +5,7 @@ class CurrentUserIntegrationTest < ActionDispatch::IntegrationTest
   # Scenario 4 -- current_user is available to all API routes without credentials
   # ---------------------------------------------------------------------------
   setup do
+    CollectionItem.delete_all
     User.delete_all
     load Rails.root.join("db", "seeds.rb")
   end

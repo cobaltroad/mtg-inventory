@@ -6,6 +6,7 @@ class ApplicationControllerTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
   test "current_user returns the seeded default User instance" do
     # Ensure the default user exists (mirrors what db:seed does)
+    CollectionItem.delete_all
     User.delete_all
     load Rails.root.join("db", "seeds.rb")
 
@@ -20,6 +21,7 @@ class ApplicationControllerTest < ActiveSupport::TestCase
   end
 
   test "current_user is never nil" do
+    CollectionItem.delete_all
     User.delete_all
     load Rails.root.join("db", "seeds.rb")
 
@@ -28,6 +30,7 @@ class ApplicationControllerTest < ActiveSupport::TestCase
   end
 
   test "current_user returns the same record on repeated calls" do
+    CollectionItem.delete_all
     User.delete_all
     load Rails.root.join("db", "seeds.rb")
 
@@ -36,5 +39,20 @@ class ApplicationControllerTest < ActiveSupport::TestCase
     second_call = controller.send(:current_user)
 
     assert_equal first_call.id, second_call.id, "current_user must return the same user every time"
+  end
+
+  test "current_user raises helpful error when default user is missing" do
+    CollectionItem.delete_all
+    User.delete_all
+
+    controller = CurrentUserProbeController.new
+
+    error = assert_raises(ApplicationController::DefaultUserMissingError) do
+      controller.send(:current_user)
+    end
+
+    assert_includes error.message, "default user"
+    assert_includes error.message, "was not found"
+    assert_includes error.message, "db:seed"
   end
 end
