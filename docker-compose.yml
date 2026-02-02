@@ -15,6 +15,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - mtg
 
   backend:
     build:
@@ -46,6 +48,8 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    networks:
+      - mtg
 
   frontend:
     build:
@@ -57,14 +61,31 @@ services:
     depends_on:
       - backend
     environment:
+      PUBLIC_BASE_PATH: ${PUBLIC_BASE_PATH}
       VITE_API_URL: http://backend:3000
     # Remove volumes: and command: in production since it will use the built-app
     # and does not require hot reload
     volumes:
       - ./frontend:/frontend  # Vite hot reload
       - frontend_node_modules:/frontend/node_modules
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mtg-app.rule=Host(`cobaltroad.com`) && PathPrefix(`/projects/mtg-inventory`)"
+      - "traefik.http.routers.mtg-app.service=mtg-service"
+      - "traefik.http.services.mtg-service.loadbalancer.server.port=3000"
+      - "traefik.http.middlewares.mtg-strip.stripprefix.prefixes=/projects/mtg-inventory"
+      - "traefik.http.routers.mtg-app.middlewares=mtg-strip"
+    networks:
+      - mtg
+      - traefik-public
 
 volumes:
   postgres_data:
   bundle_cache:
   frontend_node_modules:
+
+networks:
+  mtg:
+    internal: true
+  traefik-public:
+    external: true
