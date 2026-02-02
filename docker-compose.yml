@@ -58,10 +58,11 @@ services:
       dockerfile: Dockerfile.frontend
     container_name: mtg_frontend
     ports:
-      - "3001:3000"
+      - "3001:5173"
     depends_on:
       - backend
     environment:
+      NODE_ENV: development
       PUBLIC_BASE_PATH: ${PUBLIC_BASE_PATH}
       VITE_API_URL: http://backend:3000
     # Remove volumes: and command: in production since it will use the built-app
