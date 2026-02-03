@@ -142,7 +142,14 @@
 			const res = await fetch(`${API_BASE}/api/inventory`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ card_id: printingToAdd.id, quantity: 1 })
+				body: JSON.stringify({
+					card_id: printingToAdd.id,
+					quantity: 1,
+					acquired_date: acquiredDate,
+					price: price,
+					treatment: treatment,
+					language: language
+				})
 			});
 
 			if (!res.ok) {
