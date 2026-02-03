@@ -14,12 +14,15 @@ module CollectionItemActions
 
     if item
       item.quantity += quantity_param
+      # Only update enhanced fields if they are currently nil
+      apply_enhanced_params_to_existing(item)
       status = :ok
     else
       item = current_user.collection_items.new(
         card_id: card_id_param,
         collection_type: collection_type,
-        quantity: quantity_param
+        quantity: quantity_param,
+        **enhanced_tracking_params
       )
     end
 
@@ -73,5 +76,56 @@ module CollectionItemActions
 
   def quantity_param
     params[:quantity]&.to_i || 0
+  end
+
+  # Constants for default values
+  DEFAULT_TREATMENT = "Normal"
+  DEFAULT_LANGUAGE = "English"
+  DEFAULT_PRICE_CENTS = 0
+  CENTS_PER_DOLLAR = 100
+
+  # Enhanced tracking parameters with default values and price conversion.
+  # Returns an empty hash if no enhanced fields are provided (backward compatibility).
+  def enhanced_tracking_params
+    return {} unless enhanced_fields_present?
+
+    {
+      acquired_price_cents: resolve_price_in_cents,
+      acquired_date: params[:acquired_date].presence || Date.today,
+      treatment: params[:treatment].presence || DEFAULT_TREATMENT,
+      language: params[:language].presence || DEFAULT_LANGUAGE
+    }
+  end
+
+  # Apply enhanced tracking params to an existing item, but only if those fields are nil.
+  # This preserves existing enhanced data during upsert operations.
+  def apply_enhanced_params_to_existing(item)
+    enhanced_params = enhanced_tracking_params
+    return if enhanced_params.empty?
+
+    %i[acquired_price_cents acquired_date treatment language].each do |field|
+      item.public_send("#{field}=", enhanced_params[field]) if item.public_send(field).nil?
+    end
+  end
+
+  # Check if any enhanced tracking field is provided in params
+  def enhanced_fields_present?
+    params.key?(:acquired_price_cents) ||
+      params.key?(:price) ||
+      params.key?(:acquired_date) ||
+      params.key?(:treatment) ||
+      params.key?(:language)
+  end
+
+  # Resolve price from either acquired_price_cents or price parameter.
+  # Prioritizes acquired_price_cents over price. Converts price (decimal) to cents.
+  def resolve_price_in_cents
+    if params[:acquired_price_cents].present?
+      params[:acquired_price_cents].to_i
+    elsif params[:price].present?
+      (params[:price].to_f * CENTS_PER_DOLLAR).to_i
+    else
+      DEFAULT_PRICE_CENTS
+    end
   end
 end
