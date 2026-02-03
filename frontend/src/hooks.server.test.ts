@@ -58,18 +58,18 @@ describe('hooks.server – handle', () => {
 	beforeEach(() => {
 		originalFetch = globalThis.fetch;
 		process.env.VITE_API_URL = 'http://backend:3000';
-		process.env.API_BASE_PATH = '/projects/mtg-api';
+		process.env.PUBLIC_BASE_PATH = '/projects/mtg';
 	});
 
 	afterEach(() => {
 		globalThis.fetch = originalFetch;
 		delete process.env.VITE_API_URL;
-		delete process.env.API_BASE_PATH;
+		delete process.env.PUBLIC_BASE_PATH;
 		vi.restoreAllMocks();
 	});
 
 	// -----------------------------------------------------------------------
-	// 1. GET /api/* is proxied to the backend
+	// 1. GET /api/* is proxied to the backend with full path
 	// -----------------------------------------------------------------------
 	it('proxies GET /api/* requests to the backend with path and query string', async () => {
 		const backendResponse = makeBackendResponse({ body: '{"cards":[]}' });
@@ -81,10 +81,10 @@ describe('hooks.server – handle', () => {
 
 		const result = await handle({ event, resolve } as any);
 
-		// fetch was called exactly once with the full backend URL including API_BASE_PATH
+		// fetch was called exactly once with the full pathname forwarded to backend
 		expect(stubFetch).toHaveBeenCalledTimes(1);
 		expect(stubFetch).toHaveBeenCalledWith(
-			'http://backend:3000/projects/mtg-api/api/cards/search?q=bolt',
+			'http://backend:3000/api/cards/search?q=bolt',
 			expect.objectContaining({ method: 'GET' })
 		);
 
@@ -121,7 +121,7 @@ describe('hooks.server – handle', () => {
 
 		expect(stubFetch).toHaveBeenCalledTimes(1);
 		expect(stubFetch).toHaveBeenCalledWith(
-			'http://backend:3000/projects/mtg-api/api/inventory',
+			'http://backend:3000/api/inventory',
 			expect.objectContaining({
 				method: 'POST',
 				body: requestBody
@@ -200,26 +200,28 @@ describe('hooks.server – handle', () => {
 		await handle({ event, resolve } as any);
 
 		expect(stubFetch).toHaveBeenCalledWith(
-			'http://localhost:3000/projects/mtg-api/api/health',
+			'http://localhost:3000/api/health',
 			expect.any(Object)
 		);
 	});
 
 	// -----------------------------------------------------------------------
-	// 6. API_BASE_PATH defaults to empty string when not set
+	// 6. Handles paths with base path prefix
 	// -----------------------------------------------------------------------
-	it('uses empty API_BASE_PATH when the env var is not set', async () => {
-		delete process.env.API_BASE_PATH;
-
+	it('proxies requests with base path prefix (e.g., /projects/mtg/api/*)', async () => {
 		const backendResponse = makeBackendResponse();
 		const stubFetch = vi.fn().mockResolvedValue(backendResponse);
 		globalThis.fetch = stubFetch;
 
 		const resolve = vi.fn();
-		const event = makeEvent({ pathname: '/api/status' });
+		const event = makeEvent({ pathname: '/projects/mtg/api/inventory' });
 
 		await handle({ event, resolve } as any);
 
-		expect(stubFetch).toHaveBeenCalledWith('http://backend:3000/api/status', expect.any(Object));
+		// The full path including base is forwarded to the backend
+		expect(stubFetch).toHaveBeenCalledWith(
+			'http://backend:3000/projects/mtg/api/inventory',
+			expect.any(Object)
+		);
 	});
 });

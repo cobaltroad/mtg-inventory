@@ -25,8 +25,6 @@ services:
       args:
         RUBY_VERSION: ${RUBY_VERSION}
     container_name: mtg_backend
-    ports:
-      - "3000:3000"
     depends_on:
       db:
         condition: service_healthy
@@ -47,19 +45,13 @@ services:
       - ./backend:/backend  # Rails code
       - bundle_cache:/bundle       # Gems
     labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=traefik-public"
-      - "traefik.http.routers.mtg-api.rule=Host(`cobaltroad.com`) && PathPrefix(`/projects/mtg/api`)"
-      - "traefik.http.routers.mtg-api.priority=110"
-      - "traefik.http.routers.mtg-api.service=mtg-api-service"
-      - "traefik.http.services.mtg-api-service.loadbalancer.server.port=3000"
+      - "traefik.enable=false"
     logging:
       options:
         max-size: "10m"
         max-file: "3"
     networks:
       - mtg
-      - traefik-public
 
   frontend:
     build:
@@ -74,7 +66,6 @@ services:
       NODE_ENV: development
       APP_DOMAIN: ${APP_DOMAIN}
       PUBLIC_BASE_PATH: ${PUBLIC_BASE_PATH}
-      API_BASE_PATH: ${PUBLIC_API_PATH}
       VITE_API_URL: http://backend:3000
     # Remove volumes: and command: in production since it will use the built-app
     # and does not require hot reload
