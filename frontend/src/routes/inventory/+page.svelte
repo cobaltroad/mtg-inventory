@@ -1,42 +1,17 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { base } from '$app/paths';
 	import InventoryTable from '$lib/components/InventoryTable.svelte';
 	import EmptyInventory from '$lib/components/EmptyInventory.svelte';
-	import { Button, Alert } from 'flowbite-svelte';
+	import { Alert } from 'flowbite-svelte';
 	import { pluralize } from '$lib/utils/format';
 	import type { InventoryItem as InventoryItemType } from '$lib/types/inventory';
+	import type { PageData } from './$types';
 
-	const API_BASE = base;
+	let { data }: { data: PageData } = $props();
 
-	let items: InventoryItemType[] = $state([]);
-	let loading = $state(true);
-	let error = $state<string | null>(null);
-
-	/**
-	 * Fetches the user's inventory from the API
-	 */
-	async function fetchInventory() {
-		loading = true;
-		error = null;
-		try {
-			const res = await fetch(`${API_BASE}/api/inventory`);
-			if (!res.ok) {
-				throw new Error(`Failed to fetch inventory: ${res.statusText}`);
-			}
-			const data = await res.json();
-			items = data;
-		} catch (err) {
-			error = err instanceof Error ? err.message : 'An error occurred while loading inventory';
-			console.error('Failed to fetch inventory:', err);
-		} finally {
-			loading = false;
-		}
-	}
-
-	onMount(() => {
-		fetchInventory();
-	});
+	// Derive state from page data
+	let items = $derived(data.items || []);
+	let error = $derived(data.error || null);
+	let loading = $state(false);
 </script>
 
 <div class="inventory-page">
@@ -51,9 +26,6 @@
 		<Alert color="red" class="mb-4">
 			<span class="font-medium">Error!</span>
 			{error}
-			<div class="mt-2">
-				<Button size="sm" color="red" onclick={fetchInventory}>Try Again</Button>
-			</div>
 		</Alert>
 	{/if}
 

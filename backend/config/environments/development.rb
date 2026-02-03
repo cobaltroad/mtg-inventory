@@ -73,4 +73,7 @@ Rails.application.configure do
 
   # Allow requests from Traefik proxy domain
   config.hosts << ENV.fetch("APP_DOMAIN", "localhost") if ENV["APP_DOMAIN"].present?
+
+  # Allow requests from SvelteKit frontend via Docker internal network
+  config.hosts << "backend"
 end
