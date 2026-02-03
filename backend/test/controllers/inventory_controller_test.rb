@@ -575,6 +575,291 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, CollectionItem.where(user: @user, card_id: "existing_enhanced", collection_type: "inventory").count
   end
 
+  # ---------------------------------------------------------------------------
+  # Image caching integration tests (Story #44)
+  # ---------------------------------------------------------------------------
+
+  test "POST /api/inventory enqueues background job to cache card image" do
+    stub_scryfall_card_details("cache_job_card", name: "Cache Test Card")
+
+    assert_enqueued_with(job: CacheCardImageJob) do
+      post api_path("/inventory"), params: { card_id: "cache_job_card", quantity: 1 }, as: :json
+    end
+
+    assert_response :created
+  end
+
+  test "POST /api/inventory enqueues job with correct collection item ID and image URL" do
+    card_id = "cache_with_url"
+    image_url = "https://cards.scryfall.io/normal/front/t/e/test.jpg"
+
+    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+      .to_return(
+        status: 200,
+        body: {
+          id: card_id,
+          name: "Test Card",
+          image_uris: { normal: image_url }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    post api_path("/inventory"), params: { card_id: card_id, quantity: 1 }, as: :json
+    assert_response :created
+
+    item = CollectionItem.find_by(card_id: card_id, user: @user, collection_type: "inventory")
+    assert_not_nil item
+
+    assert_enqueued_with(job: CacheCardImageJob, args: [item.id, image_url])
+  end
+
+  test "POST /api/inventory does not enqueue job when card has no image URL" do
+    card_id = "no_image_card"
+
+    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+      .to_return(
+        status: 200,
+        body: {
+          id: card_id,
+          name: "Test Card Without Image"
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    assert_no_enqueued_jobs do
+      post api_path("/inventory"), params: { card_id: card_id, quantity: 1 }, as: :json
+    end
+
+    assert_response :created
+  end
+
+  test "POST /api/inventory does not fail if job enqueue fails" do
+    stub_valid_card("job_fail_card")
+
+    # Stub job to raise error
+    CacheCardImageJob.stub(:perform_later, ->(*_args) { raise "Job system down" }) do
+      post api_path("/inventory"), params: { card_id: "job_fail_card", quantity: 1 }, as: :json
+    end
+
+    # Card should still be created
+    assert_response :created
+    assert CollectionItem.exists?(card_id: "job_fail_card", user: @user, collection_type: "inventory")
+  end
+
+  test "POST /api/inventory on upsert enqueues job only once for new item" do
+    stub_scryfall_card_details("upsert_cache_card", name: "Upsert Test Card")
+
+    # First request - creates new item
+    assert_enqueued_jobs 1, only: CacheCardImageJob do
+      post api_path("/inventory"), params: { card_id: "upsert_cache_card", quantity: 1 }, as: :json
+    end
+
+    # Second request - updates existing item, should still enqueue (in case previous job failed)
+    assert_enqueued_jobs 1, only: CacheCardImageJob do
+      post api_path("/inventory"), params: { card_id: "upsert_cache_card", quantity: 2 }, as: :json
+    end
+  end
+
+  test "background job successfully caches image after inventory creation" do
+    card_id = "integration_cache_test"
+    image_url = "https://cards.scryfall.io/normal/front/t/e/test.jpg"
+
+    # Stub card validation
+    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+      .to_return(
+        status: 200,
+        body: {
+          id: card_id,
+          name: "Integration Test Card",
+          image_uris: { normal: image_url }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    # Stub image download
+    jpeg_data = "\xFF\xD8\xFF\xE0\x00\x10JFIF".b
+    stub_request(:get, image_url)
+      .to_return(
+        status: 200,
+        body: jpeg_data,
+        headers: { "Content-Type" => "image/jpeg" }
+      )
+
+    # Create inventory item
+    post api_path("/inventory"), params: { card_id: card_id, quantity: 1 }, as: :json
+    assert_response :created
+
+    # Perform enqueued jobs
+    perform_enqueued_jobs
+
+    # Verify image was cached
+    item = CollectionItem.find_by(card_id: card_id, user: @user, collection_type: "inventory")
+    assert_not_nil item
+    assert item.cached_image.attached?, "Image should be cached after job runs"
+  end
+
+  test "inventory creation succeeds even when image caching job fails" do
+    card_id = "cache_fail_card"
+    image_url = "https://cards.scryfall.io/normal/front/fail/fail.jpg"
+
+    # Stub card validation
+    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+      .to_return(
+        status: 200,
+        body: {
+          id: card_id,
+          name: "Cache Fail Card",
+          image_uris: { normal: image_url }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    # Stub image download to fail
+    stub_request(:get, image_url)
+      .to_raise(SocketError.new("Connection failed"))
+
+    # Create inventory item
+    post api_path("/inventory"), params: { card_id: card_id, quantity: 1 }, as: :json
+    assert_response :created
+
+    # Perform enqueued jobs (should not raise exception)
+    assert_nothing_raised do
+      perform_enqueued_jobs
+    end
+
+    # Verify card was still added to inventory
+    item = CollectionItem.find_by(card_id: card_id, user: @user, collection_type: "inventory")
+    assert_not_nil item
+    refute item.cached_image.attached?, "Image should not be cached when download fails"
+  end
+
+  # ---------------------------------------------------------------------------
+  # Cached image URL tests (Story #44)
+  # ---------------------------------------------------------------------------
+
+  test "GET /api/inventory returns local storage URL when image is cached" do
+    card_id = "cached_image_card"
+    scryfall_url = "https://cards.scryfall.io/normal/front/c/c/cached.jpg"
+
+    # Create inventory item with cached image
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: card_id,
+      collection_type: "inventory",
+      quantity: 1
+    )
+
+    # Attach a cached image
+    item.cached_image.attach(
+      io: StringIO.new("\xFF\xD8\xFF\xE0\x00\x10JFIF".b),
+      filename: "#{card_id}.jpg",
+      content_type: "image/jpeg"
+    )
+
+    # Stub Scryfall card details
+    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+      .to_return(
+        status: 200,
+        body: {
+          id: card_id,
+          name: "Cached Card",
+          set: "TST",
+          set_name: "Test Set",
+          collector_number: "1",
+          image_uris: { normal: scryfall_url }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    get api_path("/inventory")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    assert_equal 1, items.size
+
+    # Should return local storage URL, not Scryfall URL
+    refute_equal scryfall_url, items.first["image_url"], "Should not return Scryfall URL when cached"
+    assert items.first["image_url"].include?("rails/active_storage"), "Should return Active Storage URL"
+    assert_equal true, items.first["image_cached"], "Should indicate image is cached"
+  end
+
+  test "GET /api/inventory returns Scryfall URL when image is not cached" do
+    card_id = "uncached_image_card"
+    scryfall_url = "https://cards.scryfall.io/normal/front/u/u/uncached.jpg"
+
+    # Create inventory item without cached image
+    CollectionItem.create!(
+      user: @user,
+      card_id: card_id,
+      collection_type: "inventory",
+      quantity: 1
+    )
+
+    # Stub Scryfall card details
+    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+      .to_return(
+        status: 200,
+        body: {
+          id: card_id,
+          name: "Uncached Card",
+          set: "TST",
+          set_name: "Test Set",
+          collector_number: "2",
+          image_uris: { normal: scryfall_url }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    get api_path("/inventory")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    assert_equal 1, items.size
+
+    # Should return Scryfall URL as fallback
+    assert_equal scryfall_url, items.first["image_url"], "Should return Scryfall URL when not cached"
+    assert_equal false, items.first["image_cached"], "Should indicate image is not cached"
+  end
+
+  test "GET /api/inventory handles mixed cached and uncached images" do
+    # Card with cached image
+    cached_card_id = "cached_mix"
+    cached_item = CollectionItem.create!(
+      user: @user,
+      card_id: cached_card_id,
+      collection_type: "inventory",
+      quantity: 1
+    )
+    cached_item.cached_image.attach(
+      io: StringIO.new("\xFF\xD8\xFF\xE0\x00\x10JFIF".b),
+      filename: "#{cached_card_id}.jpg",
+      content_type: "image/jpeg"
+    )
+    stub_scryfall_card_details(cached_card_id, name: "Cached Mix Card")
+
+    # Card without cached image
+    uncached_card_id = "uncached_mix"
+    CollectionItem.create!(
+      user: @user,
+      card_id: uncached_card_id,
+      collection_type: "inventory",
+      quantity: 1
+    )
+    stub_scryfall_card_details(uncached_card_id, name: "Uncached Mix Card")
+
+    get api_path("/inventory")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    assert_equal 2, items.size
+
+    cached_item_response = items.find { |i| i["card_id"] == cached_card_id }
+    uncached_item_response = items.find { |i| i["card_id"] == uncached_card_id }
+
+    assert cached_item_response["image_cached"], "Cached item should be marked as cached"
+    refute uncached_item_response["image_cached"], "Uncached item should not be marked as cached"
+  end
+
   private
 
 end

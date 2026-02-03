@@ -14,6 +14,9 @@ class CollectionItem < ApplicationRecord
 
   belongs_to :user
 
+  # Active Storage attachment for cached card images
+  has_one_attached :cached_image
+
   # Required field validations
   validates :card_id, presence: true
   validates :card_id, uniqueness: { scope: [ :user_id, :collection_type ], message: "has already been taken" }

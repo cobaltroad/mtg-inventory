@@ -3,6 +3,12 @@ class InventoryController < ApplicationController
 
   before_action :validate_card_with_sdk, only: [ :create ]
 
+  # Override create to enqueue image caching job after successful save
+  def create
+    super
+    enqueue_image_cache_job if response.successful?
+  end
+
   # Override index to include card details from Scryfall
   def index
     items = collection_items
@@ -74,6 +80,9 @@ class InventoryController < ApplicationController
 
   # Serializes a collection item with its card details
   def serialize_item_with_details(item, card_details)
+    # Use cached image URL if available, otherwise fall back to Scryfall
+    image_url, image_cached = resolve_image_url(item, card_details[:image_url])
+
     {
       id: item.id,
       card_id: item.card_id,
@@ -82,7 +91,8 @@ class InventoryController < ApplicationController
       set: card_details[:set],
       set_name: card_details[:set_name],
       collector_number: card_details[:collector_number],
-      image_url: card_details[:image_url],
+      image_url: image_url,
+      image_cached: image_cached,
       acquired_date: item.acquired_date,
       acquired_price_cents: item.acquired_price_cents,
       treatment: item.treatment,
@@ -92,6 +102,18 @@ class InventoryController < ApplicationController
       user_id: item.user_id,
       collection_type: item.collection_type
     }
+  end
+
+  # Resolves the image URL for a collection item.
+  # Returns [url, cached_flag] tuple.
+  # If image is cached locally, returns Active Storage URL.
+  # Otherwise returns Scryfall URL as fallback.
+  def resolve_image_url(item, scryfall_url)
+    if item.cached_image.attached?
+      [ rails_blob_url(item.cached_image, only_path: false), true ]
+    else
+      [ scryfall_url, false ]
+    end
   end
 
   # Sorts items alphabetically by card name
@@ -108,6 +130,26 @@ class InventoryController < ApplicationController
     CardValidatorService.new(card_id_param).validate!
   rescue CardValidatorService::CardNotFoundError => e
     render json: { error: e.message }, status: :unprocessable_entity
+  end
+
+  # Enqueues background job to cache card image from Scryfall.
+  # Fetches card details to get image URL, then enqueues CacheCardImageJob.
+  # Failures are logged but don't block the inventory operation.
+  def enqueue_image_cache_job
+    card_details = fetch_card_details(card_id_param)
+    return unless card_details && card_details[:image_url]
+
+    # Find the collection item that was just created/updated
+    item = current_user.collection_items.find_by(
+      card_id: card_id_param,
+      collection_type: "inventory"
+    )
+    return unless item
+
+    CacheCardImageJob.perform_later(item.id, card_details[:image_url])
+  rescue StandardError => e
+    Rails.logger.error("Failed to enqueue image cache job: #{e.message}")
+    # Don't raise - image caching is a performance optimization, not critical
   end
 
   def collection_type
