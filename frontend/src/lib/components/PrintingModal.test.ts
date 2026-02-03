@@ -2373,8 +2373,7 @@ describe('PrintingModal', () => {
 					return Promise.resolve({
 						ok: false,
 						status: 422,
-						json: () =>
-							Promise.resolve({ errors: ['Treatment is not included in the list'] })
+						json: () => Promise.resolve({ errors: ['Treatment is not included in the list'] })
 					});
 				}
 				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
