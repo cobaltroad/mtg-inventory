@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { base } from '$app/paths';
+	import Toast from './Toast.svelte';
 
 	const API_BASE = base;
 
@@ -24,6 +25,8 @@
 		onclose?: () => void;
 	}
 
+	type InventoryState = 'idle' | 'loading' | 'success' | 'error';
+
 	let { card, open = $bindable(false), onclose }: Props = $props();
 
 	let printings: Printing[] = $state([]);
@@ -31,6 +34,11 @@
 	let error = $state(false);
 	let selectedPrinting: Printing | null = $state(null);
 	let dialogElement = $state<HTMLDialogElement>();
+	let inventoryState: InventoryState = $state('idle');
+	let inventoryQuantity = $state(0);
+	let inventoryError = $state('');
+	let toastMessage = $state('');
+	let showToast = $state(false);
 
 	function isResponseSuccessful(response: Response): boolean {
 		// 304 Not Modified is considered successful - browser returns cached data automatically
@@ -74,10 +82,52 @@
 		}
 	}
 
+	async function addToInventory() {
+		if (!selectedPrinting) return;
+
+		inventoryState = 'loading';
+		inventoryError = '';
+
+		const printingToAdd = selectedPrinting;
+
+		try {
+			const res = await fetch(`${API_BASE}/api/inventory`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ card_id: printingToAdd.id, quantity: 1 })
+			});
+
+			if (!res.ok) {
+				inventoryState = 'error';
+				inventoryError = 'Failed to add to inventory';
+				return;
+			}
+
+			const data = await res.json();
+			inventoryState = 'success';
+			inventoryQuantity = data.quantity;
+
+			// Show toast notification with printing details
+			toastMessage = `Added ${printingToAdd.name} (${printingToAdd.set.toUpperCase()} #${printingToAdd.collector_number}) to inventory`;
+			showToast = true;
+
+			// Clear selection after successful add
+			selectedPrinting = null;
+			inventoryState = 'idle';
+		} catch {
+			inventoryState = 'error';
+			inventoryError = 'Failed to add to inventory';
+		}
+	}
+
 	$effect(() => {
 		if (open && dialogElement) {
 			dialogElement.showModal();
 			fetchPrintings();
+			// Reset inventory state when opening modal
+			inventoryState = 'idle';
+			inventoryError = '';
+			inventoryQuantity = 0;
 		} else if (dialogElement) {
 			dialogElement.close();
 		}
@@ -137,12 +187,36 @@
 								src={selectedPrinting.image_url}
 								alt="{selectedPrinting.name} from {selectedPrinting.set_name}"
 							/>
+							<div class="inventory-actions">
+								{#if inventoryState === 'error'}
+									<p class="error-message">{inventoryError}</p>
+									<button class="inventory-button" onclick={addToInventory}>Retry</button>
+								{:else}
+									<button
+										class="inventory-button"
+										onclick={addToInventory}
+										disabled={inventoryState === 'loading'}
+									>
+										{inventoryState === 'loading' ? 'Adding...' : 'Add to Inventory'}
+									</button>
+								{/if}
+							</div>
 						</div>
 					{/if}
 				</div>
 			{/if}
 		</div>
 	</dialog>
+{/if}
+
+{#if showToast}
+	<Toast
+		message={toastMessage}
+		type="success"
+		onDismiss={() => {
+			showToast = false;
+		}}
+	/>
 {/if}
 
 <style>
@@ -301,8 +375,9 @@
 		width: 300px;
 		height: fit-content;
 		display: flex;
-		align-items: flex-start;
-		justify-content: center;
+		flex-direction: column;
+		align-items: center;
+		gap: 1rem;
 		padding: 1rem;
 		background: #f9fafb;
 		border-radius: 8px;
@@ -312,6 +387,47 @@
 		width: 100%;
 		border-radius: 8px;
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	}
+
+	.inventory-actions {
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		align-items: center;
+	}
+
+	.inventory-button {
+		width: 100%;
+		padding: 0.75rem 1rem;
+		border: 1px solid #3b82f6;
+		border-radius: 6px;
+		background: #3b82f6;
+		color: white;
+		cursor: pointer;
+		font-size: 0.875rem;
+		font-weight: 600;
+		transition:
+			background 0.2s,
+			border-color 0.2s;
+	}
+
+	.inventory-button:hover:not(:disabled) {
+		background: #2563eb;
+		border-color: #2563eb;
+	}
+
+	.inventory-button:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
+	.error-message {
+		color: #dc2626;
+		font-weight: 500;
+		font-size: 0.875rem;
+		text-align: center;
+		margin: 0;
 	}
 
 	@media (max-width: 768px) {
