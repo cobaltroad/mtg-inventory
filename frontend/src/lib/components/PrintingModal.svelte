@@ -461,7 +461,8 @@
 		position: sticky;
 		top: 0;
 		width: 300px;
-		height: fit-content;
+		max-height: calc(90vh - 120px);
+		overflow-y: auto;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
