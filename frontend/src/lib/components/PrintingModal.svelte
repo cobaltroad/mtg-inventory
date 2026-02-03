@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { base } from '$app/paths';
+	import Toast from './Toast.svelte';
 
 	const API_BASE = base;
 
@@ -36,6 +37,8 @@
 	let inventoryState: InventoryState = $state('idle');
 	let inventoryQuantity = $state(0);
 	let inventoryError = $state('');
+	let toastMessage = $state('');
+	let showToast = $state(false);
 
 	function isResponseSuccessful(response: Response): boolean {
 		// 304 Not Modified is considered successful - browser returns cached data automatically
@@ -85,11 +88,13 @@
 		inventoryState = 'loading';
 		inventoryError = '';
 
+		const printingToAdd = selectedPrinting;
+
 		try {
 			const res = await fetch(`${API_BASE}/api/inventory`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ card_id: selectedPrinting.id, quantity: 1 })
+				body: JSON.stringify({ card_id: printingToAdd.id, quantity: 1 })
 			});
 
 			if (!res.ok) {
@@ -101,6 +106,14 @@
 			const data = await res.json();
 			inventoryState = 'success';
 			inventoryQuantity = data.quantity;
+
+			// Show toast notification with printing details
+			toastMessage = `Added ${printingToAdd.name} (${printingToAdd.set.toUpperCase()} #${printingToAdd.collector_number}) to inventory`;
+			showToast = true;
+
+			// Clear selection after successful add
+			selectedPrinting = null;
+			inventoryState = 'idle';
 		} catch {
 			inventoryState = 'error';
 			inventoryError = 'Failed to add to inventory';
@@ -175,9 +188,7 @@
 								alt="{selectedPrinting.name} from {selectedPrinting.set_name}"
 							/>
 							<div class="inventory-actions">
-								{#if inventoryState === 'success'}
-									<p class="success-message">Added to inventory (Quantity: {inventoryQuantity})</p>
-								{:else if inventoryState === 'error'}
+								{#if inventoryState === 'error'}
 									<p class="error-message">{inventoryError}</p>
 									<button class="inventory-button" onclick={addToInventory}>Retry</button>
 								{:else}
@@ -196,6 +207,16 @@
 			{/if}
 		</div>
 	</dialog>
+{/if}
+
+{#if showToast}
+	<Toast
+		message={toastMessage}
+		type="success"
+		onDismiss={() => {
+			showToast = false;
+		}}
+	/>
 {/if}
 
 <style>
@@ -399,14 +420,6 @@
 	.inventory-button:disabled {
 		opacity: 0.6;
 		cursor: not-allowed;
-	}
-
-	.success-message {
-		color: #16a34a;
-		font-weight: 600;
-		font-size: 0.875rem;
-		text-align: center;
-		margin: 0;
 	}
 
 	.error-message {

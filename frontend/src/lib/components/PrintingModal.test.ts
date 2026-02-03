@@ -871,7 +871,7 @@ describe('PrintingModal', () => {
 			expect(addButton).toBeDisabled();
 		});
 
-		it('shows success message after successful add', async () => {
+		it('shows success toast after successful add', async () => {
 			const mockFetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
 				if (typeof url === 'string' && url.includes('/printings')) {
 					return Promise.resolve({
@@ -907,7 +907,9 @@ describe('PrintingModal', () => {
 			await fireEvent.click(addButton);
 
 			await waitFor(() => {
-				expect(screen.getByText(/added to inventory/i)).toBeInTheDocument();
+				const toast = screen.getByRole('status');
+				expect(toast).toBeInTheDocument();
+				expect(toast).toHaveTextContent(/added.*lightning bolt.*m21.*125/i);
 			});
 		});
 
@@ -1004,7 +1006,9 @@ describe('PrintingModal', () => {
 			await fireEvent.click(retryButton);
 
 			await waitFor(() => {
-				expect(screen.getByText(/added to inventory/i)).toBeInTheDocument();
+				const toast = screen.getByRole('status');
+				expect(toast).toBeInTheDocument();
+				expect(toast).toHaveTextContent(/added.*lightning bolt.*m21.*125/i);
 			});
 		});
 
@@ -1032,6 +1036,295 @@ describe('PrintingModal', () => {
 			expect(
 				previewArea?.contains(addButton) || addButton.parentElement === previewArea?.parentElement
 			).toBe(true);
+		});
+	});
+
+	// ---------------------------------------------------------------------------
+	// Toast Notifications (UX Improvements)
+	// ---------------------------------------------------------------------------
+	describe('Toast Notifications', () => {
+		it('displays toast notification after successful add to inventory', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
+					});
+				}
+				if (typeof url === 'string' && url.includes('/api/inventory') && opts?.method === 'POST') {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({ card_id: 'print-1', quantity: 1, collection_type: 'inventory' })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByRole('button', { name: /add to inventory/i })).toBeInTheDocument();
+			});
+
+			const addButton = screen.getByRole('button', { name: /add to inventory/i });
+			await fireEvent.click(addButton);
+
+			await waitFor(() => {
+				const toast = screen.getByRole('status');
+				expect(toast).toBeInTheDocument();
+				expect(toast).toHaveTextContent(/added.*lightning bolt.*m21.*125/i);
+			});
+		});
+
+		it('clears selection after successful add to inventory', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
+					});
+				}
+				if (typeof url === 'string' && url.includes('/api/inventory') && opts?.method === 'POST') {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({ card_id: 'print-1', quantity: 1, collection_type: 'inventory' })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByRole('button', { name: /add to inventory/i })).toBeInTheDocument();
+			});
+
+			const addButton = screen.getByRole('button', { name: /add to inventory/i });
+			await fireEvent.click(addButton);
+
+			await waitFor(() => {
+				const toast = screen.getByRole('status');
+				expect(toast).toBeInTheDocument();
+			});
+
+			// Preview area should disappear after selection is cleared
+			const previewArea = document.querySelector('.image-preview-area');
+			expect(previewArea).not.toBeInTheDocument();
+		});
+
+		it('allows selecting and adding another printing after clearing selection', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
+					});
+				}
+				if (typeof url === 'string' && url.includes('/api/inventory') && opts?.method === 'POST') {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({ card_id: 'print-2', quantity: 1, collection_type: 'inventory' })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+
+			// Add first printing
+			await fireEvent.mouseEnter(printingItems[0]);
+			await waitFor(() => {
+				expect(screen.getByRole('button', { name: /add to inventory/i })).toBeInTheDocument();
+			});
+			const addButton1 = screen.getByRole('button', { name: /add to inventory/i });
+			await fireEvent.click(addButton1);
+
+			await waitFor(() => {
+				const toast = screen.getByRole('status');
+				expect(toast).toBeInTheDocument();
+			});
+
+			// Add second printing
+			await fireEvent.mouseEnter(printingItems[1]);
+			await waitFor(() => {
+				expect(screen.getByRole('button', { name: /add to inventory/i })).toBeInTheDocument();
+			});
+
+			const addButton2 = screen.getByRole('button', { name: /add to inventory/i });
+			await fireEvent.click(addButton2);
+
+			await waitFor(() => {
+				const toasts = screen.getAllByRole('status');
+				expect(toasts.length).toBeGreaterThanOrEqual(1);
+			});
+		});
+
+		it('keeps selection active after error', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
+					});
+				}
+				if (typeof url === 'string' && url.includes('/api/inventory') && opts?.method === 'POST') {
+					return Promise.resolve({
+						ok: false,
+						status: 422,
+						json: () => Promise.resolve({ error: 'Failed to add' })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByRole('button', { name: /add to inventory/i })).toBeInTheDocument();
+			});
+
+			const addButton = screen.getByRole('button', { name: /add to inventory/i });
+			await fireEvent.click(addButton);
+
+			await waitFor(() => {
+				expect(screen.getByText(/failed to add/i)).toBeInTheDocument();
+			});
+
+			// Preview area should still be visible after error
+			const previewArea = document.querySelector('.image-preview-area');
+			expect(previewArea).toBeInTheDocument();
+		});
+
+		it('does not show inline success message after successful add', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
+					});
+				}
+				if (typeof url === 'string' && url.includes('/api/inventory') && opts?.method === 'POST') {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({ card_id: 'print-1', quantity: 1, collection_type: 'inventory' })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByRole('button', { name: /add to inventory/i })).toBeInTheDocument();
+			});
+
+			const addButton = screen.getByRole('button', { name: /add to inventory/i });
+			await fireEvent.click(addButton);
+
+			await waitFor(() => {
+				const toast = screen.getByRole('status');
+				expect(toast).toBeInTheDocument();
+			});
+
+			// Inline success message should not be present in preview area
+			const inlineSuccess = document.querySelector('.success-message');
+			expect(inlineSuccess).not.toBeInTheDocument();
+		});
+
+		it('auto-dismisses toast after timeout', async () => {
+			vi.useFakeTimers();
+
+			const mockFetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
+					});
+				}
+				if (typeof url === 'string' && url.includes('/api/inventory') && opts?.method === 'POST') {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({ card_id: 'print-1', quantity: 1, collection_type: 'inventory' })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByRole('button', { name: /add to inventory/i })).toBeInTheDocument();
+			});
+
+			const addButton = screen.getByRole('button', { name: /add to inventory/i });
+			await fireEvent.click(addButton);
+
+			await waitFor(() => {
+				const toast = screen.getByRole('status');
+				expect(toast).toBeInTheDocument();
+			});
+
+			// Fast-forward 3 seconds
+			vi.advanceTimersByTime(3000);
+
+			await waitFor(() => {
+				const toast = screen.queryByRole('status');
+				expect(toast).not.toBeInTheDocument();
+			});
+
+			vi.useRealTimers();
 		});
 	});
 
