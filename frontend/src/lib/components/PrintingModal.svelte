@@ -88,6 +88,11 @@
 	let treatment = $state('Normal');
 	let language = $state('English');
 
+	// Validation state
+	let invalidField = $state<string | null>(null);
+	let validationToastMessage = $state('');
+	let showValidationToast = $state(false);
+
 	function isResponseSuccessful(response: Response): boolean {
 		// 304 Not Modified is considered successful - browser returns cached data automatically
 		return response.ok || response.status === 304;
@@ -130,8 +135,49 @@
 		}
 	}
 
+	function validateForm(): string | null {
+		// Validate date not in future
+		const today = formatDateInTimeZone(userTimeZone);
+		if (acquiredDate > today) {
+			invalidField = 'acquired-date';
+			return 'Acquired date cannot be in the future';
+		}
+
+		// Validate price is numeric
+		if (isNaN(price) || price === null || price === undefined || price.toString() === '') {
+			invalidField = 'price';
+			return 'Price must be a valid number';
+		}
+
+		// Validate price >= 0
+		if (price < 0) {
+			invalidField = 'price';
+			return 'Price must be $0.00 or greater';
+		}
+
+		return null; // Valid
+	}
+
+	function clearValidationError(fieldId: string) {
+		if (invalidField === fieldId) {
+			invalidField = null;
+		}
+	}
+
 	async function addToInventory() {
 		if (!selectedPrinting) return;
+
+		// Run validation before submitting
+		const validationError = validateForm();
+		if (validationError) {
+			// Show validation error in toast
+			validationToastMessage = validationError;
+			showValidationToast = true;
+			return;
+		}
+
+		// Clear any validation errors
+		invalidField = null;
 
 		inventoryState = 'loading';
 		inventoryError = '';
@@ -249,7 +295,8 @@
 										id="acquired-date"
 										type="date"
 										bind:value={acquiredDate}
-										class="form-input"
+										class="form-input {invalidField === 'acquired-date' ? 'invalid' : ''}"
+										oninput={() => clearValidationError('acquired-date')}
 									/>
 								</div>
 
@@ -261,7 +308,8 @@
 										step="0.01"
 										min="0"
 										bind:value={price}
-										class="form-input"
+										class="form-input {invalidField === 'price' ? 'invalid' : ''}"
+										oninput={() => clearValidationError('price')}
 									/>
 								</div>
 
@@ -310,6 +358,16 @@
 		type="success"
 		onDismiss={() => {
 			showToast = false;
+		}}
+	/>
+{/if}
+
+{#if showValidationToast}
+	<Toast
+		message={validationToastMessage}
+		type="error"
+		onDismiss={() => {
+			showValidationToast = false;
 		}}
 	/>
 {/if}
@@ -556,6 +614,11 @@
 		outline: none;
 		border-color: #3b82f6;
 		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+	}
+
+	.form-input.invalid {
+		border-color: #dc2626;
+		outline: 2px solid rgba(220, 38, 38, 0.2);
 	}
 
 	.form-select {
