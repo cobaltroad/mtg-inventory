@@ -224,6 +224,206 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     assert_includes body["error"], "db:seed"
   end
 
+  # ---------------------------------------------------------------------------
+  # Enhanced tracking fields (Story #28)
+  # ---------------------------------------------------------------------------
+
+  # Scenario 1: Create inventory with all enhanced fields
+  test "POST /api/inventory with all enhanced fields creates item with all values" do
+    stub_valid_card("enhanced_card")
+
+    post api_path("/inventory"), params: {
+      card_id: "enhanced_card",
+      quantity: 2,
+      acquired_date: "2025-12-15",
+      acquired_price_cents: 1250,
+      treatment: "Foil",
+      language: "Japanese"
+    }, as: :json
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "enhanced_card", body["card_id"]
+    assert_equal 2, body["quantity"]
+    assert_equal "2025-12-15", body["acquired_date"]
+    assert_equal 1250, body["acquired_price_cents"]
+    assert_equal "Foil", body["treatment"]
+    assert_equal "Japanese", body["language"]
+
+    # Verify persistence
+    item = CollectionItem.find_by(user: @user, card_id: "enhanced_card")
+    assert_equal 1250, item.acquired_price_cents
+    assert_equal "Foil", item.treatment
+    assert_equal "Japanese", item.language
+    assert_equal Date.parse("2025-12-15"), item.acquired_date
+  end
+
+  # Scenario 1b: Create inventory with price parameter (decimal conversion)
+  test "POST /api/inventory with price parameter converts to acquired_price_cents" do
+    stub_valid_card("price_card")
+
+    post api_path("/inventory"), params: {
+      card_id: "price_card",
+      quantity: 1,
+      price: 12.50
+    }, as: :json
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "price_card", body["card_id"]
+    assert_equal 1250, body["acquired_price_cents"]
+
+    # Verify persistence
+    item = CollectionItem.find_by(user: @user, card_id: "price_card")
+    assert_equal 1250, item.acquired_price_cents
+  end
+
+  # Scenario 2: Create inventory with partial enhanced fields (defaults applied)
+  test "POST /api/inventory with only price uses defaults for other fields" do
+    stub_valid_card("partial_card")
+
+    post api_path("/inventory"), params: {
+      card_id: "partial_card",
+      quantity: 1,
+      price: 10.00
+    }, as: :json
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "partial_card", body["card_id"]
+    assert_equal 1, body["quantity"]
+    assert_equal 1000, body["acquired_price_cents"]
+    assert_equal Date.today.to_s, body["acquired_date"]
+    assert_equal "Normal", body["treatment"]
+    assert_equal "English", body["language"]
+
+    # Verify persistence
+    item = CollectionItem.find_by(user: @user, card_id: "partial_card")
+    assert_equal 1000, item.acquired_price_cents
+    assert_equal "Normal", item.treatment
+    assert_equal "English", item.language
+    assert_equal Date.today, item.acquired_date
+  end
+
+  # Scenario 3: Create inventory with no enhanced fields (backward compatibility)
+  test "POST /api/inventory with no enhanced fields maintains backward compatibility" do
+    stub_valid_card("legacy_card")
+
+    post api_path("/inventory"), params: {
+      card_id: "legacy_card",
+      quantity: 3
+    }, as: :json
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "legacy_card", body["card_id"]
+    assert_equal 3, body["quantity"]
+    assert_nil body["acquired_date"]
+    assert_nil body["acquired_price_cents"]
+    assert_nil body["treatment"]
+    assert_nil body["language"]
+
+    # Verify persistence
+    item = CollectionItem.find_by(user: @user, card_id: "legacy_card")
+    assert_nil item.acquired_price_cents
+    assert_nil item.treatment
+    assert_nil item.language
+    assert_nil item.acquired_date
+  end
+
+  # Scenario 4: Validation errors return clear messages
+  test "POST /api/inventory with negative price returns 422 with error message" do
+    stub_valid_card("bad_price_card")
+
+    post api_path("/inventory"), params: {
+      card_id: "bad_price_card",
+      quantity: 1,
+      acquired_price_cents: -1000
+    }, as: :json
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_includes body["errors"].join(" "), "must be greater than or equal to 0"
+  end
+
+  test "POST /api/inventory with future date returns 422 with error message" do
+    stub_valid_card("future_date_card")
+    future_date = (Date.today + 1).to_s
+
+    post api_path("/inventory"), params: {
+      card_id: "future_date_card",
+      quantity: 1,
+      acquired_date: future_date
+    }, as: :json
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_includes body["errors"].join(" "), "cannot be in the future"
+  end
+
+  test "POST /api/inventory with invalid treatment returns 422 with error message" do
+    stub_valid_card("bad_treatment_card")
+
+    post api_path("/inventory"), params: {
+      card_id: "bad_treatment_card",
+      quantity: 1,
+      treatment: "SuperUltraFoil"
+    }, as: :json
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_includes body["errors"].join(" "), "Treatment"
+  end
+
+  test "POST /api/inventory with invalid language returns 422 with error message" do
+    stub_valid_card("bad_language_card")
+
+    post api_path("/inventory"), params: {
+      card_id: "bad_language_card",
+      quantity: 1,
+      language: "Klingon"
+    }, as: :json
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_includes body["errors"].join(" "), "Language"
+  end
+
+  # Scenario 5: Upsert behavior preserves enhanced fields
+  test "POST /api/inventory upsert preserves existing enhanced fields" do
+    CollectionItem.create!(
+      user: @user,
+      card_id: "existing_enhanced",
+      collection_type: "inventory",
+      quantity: 1,
+      acquired_price_cents: 500,
+      treatment: "Foil",
+      language: "German",
+      acquired_date: Date.parse("2025-01-01")
+    )
+
+    stub_valid_card("existing_enhanced")
+
+    post api_path("/inventory"), params: {
+      card_id: "existing_enhanced",
+      quantity: 2
+    }, as: :json
+
+    assert_response :ok
+    body = JSON.parse(response.body)
+    assert_equal "existing_enhanced", body["card_id"]
+    assert_equal 3, body["quantity"] # 1 + 2
+
+    # Verify existing enhanced fields are preserved
+    assert_equal 500, body["acquired_price_cents"]
+    assert_equal "Foil", body["treatment"]
+    assert_equal "German", body["language"]
+    assert_equal "2025-01-01", body["acquired_date"]
+
+    # Verify only one record exists
+    assert_equal 1, CollectionItem.where(user: @user, card_id: "existing_enhanced", collection_type: "inventory").count
+  end
+
   private
 
 end
