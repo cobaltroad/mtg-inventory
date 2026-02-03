@@ -19,6 +19,9 @@
 	let selectedCard: CardType | null = $state(null);
 	let modalOpen = $state(false);
 
+	// Derived state to ensure button reactivity
+	let isButtonDisabled = $derived(searching || !query.trim());
+
 	async function handleSearch() {
 		if (!query.trim()) return;
 		searching = true;
@@ -60,7 +63,7 @@
 			>
 				<SearchOutline slot="left" class="h-5 w-5" />
 			</Input>
-			<Button type="submit" disabled={searching || !query.trim()} size="lg">
+			<Button type="submit" disabled={isButtonDisabled} size="lg">
 				{searching ? 'Searching...' : 'Search'}
 			</Button>
 		</form>
