@@ -3,7 +3,8 @@
 # returning "inventory" or "wishlist").
 module CollectionItemActions
   def index
-    render json: collection_items
+    # Subclasses can override this to customize serialization
+    render json: serialize_collection_items(collection_items)
   end
 
   # Upsert: if a row already exists for this card in the current collection,
@@ -53,6 +54,11 @@ module CollectionItemActions
   end
 
   private
+
+  # Default serialization - subclasses can override
+  def serialize_collection_items(items)
+    items
+  end
 
   def collection_items
     current_user.collection_items.where(collection_type: collection_type)
