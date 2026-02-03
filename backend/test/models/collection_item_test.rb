@@ -190,4 +190,190 @@ class CollectionItemTest < ActiveSupport::TestCase
     )
     assert other_item.valid?, other_item.errors.full_messages.inspect
   end
+
+  # ---------------------------------------------------------------------------
+  # Scenario 1 & 2: acquired_price_cents validations
+  # ---------------------------------------------------------------------------
+  test "is valid with acquired_price_cents of zero" do
+    item = CollectionItem.new(
+      user: @user,
+      card_id: "abc123",
+      collection_type: "inventory",
+      quantity: 1,
+      acquired_price_cents: 0
+    )
+    assert item.valid?, item.errors.full_messages.inspect
+  end
+
+  test "is valid with positive acquired_price_cents" do
+    item = CollectionItem.new(
+      user: @user,
+      card_id: "abc123",
+      collection_type: "inventory",
+      quantity: 1,
+      acquired_price_cents: 99999
+    )
+    assert item.valid?, item.errors.full_messages.inspect
+  end
+
+  test "is valid with nil acquired_price_cents" do
+    item = CollectionItem.new(
+      user: @user,
+      card_id: "abc123",
+      collection_type: "inventory",
+      quantity: 1,
+      acquired_price_cents: nil
+    )
+    assert item.valid?, item.errors.full_messages.inspect
+  end
+
+  test "is invalid with negative acquired_price_cents" do
+    item = CollectionItem.new(
+      user: @user,
+      card_id: "abc123",
+      collection_type: "inventory",
+      quantity: 1,
+      acquired_price_cents: -1
+    )
+    assert item.invalid?
+    assert_includes item.errors[:acquired_price_cents], "must be greater than or equal to 0"
+  end
+
+  test "is invalid with non-integer acquired_price_cents" do
+    item = CollectionItem.new(
+      user: @user,
+      card_id: "abc123",
+      collection_type: "inventory",
+      quantity: 1,
+      acquired_price_cents: 99.99
+    )
+    assert item.invalid?
+    assert_includes item.errors[:acquired_price_cents], "must be an integer"
+  end
+
+  # ---------------------------------------------------------------------------
+  # Scenario 3 & 4: acquired_date validations
+  # ---------------------------------------------------------------------------
+  test "is valid with acquired_date of today" do
+    item = CollectionItem.new(
+      user: @user,
+      card_id: "abc123",
+      collection_type: "inventory",
+      quantity: 1,
+      acquired_date: Date.today
+    )
+    assert item.valid?, item.errors.full_messages.inspect
+  end
+
+  test "is valid with acquired_date in the past" do
+    item = CollectionItem.new(
+      user: @user,
+      card_id: "abc123",
+      collection_type: "inventory",
+      quantity: 1,
+      acquired_date: 1.year.ago.to_date
+    )
+    assert item.valid?, item.errors.full_messages.inspect
+  end
+
+  test "is valid with nil acquired_date" do
+    item = CollectionItem.new(
+      user: @user,
+      card_id: "abc123",
+      collection_type: "inventory",
+      quantity: 1,
+      acquired_date: nil
+    )
+    assert item.valid?, item.errors.full_messages.inspect
+  end
+
+  test "is invalid with acquired_date in the future" do
+    item = CollectionItem.new(
+      user: @user,
+      card_id: "abc123",
+      collection_type: "inventory",
+      quantity: 1,
+      acquired_date: 1.day.from_now.to_date
+    )
+    assert item.invalid?
+    assert_includes item.errors[:acquired_date], "cannot be in the future"
+  end
+
+  # ---------------------------------------------------------------------------
+  # Scenario 5 & 6: treatment validations
+  # ---------------------------------------------------------------------------
+  test "is valid with all treatment options" do
+    CollectionItem::TREATMENT_OPTIONS.each do |treatment|
+      item = CollectionItem.new(
+        user: @user,
+        card_id: "abc123-#{treatment.parameterize}",
+        collection_type: "inventory",
+        quantity: 1,
+        treatment: treatment
+      )
+      assert item.valid?, "#{treatment} should be valid but got: #{item.errors.full_messages.inspect}"
+    end
+  end
+
+  test "is valid with nil treatment" do
+    item = CollectionItem.new(
+      user: @user,
+      card_id: "abc123",
+      collection_type: "inventory",
+      quantity: 1,
+      treatment: nil
+    )
+    assert item.valid?, item.errors.full_messages.inspect
+  end
+
+  test "is invalid with unrecognized treatment" do
+    item = CollectionItem.new(
+      user: @user,
+      card_id: "abc123",
+      collection_type: "inventory",
+      quantity: 1,
+      treatment: "InvalidTreatment"
+    )
+    assert item.invalid?
+    assert_includes item.errors[:treatment], "is not included in the list"
+  end
+
+  # ---------------------------------------------------------------------------
+  # Scenario 7 & 8: language validations
+  # ---------------------------------------------------------------------------
+  test "is valid with all language options" do
+    CollectionItem::LANGUAGE_OPTIONS.each do |language|
+      item = CollectionItem.new(
+        user: @user,
+        card_id: "abc123-#{language.parameterize}",
+        collection_type: "inventory",
+        quantity: 1,
+        language: language
+      )
+      assert item.valid?, "#{language} should be valid but got: #{item.errors.full_messages.inspect}"
+    end
+  end
+
+  test "is valid with nil language" do
+    item = CollectionItem.new(
+      user: @user,
+      card_id: "abc123",
+      collection_type: "inventory",
+      quantity: 1,
+      language: nil
+    )
+    assert item.valid?, item.errors.full_messages.inspect
+  end
+
+  test "is invalid with unrecognized language" do
+    item = CollectionItem.new(
+      user: @user,
+      card_id: "abc123",
+      collection_type: "inventory",
+      quantity: 1,
+      language: "InvalidLanguage"
+    )
+    assert item.invalid?
+    assert_includes item.errors[:language], "is not included in the list"
+  end
 end
