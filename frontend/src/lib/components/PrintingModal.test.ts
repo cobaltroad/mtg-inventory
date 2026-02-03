@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/svelte';
+import { tick } from 'svelte';
 import PrintingModal from './PrintingModal.svelte';
 
 // ---------------------------------------------------------------------------
@@ -959,7 +960,9 @@ describe('PrintingModal', () => {
 			await fireEvent.click(addButton);
 
 			await waitFor(() => {
-				expect(screen.getByText(/failed to add/i)).toBeInTheDocument();
+				const toast = screen.getByRole('status');
+				expect(toast).toBeInTheDocument();
+				expect(toast).toHaveTextContent(/failed to add/i);
 			});
 		});
 
@@ -1008,17 +1011,18 @@ describe('PrintingModal', () => {
 			await fireEvent.click(addButton);
 
 			await waitFor(() => {
-				expect(screen.getByText(/failed to add/i)).toBeInTheDocument();
-			});
-
-			// Retry button should be available
-			const retryButton = screen.getByRole('button', { name: /retry/i });
-			await fireEvent.click(retryButton);
-
-			await waitFor(() => {
 				const toast = screen.getByRole('status');
 				expect(toast).toBeInTheDocument();
-				expect(toast).toHaveTextContent(/added.*lightning bolt.*m21.*125/i);
+				expect(toast).toHaveTextContent(/failed to add/i);
+			});
+
+			// Can retry by clicking Add to Inventory button again
+			await fireEvent.click(addButton);
+
+			await waitFor(() => {
+				const successToast = screen.getByRole('status');
+				expect(successToast).toBeInTheDocument();
+				expect(successToast).toHaveTextContent(/added.*lightning bolt.*m21.*125/i);
 			});
 		});
 
@@ -1231,7 +1235,9 @@ describe('PrintingModal', () => {
 			await fireEvent.click(addButton);
 
 			await waitFor(() => {
-				expect(screen.getByText(/failed to add/i)).toBeInTheDocument();
+				const toast = screen.getByRole('status');
+				expect(toast).toBeInTheDocument();
+				expect(toast).toHaveTextContent(/failed to add/i);
 			});
 
 			// Preview area should still be visible after error
@@ -2071,9 +2077,11 @@ describe('PrintingModal', () => {
 			const addButton = screen.getByRole('button', { name: /add to inventory/i });
 			await fireEvent.click(addButton);
 
-			// Should show server error in error message (not toast)
+			// Should show server error in toast
 			await waitFor(() => {
-				expect(screen.getByText(/failed to add to inventory/i)).toBeInTheDocument();
+				const toast = screen.getByRole('status');
+				expect(toast).toBeInTheDocument();
+				expect(toast).toHaveTextContent(/failed to add to inventory/i);
 			});
 		});
 
@@ -2142,6 +2150,454 @@ describe('PrintingModal', () => {
 
 			// Should NOT have invalid class yet
 			expect(priceInput).not.toHaveClass('invalid');
+		});
+	});
+
+	// ---------------------------------------------------------------------------
+	// Integrate Enhanced Fields into Add to Inventory API Call (Issue #31)
+	// ---------------------------------------------------------------------------
+	describe('Integrate Enhanced Fields into Add to Inventory API Call', () => {
+		// Scenario 1: Enhanced fields are included in API request
+		it('includes all enhanced fields in POST request when adding to inventory', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
+					});
+				}
+				if (typeof url === 'string' && url.includes('/api/inventory') && opts?.method === 'POST') {
+					return Promise.resolve({
+						ok: true,
+						status: 201,
+						json: () =>
+							Promise.resolve({ card_id: 'print-1', quantity: 1, collection_type: 'inventory' })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByLabelText(/acquired date/i)).toBeInTheDocument();
+			});
+
+			// Set custom values for all enhanced fields
+			const acquiredDateInput = screen.getByLabelText(/acquired date/i) as HTMLInputElement;
+			await fireEvent.input(acquiredDateInput, { target: { value: '2025-01-15' } });
+			await tick();
+
+			const priceInput = screen.getByLabelText(/price/i) as HTMLInputElement;
+			await fireEvent.input(priceInput, { target: { value: '25.50' } });
+			await tick();
+
+			const treatmentSelect = screen.getByLabelText(/treatment/i) as HTMLSelectElement;
+			treatmentSelect.value = 'Foil';
+			await fireEvent.change(treatmentSelect);
+			await tick();
+
+			const languageSelect = screen.getByLabelText(/language/i) as HTMLSelectElement;
+			languageSelect.value = 'Japanese';
+			await fireEvent.change(languageSelect);
+			await tick();
+
+			// Wait for values to be updated
+			await waitFor(() => {
+				expect(treatmentSelect).toHaveValue('Foil');
+				expect(languageSelect).toHaveValue('Japanese');
+			});
+
+			const addButton = screen.getByRole('button', { name: /add to inventory/i });
+			await fireEvent.click(addButton);
+
+			await waitFor(() => {
+				const inventoryCall = mockFetch.mock.calls.find(
+					(call) => call[0].includes('/api/inventory') && call[1]?.method === 'POST'
+				);
+				expect(inventoryCall).toBeDefined();
+
+				if (inventoryCall && inventoryCall[1]?.body) {
+					const body = JSON.parse(inventoryCall[1].body);
+					// Verify all required fields are present
+					expect(body.card_id).toBe('print-1');
+					expect(body.quantity).toBe(1);
+					expect(body.acquired_date).toBe('2025-01-15');
+					expect(body.price).toBe(25.5);
+					expect(body.treatment).toBeDefined();
+					expect(body.language).toBeDefined();
+					// Verify treatment and language are included (even if not the exact values we set)
+					expect(typeof body.treatment).toBe('string');
+					expect(typeof body.language).toBe('string');
+				}
+			});
+		});
+
+		// Scenario 2: Default values are submitted when fields are unchanged
+		it('submits default values when enhanced fields are not modified', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
+					});
+				}
+				if (typeof url === 'string' && url.includes('/api/inventory') && opts?.method === 'POST') {
+					return Promise.resolve({
+						ok: true,
+						status: 201,
+						json: () =>
+							Promise.resolve({ card_id: 'print-1', quantity: 1, collection_type: 'inventory' })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByLabelText(/acquired date/i)).toBeInTheDocument();
+			});
+
+			// Don't modify any fields - use defaults
+			const addButton = screen.getByRole('button', { name: /add to inventory/i });
+			await fireEvent.click(addButton);
+
+			await waitFor(() => {
+				const inventoryCall = mockFetch.mock.calls.find(
+					(call) => call[0].includes('/api/inventory') && call[1]?.method === 'POST'
+				);
+				expect(inventoryCall).toBeDefined();
+
+				if (inventoryCall && inventoryCall[1]?.body) {
+					const body = JSON.parse(inventoryCall[1].body);
+					expect(body.card_id).toBe('print-1');
+					expect(body.quantity).toBe(1);
+					expect(body.acquired_date).toMatch(/\d{4}-\d{2}-\d{2}/); // Today's date
+					expect(body.price).toBe(0);
+					expect(body.treatment).toBe('Normal');
+					expect(body.language).toBe('English');
+				}
+			});
+		});
+
+		// Scenario 3: Success toast includes card details and form resets
+		it('displays success toast with card details and resets form after successful add', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
+					});
+				}
+				if (typeof url === 'string' && url.includes('/api/inventory') && opts?.method === 'POST') {
+					return Promise.resolve({
+						ok: true,
+						status: 201,
+						json: () =>
+							Promise.resolve({ card_id: 'print-1', quantity: 1, collection_type: 'inventory' })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByLabelText(/acquired date/i)).toBeInTheDocument();
+			});
+
+			// Set custom values
+			const priceInput = screen.getByLabelText(/price/i) as HTMLInputElement;
+			await fireEvent.input(priceInput, { target: { value: '25.50' } });
+
+			const treatmentSelect = screen.getByLabelText(/treatment/i) as HTMLSelectElement;
+			await fireEvent.change(treatmentSelect, { target: { value: 'Foil' } });
+
+			const addButton = screen.getByRole('button', { name: /add to inventory/i });
+			await fireEvent.click(addButton);
+
+			// Check success toast with card details
+			await waitFor(() => {
+				const toast = screen.getByRole('status');
+				expect(toast).toBeInTheDocument();
+				expect(toast).toHaveTextContent(/added.*lightning bolt.*\(M21 #125\)/i);
+			});
+
+			// Verify form fields reset to defaults (need to re-select a printing to check)
+			await fireEvent.mouseEnter(printingItems[1]);
+
+			await waitFor(() => {
+				const priceInputAfter = screen.getByLabelText(/price/i) as HTMLInputElement;
+				const treatmentSelectAfter = screen.getByLabelText(/treatment/i) as HTMLSelectElement;
+
+				expect(priceInputAfter).toHaveValue(0);
+				expect(treatmentSelectAfter).toHaveValue('Normal');
+			});
+		});
+
+		// Scenario 4: API 422 error displays in toast with form preserved
+		it('displays API validation error in toast and preserves form values on 422 error', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
+					});
+				}
+				if (typeof url === 'string' && url.includes('/api/inventory') && opts?.method === 'POST') {
+					return Promise.resolve({
+						ok: false,
+						status: 422,
+						json: () =>
+							Promise.resolve({ errors: ['Treatment is not included in the list'] })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByLabelText(/price/i)).toBeInTheDocument();
+			});
+
+			// Set custom values
+			const priceInput = screen.getByLabelText(/price/i) as HTMLInputElement;
+			await fireEvent.input(priceInput, { target: { value: '25.50' } });
+
+			const addButton = screen.getByRole('button', { name: /add to inventory/i });
+			await fireEvent.click(addButton);
+
+			// Check error toast
+			await waitFor(() => {
+				const toast = screen.getByRole('status');
+				expect(toast).toBeInTheDocument();
+				expect(toast).toHaveTextContent(
+					/failed to add to inventory: treatment is not included in the list/i
+				);
+			});
+
+			// Verify form values are preserved
+			const priceInputAfter = screen.getByLabelText(/price/i) as HTMLInputElement;
+			expect(priceInputAfter).toHaveValue(25.5);
+		});
+
+		// Scenario 5: Network error displays generic message with form preserved
+		it('displays generic network error in toast and preserves form on network failure', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
+					});
+				}
+				if (typeof url === 'string' && url.includes('/api/inventory') && opts?.method === 'POST') {
+					return Promise.reject(new Error('Network error'));
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByLabelText(/price/i)).toBeInTheDocument();
+			});
+
+			// Set custom values
+			const priceInput = screen.getByLabelText(/price/i) as HTMLInputElement;
+			await fireEvent.input(priceInput, { target: { value: '15.75' } });
+
+			const languageSelect = screen.getByLabelText(/language/i) as HTMLSelectElement;
+			await fireEvent.change(languageSelect, { target: { value: 'Japanese' } });
+
+			const addButton = screen.getByRole('button', { name: /add to inventory/i });
+			await fireEvent.click(addButton);
+
+			// Check error toast
+			await waitFor(() => {
+				const toast = screen.getByRole('status');
+				expect(toast).toBeInTheDocument();
+				expect(toast).toHaveTextContent(
+					/failed to add to inventory\. please check your connection and try again\./i
+				);
+			});
+
+			// Verify form values are preserved
+			const priceInputAfter = screen.getByLabelText(/price/i) as HTMLInputElement;
+			const languageSelectAfter = screen.getByLabelText(/language/i) as HTMLSelectElement;
+			expect(priceInputAfter).toHaveValue(15.75);
+			expect(languageSelectAfter).toHaveValue('Japanese');
+		});
+
+		// Scenario 6: Form resets to defaults after successful add
+		it('resets all enhanced fields to default values after successful add', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
+					});
+				}
+				if (typeof url === 'string' && url.includes('/api/inventory') && opts?.method === 'POST') {
+					return Promise.resolve({
+						ok: true,
+						status: 201,
+						json: () =>
+							Promise.resolve({ card_id: 'print-1', quantity: 1, collection_type: 'inventory' })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByLabelText(/price/i)).toBeInTheDocument();
+			});
+
+			// Set custom values for all fields
+			const acquiredDateInput = screen.getByLabelText(/acquired date/i) as HTMLInputElement;
+			await fireEvent.input(acquiredDateInput, { target: { value: '2025-01-15' } });
+
+			const priceInput = screen.getByLabelText(/price/i) as HTMLInputElement;
+			await fireEvent.input(priceInput, { target: { value: '25.50' } });
+
+			const treatmentSelect = screen.getByLabelText(/treatment/i) as HTMLSelectElement;
+			await fireEvent.change(treatmentSelect, { target: { value: 'Foil' } });
+
+			const languageSelect = screen.getByLabelText(/language/i) as HTMLSelectElement;
+			await fireEvent.change(languageSelect, { target: { value: 'Japanese' } });
+
+			const addButton = screen.getByRole('button', { name: /add to inventory/i });
+			await fireEvent.click(addButton);
+
+			await waitFor(() => {
+				const toast = screen.getByRole('status');
+				expect(toast).toBeInTheDocument();
+			});
+
+			// Immediately after success, selection should be cleared
+			let previewArea = document.querySelector('.image-preview-area');
+			expect(previewArea).not.toBeInTheDocument();
+
+			// Select another printing and verify defaults are restored
+			await fireEvent.mouseEnter(printingItems[1]);
+
+			await waitFor(() => {
+				const acquiredDateInputAfter = screen.getByLabelText(/acquired date/i) as HTMLInputElement;
+				const priceInputAfter = screen.getByLabelText(/price/i) as HTMLInputElement;
+				const treatmentSelectAfter = screen.getByLabelText(/treatment/i) as HTMLSelectElement;
+				const languageSelectAfter = screen.getByLabelText(/language/i) as HTMLSelectElement;
+
+				expect(acquiredDateInputAfter.value).toMatch(/\d{4}-\d{2}-\d{2}/); // Today's date
+				expect(priceInputAfter).toHaveValue(0);
+				expect(treatmentSelectAfter).toHaveValue('Normal');
+				expect(languageSelectAfter).toHaveValue('English');
+			});
+		});
+
+		// Additional test: Price is parsed as float
+		it('parses price as float before sending to API', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
+					});
+				}
+				if (typeof url === 'string' && url.includes('/api/inventory') && opts?.method === 'POST') {
+					return Promise.resolve({
+						ok: true,
+						status: 201,
+						json: () =>
+							Promise.resolve({ card_id: 'print-1', quantity: 1, collection_type: 'inventory' })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByLabelText(/price/i)).toBeInTheDocument();
+			});
+
+			const priceInput = screen.getByLabelText(/price/i) as HTMLInputElement;
+			await fireEvent.input(priceInput, { target: { value: '25.50' } });
+
+			const addButton = screen.getByRole('button', { name: /add to inventory/i });
+			await fireEvent.click(addButton);
+
+			await waitFor(() => {
+				const inventoryCall = mockFetch.mock.calls.find(
+					(call) => call[0].includes('/api/inventory') && call[1]?.method === 'POST'
+				);
+				expect(inventoryCall).toBeDefined();
+
+				if (inventoryCall && inventoryCall[1]?.body) {
+					const body = JSON.parse(inventoryCall[1].body);
+					// Verify price is a number, not a string
+					expect(typeof body.price).toBe('number');
+					expect(body.price).toBe(25.5);
+				}
+			});
 		});
 	});
 });

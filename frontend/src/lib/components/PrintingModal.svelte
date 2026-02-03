@@ -192,15 +192,20 @@
 					card_id: printingToAdd.id,
 					quantity: 1,
 					acquired_date: acquiredDate,
-					price: price,
+					price: parseFloat(price.toString()),
 					treatment: treatment,
 					language: language
 				})
 			});
 
 			if (!res.ok) {
+				const errorData = await res.json();
 				inventoryState = 'error';
-				inventoryError = 'Failed to add to inventory';
+				inventoryError = errorData.errors
+					? `Failed to add to inventory: ${errorData.errors.join(', ')}`
+					: 'Failed to add to inventory';
+				toastMessage = inventoryError;
+				showToast = true;
 				return;
 			}
 
@@ -212,12 +217,18 @@
 			toastMessage = `Added ${printingToAdd.name} (${printingToAdd.set.toUpperCase()} #${printingToAdd.collector_number}) to inventory`;
 			showToast = true;
 
-			// Clear selection after successful add
+			// Reset form to defaults after successful add
 			selectedPrinting = null;
+			acquiredDate = formatDateInTimeZone(userTimeZone);
+			price = 0.0;
+			treatment = 'Normal';
+			language = 'English';
 			inventoryState = 'idle';
 		} catch {
 			inventoryState = 'error';
-			inventoryError = 'Failed to add to inventory';
+			inventoryError = 'Failed to add to inventory. Please check your connection and try again.';
+			toastMessage = inventoryError;
+			showToast = true;
 		}
 	}
 
@@ -331,18 +342,13 @@
 									</select>
 								</div>
 
-								{#if inventoryState === 'error'}
-									<p class="error-message">{inventoryError}</p>
-									<button class="inventory-button" onclick={addToInventory}>Retry</button>
-								{:else}
-									<button
-										class="inventory-button"
-										onclick={addToInventory}
-										disabled={inventoryState === 'loading'}
-									>
-										{inventoryState === 'loading' ? 'Adding...' : 'Add to Inventory'}
-									</button>
-								{/if}
+								<button
+									class="inventory-button"
+									onclick={addToInventory}
+									disabled={inventoryState === 'loading'}
+								>
+									{inventoryState === 'loading' ? 'Adding...' : 'Add to Inventory'}
+								</button>
 							</div>
 						</div>
 					{/if}
@@ -355,7 +361,7 @@
 {#if showToast}
 	<Toast
 		message={toastMessage}
-		type="success"
+		type={inventoryState === 'success' ? 'success' : 'error'}
 		onDismiss={() => {
 			showToast = false;
 		}}
@@ -574,14 +580,6 @@
 	.inventory-button:disabled {
 		opacity: 0.6;
 		cursor: not-allowed;
-	}
-
-	.error-message {
-		color: #dc2626;
-		font-weight: 500;
-		font-size: 0.875rem;
-		text-align: center;
-		margin: 0;
 	}
 
 	.form-field {
