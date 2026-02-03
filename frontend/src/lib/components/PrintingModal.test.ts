@@ -1347,9 +1347,9 @@ describe('PrintingModal', () => {
 
 			await waitFor(() => {
 				// Acquired Date field with today's date
-				const acquiredDateInput = screen.getByLabelText(/acquired date/i);
+				const acquiredDateInput = screen.getByLabelText(/acquired date/i) as HTMLInputElement;
 				expect(acquiredDateInput).toBeInTheDocument();
-				expect(acquiredDateInput).toHaveValue(expect.stringMatching(/\d{4}-\d{2}-\d{2}/));
+				expect(acquiredDateInput.value).toMatch(/\d{4}-\d{2}-\d{2}/);
 
 				// Price field with $0.00
 				const priceInput = screen.getByLabelText(/price/i);
@@ -1532,7 +1532,7 @@ describe('PrintingModal', () => {
 			expect(languageSelect).toHaveValue('Japanese');
 		});
 
-		it('resets form fields to defaults when selecting a new printing', async () => {
+		it('preserves form field values when selecting a different printing', async () => {
 			const mockFetch = mockFetchForPrintings();
 			vi.stubGlobal('fetch', mockFetch);
 
@@ -1557,13 +1557,19 @@ describe('PrintingModal', () => {
 			const treatmentSelect = screen.getByLabelText(/treatment/i) as HTMLSelectElement;
 			await fireEvent.change(treatmentSelect, { target: { value: 'Foil' } });
 
+			// Verify modified values
+			expect(priceInput).toHaveValue(25.5);
+			expect(treatmentSelect).toHaveValue('Foil');
+
 			// Select second printing
 			await fireEvent.mouseEnter(printingItems[1]);
 
 			await waitFor(() => {
-				// Values should reset to defaults
-				expect(priceInput).toHaveValue(0);
-				expect(treatmentSelect).toHaveValue('Normal');
+				// Values should be preserved (not reset)
+				const updatedPriceInput = screen.getByLabelText(/price/i) as HTMLInputElement;
+				const updatedTreatmentSelect = screen.getByLabelText(/treatment/i) as HTMLSelectElement;
+				expect(updatedPriceInput).toHaveValue(25.5);
+				expect(updatedTreatmentSelect).toHaveValue('Foil');
 			});
 		});
 
