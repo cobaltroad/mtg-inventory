@@ -1329,6 +1329,292 @@ describe('PrintingModal', () => {
 	});
 
 	// ---------------------------------------------------------------------------
+	// Enhanced Card Tracking Form Fields (Issue #29)
+	// ---------------------------------------------------------------------------
+	describe('Enhanced Card Tracking Form Fields', () => {
+		it('displays all form fields with default values when printing is selected', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				// Acquired Date field with today's date
+				const acquiredDateInput = screen.getByLabelText(/acquired date/i) as HTMLInputElement;
+				expect(acquiredDateInput).toBeInTheDocument();
+				expect(acquiredDateInput.value).toMatch(/\d{4}-\d{2}-\d{2}/);
+
+				// Price field with $0.00
+				const priceInput = screen.getByLabelText(/price/i);
+				expect(priceInput).toBeInTheDocument();
+				expect(priceInput).toHaveValue(0);
+
+				// Treatment dropdown with "Normal"
+				const treatmentSelect = screen.getByLabelText(/treatment/i);
+				expect(treatmentSelect).toBeInTheDocument();
+				expect(treatmentSelect).toHaveValue('Normal');
+
+				// Language dropdown with "English"
+				const languageSelect = screen.getByLabelText(/language/i);
+				expect(languageSelect).toBeInTheDocument();
+				expect(languageSelect).toHaveValue('English');
+			});
+		});
+
+		it('allows editing the acquired date field', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByLabelText(/acquired date/i)).toBeInTheDocument();
+			});
+
+			const acquiredDateInput = screen.getByLabelText(/acquired date/i) as HTMLInputElement;
+			await fireEvent.input(acquiredDateInput, { target: { value: '2024-01-15' } });
+
+			expect(acquiredDateInput).toHaveValue('2024-01-15');
+		});
+
+		it('allows editing the price field', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByLabelText(/price/i)).toBeInTheDocument();
+			});
+
+			const priceInput = screen.getByLabelText(/price/i) as HTMLInputElement;
+			await fireEvent.input(priceInput, { target: { value: '25.50' } });
+
+			expect(priceInput).toHaveValue(25.5);
+		});
+
+		it('displays all treatment options in dropdown', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByLabelText(/treatment/i)).toBeInTheDocument();
+			});
+
+			const treatmentSelect = screen.getByLabelText(/treatment/i);
+			const expectedOptions = [
+				'Normal',
+				'Foil',
+				'Etched',
+				'Showcase',
+				'Extended Art',
+				'Borderless',
+				'Full Art',
+				'Retro Frame',
+				'Textured Foil'
+			];
+
+			expectedOptions.forEach((option) => {
+				expect(treatmentSelect).toContainHTML(`<option value="${option}">${option}</option>`);
+			});
+		});
+
+		it('allows selecting different treatment option', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByLabelText(/treatment/i)).toBeInTheDocument();
+			});
+
+			const treatmentSelect = screen.getByLabelText(/treatment/i) as HTMLSelectElement;
+			await fireEvent.change(treatmentSelect, { target: { value: 'Foil' } });
+
+			expect(treatmentSelect).toHaveValue('Foil');
+		});
+
+		it('displays all language options in dropdown', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByLabelText(/language/i)).toBeInTheDocument();
+			});
+
+			const languageSelect = screen.getByLabelText(/language/i);
+			const expectedLanguages = [
+				'English',
+				'Japanese',
+				'German',
+				'French',
+				'Spanish',
+				'Italian',
+				'Portuguese',
+				'Russian',
+				'Korean',
+				'Chinese Simplified',
+				'Chinese Traditional'
+			];
+
+			expectedLanguages.forEach((language) => {
+				expect(languageSelect).toContainHTML(`<option value="${language}">${language}</option>`);
+			});
+		});
+
+		it('allows selecting different language option', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByLabelText(/language/i)).toBeInTheDocument();
+			});
+
+			const languageSelect = screen.getByLabelText(/language/i) as HTMLSelectElement;
+			await fireEvent.change(languageSelect, { target: { value: 'Japanese' } });
+
+			expect(languageSelect).toHaveValue('Japanese');
+		});
+
+		it('preserves form field values when selecting a different printing', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+
+			// Select first printing and modify values
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByLabelText(/price/i)).toBeInTheDocument();
+			});
+
+			const priceInput = screen.getByLabelText(/price/i) as HTMLInputElement;
+			await fireEvent.input(priceInput, { target: { value: '25.50' } });
+
+			const treatmentSelect = screen.getByLabelText(/treatment/i) as HTMLSelectElement;
+			await fireEvent.change(treatmentSelect, { target: { value: 'Foil' } });
+
+			// Verify modified values
+			expect(priceInput).toHaveValue(25.5);
+			expect(treatmentSelect).toHaveValue('Foil');
+
+			// Select second printing
+			await fireEvent.mouseEnter(printingItems[1]);
+
+			await waitFor(() => {
+				// Values should be preserved (not reset)
+				const updatedPriceInput = screen.getByLabelText(/price/i) as HTMLInputElement;
+				const updatedTreatmentSelect = screen.getByLabelText(/treatment/i) as HTMLSelectElement;
+				expect(updatedPriceInput).toHaveValue(25.5);
+				expect(updatedTreatmentSelect).toHaveValue('Foil');
+			});
+		});
+
+		it('uses date input type for acquired date field', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				const acquiredDateInput = screen.getByLabelText(/acquired date/i);
+				expect(acquiredDateInput).toHaveAttribute('type', 'date');
+			});
+		});
+
+		it('uses number input type with step 0.01 for price field', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				const priceInput = screen.getByLabelText(/price/i);
+				expect(priceInput).toHaveAttribute('type', 'number');
+				expect(priceInput).toHaveAttribute('step', '0.01');
+				expect(priceInput).toHaveAttribute('min', '0');
+			});
+		});
+	});
+
+	// ---------------------------------------------------------------------------
 	// Accessibility (Technical Requirements)
 	// ---------------------------------------------------------------------------
 	describe('Accessibility', () => {

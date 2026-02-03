@@ -27,6 +27,48 @@
 
 	type InventoryState = 'idle' | 'loading' | 'success' | 'error';
 
+	// Treatment options for enhanced tracking
+	const TREATMENT_OPTIONS = [
+		'Normal',
+		'Foil',
+		'Etched',
+		'Showcase',
+		'Extended Art',
+		'Borderless',
+		'Full Art',
+		'Retro Frame',
+		'Textured Foil'
+	];
+
+	// Language options for enhanced tracking
+	const LANGUAGE_OPTIONS = [
+		'English',
+		'Japanese',
+		'German',
+		'French',
+		'Spanish',
+		'Italian',
+		'Portuguese',
+		'Russian',
+		'Korean',
+		'Chinese Simplified',
+		'Chinese Traditional'
+	];
+
+	// Helper function to format date in user's timezone
+	function formatDateInTimeZone(timeZone: string, date = new Date()): string {
+		const formatter = new Intl.DateTimeFormat('en-CA', {
+			timeZone,
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit'
+		});
+		// "en-CA" with these options yields "YYYY-MM-DD"
+		return formatter.format(date);
+	}
+
+	const userTimeZone = 'America/Detroit';
+
 	let { card, open = $bindable(false), onclose }: Props = $props();
 
 	let printings: Printing[] = $state([]);
@@ -39,6 +81,12 @@
 	let inventoryError = $state('');
 	let toastMessage = $state('');
 	let showToast = $state(false);
+
+	// Enhanced tracking form fields
+	let acquiredDate = $state(formatDateInTimeZone(userTimeZone));
+	let price = $state(0.0);
+	let treatment = $state('Normal');
+	let language = $state('English');
 
 	function isResponseSuccessful(response: Response): boolean {
 		// 304 Not Modified is considered successful - browser returns cached data automatically
@@ -94,7 +142,14 @@
 			const res = await fetch(`${API_BASE}/api/inventory`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ card_id: printingToAdd.id, quantity: 1 })
+				body: JSON.stringify({
+					card_id: printingToAdd.id,
+					quantity: 1,
+					acquired_date: acquiredDate,
+					price: price,
+					treatment: treatment,
+					language: language
+				})
 			});
 
 			if (!res.ok) {
@@ -188,6 +243,46 @@
 								alt="{selectedPrinting.name} from {selectedPrinting.set_name}"
 							/>
 							<div class="inventory-actions">
+								<div class="form-field">
+									<label for="acquired-date">Acquired Date</label>
+									<input
+										id="acquired-date"
+										type="date"
+										bind:value={acquiredDate}
+										class="form-input"
+									/>
+								</div>
+
+								<div class="form-field">
+									<label for="price">Price</label>
+									<input
+										id="price"
+										type="number"
+										step="0.01"
+										min="0"
+										bind:value={price}
+										class="form-input"
+									/>
+								</div>
+
+								<div class="form-field">
+									<label for="treatment">Treatment</label>
+									<select id="treatment" bind:value={treatment} class="form-select">
+										{#each TREATMENT_OPTIONS as option}
+											<option value={option}>{option}</option>
+										{/each}
+									</select>
+								</div>
+
+								<div class="form-field">
+									<label for="language">Language</label>
+									<select id="language" bind:value={language} class="form-select">
+										{#each LANGUAGE_OPTIONS as option}
+											<option value={option}>{option}</option>
+										{/each}
+									</select>
+								</div>
+
 								{#if inventoryState === 'error'}
 									<p class="error-message">{inventoryError}</p>
 									<button class="inventory-button" onclick={addToInventory}>Retry</button>
@@ -373,7 +468,8 @@
 		position: sticky;
 		top: 0;
 		width: 300px;
-		height: fit-content;
+		max-height: calc(90vh - 120px);
+		overflow-y: auto;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
@@ -428,6 +524,42 @@
 		font-size: 0.875rem;
 		text-align: center;
 		margin: 0;
+	}
+
+	.form-field {
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+
+	.form-field label {
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: #374151;
+	}
+
+	.form-input,
+	.form-select {
+		width: 100%;
+		padding: 0.5rem;
+		border: 1px solid #d1d5db;
+		border-radius: 4px;
+		font-size: 0.875rem;
+		background: white;
+		color: #111827;
+		transition: border-color 0.2s;
+	}
+
+	.form-input:focus,
+	.form-select:focus {
+		outline: none;
+		border-color: #3b82f6;
+		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+	}
+
+	.form-select {
+		cursor: pointer;
 	}
 
 	@media (max-width: 768px) {
