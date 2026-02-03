@@ -10,9 +10,7 @@ export default defineConfig(({ mode }) => {
 			host: true,
 			port: 5173,
 			allowedHosts: env.APP_DOMAIN ? [env.APP_DOMAIN, `.${env.APP_DOMAIN}`] : [],
-			hmr: {
-				clientPort: 5173
-			}
+			hmr: { clientPort: 5173 }
 		}
 	};
 });

@@ -12,6 +12,15 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     load Rails.root.join("db", "seeds.rb")
     @user = User.find_by!(email: User::DEFAULT_EMAIL)
     WebMock.reset!
+
+    # Use memory store for cache testing instead of null store
+    @original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+  end
+
+  teardown do
+    # Restore original cache
+    Rails.cache = @original_cache
   end
 
   def api_path(path)
@@ -34,6 +43,25 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
       .to_return(status: 404, body: '{"object":"error","code":"not_found"}')
   end
 
+  # Stubs Scryfall API to return card details
+  def stub_scryfall_card_details(card_id, name: "Black Lotus")
+    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+      .to_return(
+        status: 200,
+        body: {
+          id: card_id,
+          name: name,
+          set: "LEA",
+          set_name: "Limited Edition Alpha",
+          collector_number: "234",
+          image_uris: {
+            normal: "https://cards.scryfall.io/normal/front/b/l/black-lotus.jpg"
+          }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+  end
+
   # ---------------------------------------------------------------------------
   # #index -- returns only current_user's inventory items
   # ---------------------------------------------------------------------------
@@ -42,6 +70,8 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
 
     other_user = User.create!(email: "other@example.com", name: "Other")
     CollectionItem.create!(user: other_user, card_id: "their_card", collection_type: "inventory", quantity: 1)
+
+    stub_scryfall_card_details("my_card", name: "My Card")
 
     get api_path("/inventory")
 
@@ -55,12 +85,133 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     CollectionItem.create!(user: @user, card_id: "inv_card", collection_type: "inventory", quantity: 1)
     CollectionItem.create!(user: @user, card_id: "wish_card", collection_type: "wishlist", quantity: 1)
 
+    stub_scryfall_card_details("inv_card", name: "Inventory Card")
+
     get api_path("/inventory")
 
     assert_response :success
     items = JSON.parse(response.body)
     assert_equal 1, items.size
     assert_equal "inv_card", items.first["card_id"]
+  end
+
+  # ---------------------------------------------------------------------------
+  # #index with card details -- returns enriched inventory with Scryfall data
+  # ---------------------------------------------------------------------------
+  test "GET /api/inventory includes card details from Scryfall API" do
+    CollectionItem.create!(user: @user, card_id: "uuid-123", collection_type: "inventory", quantity: 3)
+
+    stub_scryfall_card_details("uuid-123")
+
+    get api_path("/inventory")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    assert_equal 1, items.size
+
+    item = items.first
+    assert_equal "uuid-123", item["card_id"]
+    assert_equal 3, item["quantity"]
+    assert_equal "Black Lotus", item["card_name"]
+    assert_equal "LEA", item["set"]
+    assert_equal "Limited Edition Alpha", item["set_name"]
+    assert_equal "234", item["collector_number"]
+    assert_equal "https://cards.scryfall.io/normal/front/b/l/black-lotus.jpg", item["image_url"]
+  end
+
+  test "GET /api/inventory returns items sorted alphabetically by card name" do
+    CollectionItem.create!(user: @user, card_id: "uuid-zzz", collection_type: "inventory", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "uuid-aaa", collection_type: "inventory", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "uuid-mmm", collection_type: "inventory", quantity: 1)
+
+    stub_scryfall_card_details("uuid-zzz", name: "Zombie Token")
+    stub_scryfall_card_details("uuid-aaa", name: "Ancient Tomb")
+    stub_scryfall_card_details("uuid-mmm", name: "Mox Pearl")
+
+    get api_path("/inventory")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    assert_equal 3, items.size
+
+    # Verify alphabetical order
+    assert_equal "Ancient Tomb", items[0]["card_name"]
+    assert_equal "Mox Pearl", items[1]["card_name"]
+    assert_equal "Zombie Token", items[2]["card_name"]
+  end
+
+  test "GET /api/inventory handles cards with missing Scryfall data gracefully" do
+    CollectionItem.create!(user: @user, card_id: "uuid-valid", collection_type: "inventory", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "uuid-missing", collection_type: "inventory", quantity: 2)
+
+    stub_scryfall_card_details("uuid-valid")
+    stub_request(:get, "https://api.scryfall.com/cards/uuid-missing")
+      .to_return(status: 404, body: '{"object":"error","code":"not_found"}')
+
+    get api_path("/inventory")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+
+    # Should only return items with valid card data
+    assert_equal 1, items.size
+    assert_equal "uuid-valid", items.first["card_id"]
+    assert_equal "Black Lotus", items.first["card_name"]
+  end
+
+  test "GET /api/inventory includes enhanced tracking fields when present" do
+    CollectionItem.create!(
+      user: @user,
+      card_id: "uuid-enhanced",
+      collection_type: "inventory",
+      quantity: 2,
+      acquired_date: Date.parse("2025-12-15"),
+      acquired_price_cents: 1250,
+      treatment: "Foil",
+      language: "Japanese"
+    )
+
+    stub_scryfall_card_details("uuid-enhanced")
+
+    get api_path("/inventory")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    assert_equal 1, items.size
+
+    item = items.first
+    assert_equal "uuid-enhanced", item["card_id"]
+    assert_equal 2, item["quantity"]
+    assert_equal "2025-12-15", item["acquired_date"]
+    assert_equal 1250, item["acquired_price_cents"]
+    assert_equal "Foil", item["treatment"]
+    assert_equal "Japanese", item["language"]
+    assert_equal "Black Lotus", item["card_name"]
+  end
+
+  test "GET /api/inventory returns empty array when inventory is empty" do
+    get api_path("/inventory")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    assert_equal 0, items.size
+  end
+
+  test "GET /api/inventory uses cached card details to minimize API calls" do
+    CollectionItem.create!(user: @user, card_id: "uuid-cached", collection_type: "inventory", quantity: 1)
+
+    stub = stub_scryfall_card_details("uuid-cached")
+
+    # First request should hit Scryfall API
+    get api_path("/inventory")
+    assert_response :success
+
+    # Second request should use cached data
+    get api_path("/inventory")
+    assert_response :success
+
+    # Verify API was only called once due to caching
+    assert_requested stub, times: 1
   end
 
   # ---------------------------------------------------------------------------

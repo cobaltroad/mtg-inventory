@@ -1,0 +1,57 @@
+<script lang="ts">
+	import { base } from '$app/paths';
+</script>
+
+<div class="empty-state">
+	<div class="empty-icon">📦</div>
+	<h2>Your inventory is empty</h2>
+	<p>Start building your collection by searching for cards and adding them to your inventory.</p>
+	<a href="{base}/search" class="cta-button">Search for Cards</a>
+</div>
+
+<style>
+	.empty-state {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding: 4rem 2rem;
+		text-align: center;
+		min-height: 400px;
+	}
+
+	.empty-icon {
+		font-size: 4rem;
+		margin-bottom: 1rem;
+		opacity: 0.6;
+	}
+
+	h2 {
+		font-size: 1.5rem;
+		font-weight: 700;
+		color: #111827;
+		margin: 0 0 0.5rem;
+	}
+
+	p {
+		color: #6b7280;
+		font-size: 1rem;
+		margin: 0 0 1.5rem;
+		max-width: 500px;
+	}
+
+	.cta-button {
+		display: inline-block;
+		padding: 0.75rem 1.5rem;
+		background: #3b82f6;
+		color: white;
+		text-decoration: none;
+		border-radius: 8px;
+		font-weight: 600;
+		transition: background 0.2s;
+	}
+
+	.cta-button:hover {
+		background: #2563eb;
+	}
+</style>

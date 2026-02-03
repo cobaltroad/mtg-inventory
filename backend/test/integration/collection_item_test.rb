@@ -12,6 +12,15 @@ class CollectionItemIntegrationTest < ActionDispatch::IntegrationTest
     load Rails.root.join("db", "seeds.rb")
     @user = User.find_by!(email: User::DEFAULT_EMAIL)
     WebMock.reset!
+
+    # Use memory store for cache testing instead of null store
+    @original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+  end
+
+  teardown do
+    # Restore original cache
+    Rails.cache = @original_cache
   end
 
   def api_path(path)
@@ -23,6 +32,25 @@ class CollectionItemIntegrationTest < ActionDispatch::IntegrationTest
       .to_return(
         status: 200,
         body: { id: card_id, name: "Test Card" }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+  end
+
+  # Stubs Scryfall API to return card details
+  def stub_scryfall_card_details(card_id, name: "Test Card")
+    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+      .to_return(
+        status: 200,
+        body: {
+          id: card_id,
+          name: name,
+          set: "TST",
+          set_name: "Test Set",
+          collector_number: "1",
+          image_uris: {
+            normal: "https://example.com/test-card.jpg"
+          }
+        }.to_json,
         headers: { "Content-Type" => "application/json" }
       )
   end
@@ -115,6 +143,8 @@ class CollectionItemIntegrationTest < ActionDispatch::IntegrationTest
 
     CollectionItem.create!(user: @user, card_id: "mine", collection_type: "inventory", quantity: 1)
     CollectionItem.create!(user: other_user, card_id: "theirs", collection_type: "inventory", quantity: 1)
+
+    stub_scryfall_card_details("mine", name: "My Card")
 
     get api_path("/inventory")
     assert_response :success
