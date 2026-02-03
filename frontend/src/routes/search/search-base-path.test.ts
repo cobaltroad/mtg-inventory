@@ -132,8 +132,8 @@ describe('Card Search Page – API path behavior', () => {
 
 		await waitFor(() => {
 			const toast = screen.getByRole('status');
-		expect(toast).toBeDefined();
-		expect(toast.textContent).toMatch(/Added.*to inventory/i);
+			expect(toast).toBeDefined();
+			expect(toast.textContent).toMatch(/Added.*to inventory/i);
 		});
 
 		// The inventory POST should be called with just /api/inventory (no prefix)

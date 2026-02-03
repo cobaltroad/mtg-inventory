@@ -92,7 +92,7 @@ describe('Inventory Page - Loading State', () => {
 
 		render(InventoryPage);
 
-		expect(screen.getByText('Loading your inventory...')).toBeInTheDocument();
+		expect(screen.getByText('Loading inventory...')).toBeInTheDocument();
 		expect(document.querySelector('.spinner')).toBeInTheDocument();
 	});
 });
@@ -111,7 +111,9 @@ describe('Inventory Page - Empty State', () => {
 		});
 
 		expect(
-			screen.getByText('Start building your collection by searching for cards and adding them to your inventory.')
+			screen.getByText(
+				'Start building your collection by searching for cards and adding them to your inventory.'
+			)
 		).toBeInTheDocument();
 		expect(screen.getByText('Search for Cards')).toBeInTheDocument();
 	});
@@ -169,9 +171,10 @@ describe('Inventory Page - Data Display', () => {
 		render(InventoryPage);
 
 		await waitFor(() => {
-			// Both items are from the same set
-			const setElements = screen.getAllByText('Limited Edition Alpha (LEA)');
-			expect(setElements.length).toBe(2);
+			// Check for set name (appears twice - once for each card)
+			const setNames = screen.getAllByText('Limited Edition Alpha');
+			expect(setNames.length).toBe(2);
+			// Check for collector numbers
 			expect(screen.getByText('#234')).toBeInTheDocument();
 			expect(screen.getByText('#48')).toBeInTheDocument();
 		});
@@ -183,8 +186,9 @@ describe('Inventory Page - Data Display', () => {
 		render(InventoryPage);
 
 		await waitFor(() => {
-			const quantityElements = screen.getAllByText(/Quantity:/);
-			expect(quantityElements.length).toBeGreaterThan(0);
+			// Check for quantity values in table
+			expect(screen.getByText('3')).toBeInTheDocument(); // Black Lotus quantity
+			expect(screen.getByText('1')).toBeInTheDocument(); // Ancestral Recall quantity
 		});
 	});
 
@@ -196,7 +200,7 @@ describe('Inventory Page - Data Display', () => {
 		await waitFor(() => {
 			expect(screen.getByText('Foil')).toBeInTheDocument();
 			expect(screen.getByText('Acquired: 2025-01-15')).toBeInTheDocument();
-			expect(screen.getByText('Price: $50.00')).toBeInTheDocument();
+			expect(screen.getByText('$50.00')).toBeInTheDocument();
 		});
 	});
 
