@@ -18,7 +18,9 @@ describe('EmptyInventory - Content', () => {
 	it('renders descriptive message', () => {
 		render(EmptyInventory);
 		expect(
-			screen.getByText('Start building your collection by searching for cards and adding them to your inventory.')
+			screen.getByText(
+				'Start building your collection by searching for cards and adding them to your inventory.'
+			)
 		).toBeInTheDocument();
 	});
 
