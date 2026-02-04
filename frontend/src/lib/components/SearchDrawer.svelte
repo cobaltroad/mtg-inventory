@@ -1,12 +1,7 @@
 <script lang="ts">
 	import { Dialog, Portal } from '@skeletonlabs/skeleton-svelte';
 	import { X } from 'lucide-svelte';
-
-	interface Card {
-		id: string;
-		name: string;
-		mana_cost?: string;
-	}
+	import type { Card } from '$lib/types/card';
 
 	interface Props {
 		open?: boolean;
@@ -14,6 +9,7 @@
 		searching?: boolean;
 		hasSearched?: boolean;
 		onCardSelect?: (card: Card) => void;
+		onSearch?: (query: string) => void;
 	}
 
 	let {
@@ -21,28 +17,41 @@
 		results = [],
 		searching = false,
 		hasSearched = false,
-		onCardSelect
+		onCardSelect,
+		onSearch
 	}: Props = $props();
 
 	let query = $state('');
 	let inputElement = $state<HTMLInputElement | null>(null);
 
-	// Auto-focus search input when drawer opens
+	/**
+	 * Auto-focuses the search input when the drawer opens.
+	 * Uses a short delay to ensure the drawer is fully rendered before focusing.
+	 */
 	$effect(() => {
 		if (open && inputElement) {
-			// Use setTimeout to ensure the drawer is fully rendered before focusing
 			setTimeout(() => {
 				inputElement?.focus();
 			}, 100);
 		}
 	});
 
+	/**
+	 * Handles search form submission.
+	 * Prevents default form behavior and triggers the parent's search handler.
+	 * @param event - The form submit event
+	 */
 	function handleSearch(event: Event) {
 		event.preventDefault();
-		// This would trigger search in parent component
-		// For testing purposes, we just need the form to be submittable
+		if (onSearch && query.trim()) {
+			onSearch(query.trim());
+		}
 	}
 
+	/**
+	 * Handles card selection from the results list.
+	 * @param card - The selected card
+	 */
 	function selectCard(card: Card) {
 		if (onCardSelect) {
 			onCardSelect(card);
@@ -174,6 +183,7 @@
 		padding: 1rem;
 		overflow-y: auto;
 		flex: 1;
+		min-height: 0; /* Ensure flex child can shrink */
 	}
 
 	.search-state {
