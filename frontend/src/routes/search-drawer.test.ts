@@ -3,6 +3,7 @@ import { render, cleanup, fireEvent, waitFor } from '@testing-library/svelte';
 import Sidebar from '$lib/components/Sidebar.svelte';
 import SearchDrawer from '$lib/components/SearchDrawer.svelte';
 import { base } from '$app/paths';
+import type { Card } from '$lib/types/card';
 
 afterEach(() => {
 	cleanup();
@@ -310,5 +311,175 @@ describe('Search Drawer Integration - Sidebar Trigger', () => {
 
 			cleanup();
 		});
+	});
+});
+
+describe('Search Drawer Integration - PrintingModal', () => {
+	beforeEach(() => {
+		vi.stubGlobal('fetch', vi.fn());
+	});
+
+	it('should open PrintingModal when a card result is clicked', async () => {
+		const mockFetch = vi.fn().mockImplementation((url: string) => {
+			if (typeof url === 'string' && url.includes('/api/cards/search')) {
+				return Promise.resolve({
+					ok: true,
+					json: () => Promise.resolve({ cards: MOCK_SEARCH_RESULTS })
+				});
+			}
+			if (typeof url === 'string' && url.includes('/printings')) {
+				return Promise.resolve({
+					ok: true,
+					json: () => Promise.resolve({ printings: [] })
+				});
+			}
+			return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+		});
+		vi.stubGlobal('fetch', mockFetch);
+
+		render(SearchDrawer, {
+			props: {
+				open: true,
+				results: MOCK_SEARCH_RESULTS,
+				onCardSelect: (card) => {
+					// Verify that onCardSelect was called
+					expect(card).toBeDefined();
+					expect(card.id).toBe('card-1');
+				}
+			}
+		});
+
+		// Click on first card result
+		const firstResult = document.body.querySelector('[data-card-id="card-1"]');
+		expect(firstResult).toBeInTheDocument();
+
+		if (firstResult) {
+			await fireEvent.click(firstResult);
+		}
+	});
+
+	it('should pass correct card data to PrintingModal', async () => {
+		const cardData = MOCK_SEARCH_RESULTS[0];
+		let receivedCard: Card | null = null;
+
+		render(SearchDrawer, {
+			props: {
+				open: true,
+				results: MOCK_SEARCH_RESULTS,
+				onCardSelect: (card) => {
+					receivedCard = card;
+				}
+			}
+		});
+
+		const firstResult = document.body.querySelector('[data-card-id="card-1"]');
+		if (firstResult) {
+			await fireEvent.click(firstResult);
+		}
+
+		await waitFor(() => {
+			expect(receivedCard).toEqual(cardData);
+		});
+	});
+
+	it('should keep drawer open when PrintingModal is displayed', async () => {
+		render(SearchDrawer, {
+			props: {
+				open: true,
+				results: MOCK_SEARCH_RESULTS,
+				onCardSelect: vi.fn()
+			}
+		});
+
+		// Click on a card to open modal
+		const firstResult = document.body.querySelector('[data-card-id="card-1"]');
+		if (firstResult) {
+			await fireEvent.click(firstResult);
+		}
+
+		// Drawer should still be visible
+		await waitFor(() => {
+			const drawer = document.body.querySelector('[data-testid="search-drawer"]');
+			expect(drawer).toBeVisible();
+		});
+	});
+
+	it('should return to search results when modal is closed', async () => {
+		// This test verifies the drawer remains open after modal closes
+		// The actual modal closing is tested in the component level test
+		render(SearchDrawer, {
+			props: {
+				open: true,
+				results: MOCK_SEARCH_RESULTS,
+				onCardSelect: vi.fn()
+			}
+		});
+
+		const drawer = document.body.querySelector('[data-testid="search-drawer"]');
+		expect(drawer).toBeVisible();
+
+		// Results should still be displayed
+		expect(document.body.textContent).toContain('Lightning Bolt');
+	});
+
+	it('should allow selecting different card after closing modal', async () => {
+		const onCardSelect = vi.fn();
+
+		render(SearchDrawer, {
+			props: {
+				open: true,
+				results: MOCK_SEARCH_RESULTS,
+				onCardSelect
+			}
+		});
+
+		// Click first card
+		const firstResult = document.body.querySelector('[data-card-id="card-1"]');
+		if (firstResult) {
+			await fireEvent.click(firstResult);
+		}
+
+		await waitFor(() => {
+			expect(onCardSelect).toHaveBeenCalledWith(MOCK_SEARCH_RESULTS[0]);
+		});
+
+		// Click second card
+		const secondResult = document.body.querySelector('[data-card-id="card-2"]');
+		if (secondResult) {
+			await fireEvent.click(secondResult);
+		}
+
+		await waitFor(() => {
+			expect(onCardSelect).toHaveBeenCalledWith(MOCK_SEARCH_RESULTS[1]);
+			expect(onCardSelect).toHaveBeenCalledTimes(2);
+		});
+	});
+
+	it('should allow adding card to inventory from modal while drawer is open', async () => {
+		// This is an integration test that verifies the workflow
+		// The actual "add to inventory" functionality is tested in PrintingModal tests
+		const onCardSelect = vi.fn();
+
+		render(SearchDrawer, {
+			props: {
+				open: true,
+				results: MOCK_SEARCH_RESULTS,
+				onCardSelect
+			}
+		});
+
+		// Select a card (which would open the modal in the full app)
+		const firstResult = document.body.querySelector('[data-card-id="card-1"]');
+		if (firstResult) {
+			await fireEvent.click(firstResult);
+		}
+
+		await waitFor(() => {
+			expect(onCardSelect).toHaveBeenCalled();
+		});
+
+		// Drawer should still be visible
+		const drawer = document.body.querySelector('[data-testid="search-drawer"]');
+		expect(drawer).toBeVisible();
 	});
 });

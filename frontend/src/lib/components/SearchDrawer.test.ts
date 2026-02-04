@@ -233,6 +233,39 @@ describe('SearchDrawer Component - Card Selection', () => {
 		}
 	});
 
+	it('should call onCardSelect with correct card data when result is clicked', async () => {
+		const onCardSelect = vi.fn();
+		render(SearchDrawer, {
+			props: { open: true, results: mockCards, onCardSelect }
+		});
+
+		const firstResult = document.body.querySelector('[data-card-id="card-1"]');
+		expect(firstResult).toBeInTheDocument();
+
+		if (firstResult) {
+			await fireEvent.click(firstResult);
+			expect(onCardSelect).toHaveBeenCalledWith(mockCards[0]);
+		}
+	});
+
+	it('should make card result buttons keyboard accessible', async () => {
+		const onCardSelect = vi.fn();
+		render(SearchDrawer, {
+			props: { open: true, results: mockCards, onCardSelect }
+		});
+
+		const firstResult = document.body.querySelector('[data-card-id="card-1"]') as HTMLElement;
+		expect(firstResult).toBeInTheDocument();
+
+		// Test Enter key
+		await fireEvent.keyDown(firstResult, { key: 'Enter' });
+		expect(onCardSelect).toHaveBeenCalledWith(mockCards[0]);
+
+		// Test Space key
+		await fireEvent.keyDown(firstResult, { key: ' ' });
+		expect(onCardSelect).toHaveBeenCalledTimes(2);
+	});
+
 	it('should display card mana cost if available', () => {
 		render(SearchDrawer, {
 			props: { open: true, results: mockCards }
