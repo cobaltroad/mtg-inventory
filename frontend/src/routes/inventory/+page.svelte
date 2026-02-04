@@ -2,7 +2,6 @@
 	import InventoryTable from '$lib/components/InventoryTable.svelte';
 	import EmptyInventory from '$lib/components/EmptyInventory.svelte';
 	import { pluralize } from '$lib/utils/format';
-	import type { InventoryItem as InventoryItemType } from '$lib/types/inventory';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
