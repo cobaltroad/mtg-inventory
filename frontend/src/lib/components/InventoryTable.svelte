@@ -185,6 +185,27 @@
 		vertical-align: middle;
 	}
 
+	:global(.dark) .inventory-table {
+		background: #1f2937;
+	}
+
+	:global(.dark) .inventory-table thead {
+		background: #374151;
+		border-bottom-color: #4b5563;
+	}
+
+	:global(.dark) .inventory-table th {
+		color: #e5e7eb;
+	}
+
+	:global(.dark) .inventory-table tbody tr {
+		border-bottom-color: #374151;
+	}
+
+	:global(.dark) .inventory-table tbody tr:hover {
+		background: #374151;
+	}
+
 	.image-cell {
 		width: 80px;
 		height: 112px;
@@ -228,9 +249,17 @@
 		color: #111827;
 	}
 
+	:global(.dark) .card-name {
+		color: #e5e7eb;
+	}
+
 	.collector-number {
 		font-size: 0.875rem;
 		color: #6b7280;
+	}
+
+	:global(.dark) .collector-number {
+		color: #9ca3af;
 	}
 
 	.set-cell {
@@ -243,9 +272,17 @@
 		font-weight: 500;
 	}
 
+	:global(.dark) .set-name {
+		color: #e5e7eb;
+	}
+
 	.set-code {
 		font-size: 0.875rem;
 		color: #6b7280;
+	}
+
+	:global(.dark) .set-code {
+		color: #9ca3af;
 	}
 
 	.quantity-badge {
