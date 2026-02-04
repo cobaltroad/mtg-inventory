@@ -1,27 +1,36 @@
 <script lang="ts">
-	import { HomeOutline, SearchOutline, GridSolidOutline } from 'flowbite-svelte-icons';
+	import { House, Search, LayoutGrid, Menu } from 'lucide-svelte';
 	import { base } from '$app/paths';
+	import type { ComponentType } from 'svelte';
 
 	interface Props {
 		open?: boolean;
+		onSearchClick?: () => void;
 	}
 
-	let { open = $bindable(false) }: Props = $props();
+	let { open = $bindable(false), onSearchClick }: Props = $props();
 
 	function toggleSidebar() {
 		open = !open;
 	}
 
+	function handleSearchClick() {
+		if (onSearchClick) {
+			onSearchClick();
+		}
+	}
+
 	interface NavItem {
-		href: string;
+		href?: string;
 		label: string;
-		icon: any;
+		icon: ComponentType;
+		isButton?: boolean;
 	}
 
 	const navItems: NavItem[] = [
-		{ href: `${base}/`, label: 'Home', icon: HomeOutline },
-		{ href: `${base}/search`, label: 'Search', icon: SearchOutline },
-		{ href: `${base}/inventory`, label: 'Inventory', icon: GridSolidOutline }
+		{ href: `${base}/`, label: 'Home', icon: House },
+		{ label: 'Search', icon: Search, isButton: true },
+		{ href: `${base}/inventory`, label: 'Inventory', icon: LayoutGrid }
 	];
 
 	const currentPath =
@@ -36,13 +45,7 @@
 		aria-label="Toggle navigation menu"
 		aria-expanded={open}
 	>
-		<svg class="h-6 w-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-			<path
-				fill-rule="evenodd"
-				d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-				clip-rule="evenodd"
-			></path>
-		</svg>
+		<Menu class="h-6 w-6" />
 	</button>
 
 	<div
@@ -54,14 +57,30 @@
 				{#each navItems as item}
 					{@const Icon = item.icon}
 					<li>
-						<a
-							href={item.href}
-							class="nav-link {currentPath === item.href.replace(base, '') || '/' ? 'active' : ''}"
-							aria-current={currentPath === item.href.replace(base, '') || '/' ? 'page' : undefined}
-						>
-							<Icon class="h-5 w-5" />
-							<span class="nav-label">{item.label}</span>
-						</a>
+						{#if item.isButton}
+							<button
+								type="button"
+								onclick={handleSearchClick}
+								class="nav-link nav-button"
+								aria-label="Search - Open search drawer"
+							>
+								<Icon class="h-5 w-5" />
+								<span class="nav-label">{item.label}</span>
+							</button>
+						{:else}
+							<a
+								href={item.href}
+								class="nav-link {currentPath === item.href?.replace(base, '') || '/'
+									? 'active'
+									: ''}"
+								aria-current={currentPath === item.href?.replace(base, '') || '/'
+									? 'page'
+									: undefined}
+							>
+								<Icon class="h-5 w-5" />
+								<span class="nav-label">{item.label}</span>
+							</a>
+						{/if}
 					</li>
 				{/each}
 			</ul>
@@ -134,6 +153,14 @@
 		border-radius: 0.5rem;
 		transition: background 0.2s;
 		font-weight: 500;
+	}
+
+	.nav-button {
+		width: 100%;
+		background: transparent;
+		border: none;
+		cursor: pointer;
+		text-align: left;
 	}
 
 	.nav-link:hover {

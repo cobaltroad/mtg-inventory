@@ -199,10 +199,7 @@ describe('hooks.server – handle', () => {
 
 		await handle({ event, resolve } as any);
 
-		expect(stubFetch).toHaveBeenCalledWith(
-			'http://localhost:3000/api/health',
-			expect.any(Object)
-		);
+		expect(stubFetch).toHaveBeenCalledWith('http://localhost:3000/api/health', expect.any(Object));
 	});
 
 	// -----------------------------------------------------------------------

@@ -52,6 +52,7 @@ services:
         max-file: "3"
     networks:
       - mtg
+      - traefik-public
 
   frontend:
     build:
@@ -71,7 +72,7 @@ services:
     # and does not require hot reload
     volumes:
       - ./frontend:/frontend  # Vite hot reload
-      - frontend_node_modules:/frontend/node_modules
+      - /frontend/node_modules # container-only install
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik-public"

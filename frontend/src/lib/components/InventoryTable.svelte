@@ -1,12 +1,4 @@
 <script lang="ts">
-	import {
-		Table,
-		TableBody,
-		TableBodyCell,
-		TableBodyRow,
-		TableHead,
-		TableHeadCell
-	} from 'flowbite-svelte';
 	import type { InventoryItem } from '$lib/types/inventory';
 	import { formatPrice } from '$lib/utils/format';
 
@@ -48,19 +40,21 @@
 	</div>
 {:else}
 	<div class="table-container">
-		<Table hoverable={true}>
-			<TableHead>
-				<TableHeadCell>Image</TableHeadCell>
-				<TableHeadCell>Card Name</TableHeadCell>
-				<TableHeadCell>Set</TableHeadCell>
-				<TableHeadCell>Quantity</TableHeadCell>
-				<TableHeadCell>Price</TableHeadCell>
-				<TableHeadCell>Details</TableHeadCell>
-			</TableHead>
-			<TableBody>
+		<table class="inventory-table">
+			<thead>
+				<tr>
+					<th>Image</th>
+					<th>Card Name</th>
+					<th>Set</th>
+					<th>Quantity</th>
+					<th>Price</th>
+					<th>Details</th>
+				</tr>
+			</thead>
+			<tbody>
 				{#each items as item (item.id)}
-					<TableBodyRow>
-						<TableBodyCell>
+					<tr>
+						<td>
 							<div class="image-cell">
 								{#if !imageStates[item.id]?.loaded && !imageStates[item.id]?.error}
 									<div class="image-placeholder">Loading...</div>
@@ -78,26 +72,26 @@
 									class="card-thumbnail"
 								/>
 							</div>
-						</TableBodyCell>
-						<TableBodyCell>
+						</td>
+						<td>
 							<div class="card-name-cell">
 								<span class="card-name">{item.card_name}</span>
 								<span class="collector-number">#{item.collector_number}</span>
 							</div>
-						</TableBodyCell>
-						<TableBodyCell>
+						</td>
+						<td>
 							<div class="set-cell">
 								<span class="set-name">{item.set_name}</span>
 								<span class="set-code">({item.set.toUpperCase()})</span>
 							</div>
-						</TableBodyCell>
-						<TableBodyCell>
+						</td>
+						<td>
 							<span class="quantity-badge">{item.quantity}</span>
-						</TableBodyCell>
-						<TableBodyCell>
+						</td>
+						<td>
 							{formatPrice(item.acquired_price_cents)}
-						</TableBodyCell>
-						<TableBodyCell>
+						</td>
+						<td>
 							<div class="details-cell">
 								{#if item.treatment}
 									<span class="detail-badge">{item.treatment}</span>
@@ -109,11 +103,11 @@
 									<span class="detail-text">Acquired: {item.acquired_date}</span>
 								{/if}
 							</div>
-						</TableBodyCell>
-					</TableBodyRow>
+						</td>
+					</tr>
 				{/each}
-			</TableBody>
-		</Table>
+			</tbody>
+		</table>
 	</div>
 {/if}
 
@@ -154,6 +148,62 @@
 		overflow-x: auto;
 		border-radius: 0.5rem;
 		box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+	}
+
+	.inventory-table {
+		width: 100%;
+		border-collapse: collapse;
+		background: white;
+	}
+
+	.inventory-table thead {
+		background: #f9fafb;
+		border-bottom: 2px solid #e5e7eb;
+	}
+
+	.inventory-table th {
+		padding: 0.75rem 1rem;
+		text-align: left;
+		font-weight: 600;
+		color: #374151;
+		font-size: 0.875rem;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	.inventory-table tbody tr {
+		border-bottom: 1px solid #e5e7eb;
+		transition: background 0.2s;
+	}
+
+	.inventory-table tbody tr:hover {
+		background: #f9fafb;
+	}
+
+	.inventory-table td {
+		padding: 1rem;
+		vertical-align: middle;
+	}
+
+	:global(.dark) .inventory-table {
+		background: #1f2937;
+	}
+
+	:global(.dark) .inventory-table thead {
+		background: #374151;
+		border-bottom-color: #4b5563;
+	}
+
+	:global(.dark) .inventory-table th {
+		color: #e5e7eb;
+	}
+
+	:global(.dark) .inventory-table tbody tr {
+		border-bottom-color: #374151;
+	}
+
+	:global(.dark) .inventory-table tbody tr:hover {
+		background: #374151;
 	}
 
 	.image-cell {
@@ -199,9 +249,17 @@
 		color: #111827;
 	}
 
+	:global(.dark) .card-name {
+		color: #e5e7eb;
+	}
+
 	.collector-number {
 		font-size: 0.875rem;
 		color: #6b7280;
+	}
+
+	:global(.dark) .collector-number {
+		color: #9ca3af;
 	}
 
 	.set-cell {
@@ -214,9 +272,17 @@
 		font-weight: 500;
 	}
 
+	:global(.dark) .set-name {
+		color: #e5e7eb;
+	}
+
 	.set-code {
 		font-size: 0.875rem;
 		color: #6b7280;
+	}
+
+	:global(.dark) .set-code {
+		color: #9ca3af;
 	}
 
 	.quantity-badge {

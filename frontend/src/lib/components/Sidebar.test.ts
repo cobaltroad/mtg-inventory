@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/svelte';
+import { render, screen, cleanup, fireEvent } from '@testing-library/svelte';
 import { base } from '$app/paths';
 import Sidebar from './Sidebar.svelte';
 
@@ -20,11 +20,11 @@ describe('Sidebar Component - Navigation Links', () => {
 		expect(homeLink).toHaveAttribute('href', `${base}/`);
 	});
 
-	it('should render with Search navigation link', () => {
+	it('should render with Search navigation button', () => {
 		const { container } = render(Sidebar);
-		const searchLink = container.querySelector('a[href="/search"]');
-		expect(searchLink).toBeInTheDocument();
-		expect(searchLink).toHaveAttribute('href', `${base}/search`);
+		const searchButton = container.querySelector('button[aria-label*="Search"]');
+		expect(searchButton).toBeInTheDocument();
+		expect(searchButton).toHaveAttribute('type', 'button');
 	});
 
 	it('should render with Inventory navigation link', () => {
@@ -34,17 +34,18 @@ describe('Sidebar Component - Navigation Links', () => {
 		expect(inventoryLink).toHaveAttribute('href', `${base}/inventory`);
 	});
 
-	it('should render all navigation links in correct order', () => {
+	it('should render all navigation items in correct order', () => {
 		const { container } = render(Sidebar);
 		const links = container.querySelectorAll('a.nav-link');
+		const buttons = container.querySelectorAll('button.nav-button');
 
-		// Should have exactly 3 links
-		expect(links).toHaveLength(3);
+		// Should have exactly 2 links and 1 button
+		expect(links).toHaveLength(2);
+		expect(buttons).toHaveLength(1);
 
-		// Check hrefs are correct
+		// Check link hrefs are correct
 		const hrefs = Array.from(links).map((link) => link.getAttribute('href'));
 		expect(hrefs).toContain('/');
-		expect(hrefs).toContain('/search');
 		expect(hrefs).toContain('/inventory');
 	});
 });
@@ -88,14 +89,21 @@ describe('Sidebar Component - Accessibility', () => {
 		expect(sidebar).toBeInTheDocument();
 	});
 
-	it('should have accessible navigation links', () => {
+	it('should have accessible navigation items', () => {
 		const { container } = render(Sidebar);
 		const links = container.querySelectorAll('a.nav-link');
+		const buttons = container.querySelectorAll('button.nav-button');
 
-		// Should have exactly 3 links
-		expect(links.length).toBe(3);
+		// Should have exactly 2 links and 1 button
+		expect(links.length).toBe(2);
+		expect(buttons.length).toBe(1);
+
 		links.forEach((link) => {
 			expect(link).toBeInTheDocument();
+		});
+
+		buttons.forEach((button) => {
+			expect(button).toBeInTheDocument();
 		});
 	});
 
@@ -121,9 +129,61 @@ describe('Sidebar Component - Props', () => {
 });
 
 describe('Sidebar Component - Styling', () => {
-	it('should use Flowbite styling classes', () => {
+	it('should render with proper structure', () => {
 		const { container } = render(Sidebar);
 		const sidebar = container.querySelector('aside');
 		expect(sidebar).toBeInTheDocument();
+	});
+});
+
+describe('Sidebar Component - Search Drawer Trigger', () => {
+	it('should render Search as a button instead of anchor link', () => {
+		const { container } = render(Sidebar);
+		const searchButton = container.querySelector('button[aria-label*="Search"]');
+		expect(searchButton).toBeInTheDocument();
+
+		// Should not have an anchor link for Search
+		const searchLink = container.querySelector('a[href*="search"]');
+		expect(searchLink).not.toBeInTheDocument();
+	});
+
+	it('should call onSearchClick when Search button is clicked', async () => {
+		const onSearchClick = vi.fn();
+		const { container } = render(Sidebar, { props: { onSearchClick } });
+
+		const searchButton = container.querySelector(
+			'button[aria-label*="Search"]'
+		) as HTMLButtonElement;
+		expect(searchButton).toBeInTheDocument();
+
+		await fireEvent.click(searchButton);
+
+		expect(onSearchClick).toHaveBeenCalledTimes(1);
+	});
+
+	it('should have proper ARIA attributes on Search button', () => {
+		const { container } = render(Sidebar);
+		const searchButton = container.querySelector('button[aria-label*="Search"]');
+
+		expect(searchButton).toHaveAttribute('type', 'button');
+		expect(searchButton).toHaveAttribute('aria-label');
+	});
+
+	it('should still render Home and Inventory as navigation links', () => {
+		const { container } = render(Sidebar);
+
+		const homeLink = container.querySelector('a[href="/"]');
+		expect(homeLink).toBeInTheDocument();
+
+		const inventoryLink = container.querySelector('a[href="/inventory"]');
+		expect(inventoryLink).toBeInTheDocument();
+	});
+
+	it('should only have 2 anchor links (Home and Inventory)', () => {
+		const { container } = render(Sidebar);
+		const links = container.querySelectorAll('a.nav-link');
+
+		// Should have exactly 2 links now (Home and Inventory)
+		expect(links).toHaveLength(2);
 	});
 });

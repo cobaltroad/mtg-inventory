@@ -1,9 +1,7 @@
 <script lang="ts">
 	import InventoryTable from '$lib/components/InventoryTable.svelte';
 	import EmptyInventory from '$lib/components/EmptyInventory.svelte';
-	import { Alert } from 'flowbite-svelte';
 	import { pluralize } from '$lib/utils/format';
-	import type { InventoryItem as InventoryItemType } from '$lib/types/inventory';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -23,10 +21,10 @@
 	</header>
 
 	{#if error}
-		<Alert color="red" class="mb-4">
+		<div class="alert alert-error" role="alert">
 			<span class="font-medium">Error!</span>
 			{error}
-		</Alert>
+		</div>
 	{/if}
 
 	{#if !error && items.length === 0 && !loading}
@@ -60,11 +58,32 @@
 		margin: 0;
 	}
 
+	.alert {
+		padding: 1rem;
+		border-radius: 0.5rem;
+		margin-bottom: 1rem;
+		display: flex;
+		gap: 0.5rem;
+		align-items: flex-start;
+	}
+
+	.alert-error {
+		background: #fef2f2;
+		border: 1px solid #fecaca;
+		color: #991b1b;
+	}
+
 	:global(.dark) .page-title {
 		color: #e5e7eb;
 	}
 
 	:global(.dark) .item-count {
 		color: #9ca3af;
+	}
+
+	:global(.dark) .alert-error {
+		background: #7f1d1d;
+		border-color: #991b1b;
+		color: #fecaca;
 	}
 </style>
