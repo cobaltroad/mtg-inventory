@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 MTG (Magic: The Gathering) inventory management system. Full-stack application with:
 - **Backend**: Rails 8.1 API-only (Ruby 3.4)
-- **Frontend**: SvelteKit 2 with TypeScript
+- **Frontend**: SvelteKit 2 with TypeScript, Skeleton UI v4, Tailwind CSS v4
 - **Database**: PostgreSQL 16
 - **Deployment**: Docker Compose
 
@@ -48,7 +48,21 @@ npm run check             # TypeScript type checking
 npm run lint              # Prettier + ESLint
 npm run format            # Auto-format with Prettier
 npm run build             # Production build
+npm run test              # Run test suite (Vitest)
+npm run test:watch        # Run tests in watch mode
 ```
+
+**UI Stack:**
+- **Skeleton UI v4** - Component library and design system
+- **Tailwind CSS v4** - Utility-first CSS framework
+- **Lucide Svelte** - Icon library
+- **Svelte 5** - Reactive UI framework with runes
+
+**Styling Approach:**
+- Utility-first design with Tailwind classes
+- Skeleton UI theme: Crimson
+- Dark mode support via `class` strategy
+- Semantic HTML with accessibility features
 
 ## Architecture
 

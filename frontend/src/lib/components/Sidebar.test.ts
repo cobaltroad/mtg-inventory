@@ -129,7 +129,7 @@ describe('Sidebar Component - Props', () => {
 });
 
 describe('Sidebar Component - Styling', () => {
-	it('should use Flowbite styling classes', () => {
+	it('should render with proper structure', () => {
 		const { container } = render(Sidebar);
 		const sidebar = container.querySelector('aside');
 		expect(sidebar).toBeInTheDocument();
