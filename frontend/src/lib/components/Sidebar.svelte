@@ -4,23 +4,31 @@
 
 	interface Props {
 		open?: boolean;
+		onSearchClick?: () => void;
 	}
 
-	let { open = $bindable(false) }: Props = $props();
+	let { open = $bindable(false), onSearchClick }: Props = $props();
 
 	function toggleSidebar() {
 		open = !open;
 	}
 
+	function handleSearchClick() {
+		if (onSearchClick) {
+			onSearchClick();
+		}
+	}
+
 	interface NavItem {
-		href: string;
+		href?: string;
 		label: string;
-		icon: any;
+		icon: typeof HomeOutline | typeof SearchOutline | typeof GridSolidOutline;
+		isButton?: boolean;
 	}
 
 	const navItems: NavItem[] = [
 		{ href: `${base}/`, label: 'Home', icon: HomeOutline },
-		{ href: `${base}/search`, label: 'Search', icon: SearchOutline },
+		{ label: 'Search', icon: SearchOutline, isButton: true },
 		{ href: `${base}/inventory`, label: 'Inventory', icon: GridSolidOutline }
 	];
 
@@ -54,14 +62,26 @@
 				{#each navItems as item}
 					{@const Icon = item.icon}
 					<li>
-						<a
-							href={item.href}
-							class="nav-link {currentPath === item.href.replace(base, '') || '/' ? 'active' : ''}"
-							aria-current={currentPath === item.href.replace(base, '') || '/' ? 'page' : undefined}
-						>
-							<Icon class="h-5 w-5" />
-							<span class="nav-label">{item.label}</span>
-						</a>
+						{#if item.isButton}
+							<button
+								type="button"
+								onclick={handleSearchClick}
+								class="nav-link nav-button"
+								aria-label="Search - Open search drawer"
+							>
+								<Icon class="h-5 w-5" />
+								<span class="nav-label">{item.label}</span>
+							</button>
+						{:else}
+							<a
+								href={item.href}
+								class="nav-link {currentPath === item.href?.replace(base, '') || '/' ? 'active' : ''}"
+								aria-current={currentPath === item.href?.replace(base, '') || '/' ? 'page' : undefined}
+							>
+								<Icon class="h-5 w-5" />
+								<span class="nav-label">{item.label}</span>
+							</a>
+						{/if}
 					</li>
 				{/each}
 			</ul>
@@ -134,6 +154,14 @@
 		border-radius: 0.5rem;
 		transition: background 0.2s;
 		font-weight: 500;
+	}
+
+	.nav-button {
+		width: 100%;
+		background: transparent;
+		border: none;
+		cursor: pointer;
+		text-align: left;
 	}
 
 	.nav-link:hover {

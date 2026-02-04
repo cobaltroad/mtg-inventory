@@ -194,3 +194,28 @@ describe('SearchDrawer Component - Responsive Design', () => {
 		expect(drawer?.className).toBeTruthy();
 	});
 });
+
+describe('SearchDrawer Component - Auto-focus', () => {
+	it('should auto-focus search input when drawer opens', async () => {
+		const { container, rerender } = render(SearchDrawer, { props: { open: false } });
+
+		// Initially closed, input should not be focused
+		const input = container.querySelector('input[type="text"]') as HTMLInputElement;
+
+		// Open the drawer
+		await rerender({ open: true });
+
+		// Wait for the focus to be applied
+		await waitFor(() => {
+			expect(document.activeElement).toBe(input);
+		});
+	});
+
+	it('should have proper ARIA dialog attributes', () => {
+		const { container } = render(SearchDrawer, { props: { open: true } });
+		const drawer = container.querySelector('[data-testid="search-drawer"]');
+
+		expect(drawer).toHaveAttribute('role', 'dialog');
+		expect(drawer).toHaveAttribute('aria-label', 'Search cards');
+	});
+});

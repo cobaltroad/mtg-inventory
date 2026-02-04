@@ -25,6 +25,17 @@
 	}: Props = $props();
 
 	let query = $state('');
+	let inputElement = $state<HTMLInputElement | null>(null);
+
+	// Auto-focus search input when drawer opens
+	$effect(() => {
+		if (open && inputElement) {
+			// Use setTimeout to ensure the drawer is fully rendered before focusing
+			setTimeout(() => {
+				inputElement?.focus();
+			}, 100);
+		}
+	});
 
 	function handleClose() {
 		open = false;
@@ -66,15 +77,14 @@
 	</div>
 
 	<form onsubmit={handleSearch} class="search-form">
-		<Input
+		<input
 			type="text"
 			bind:value={query}
+			bind:this={inputElement}
 			placeholder="Enter card name..."
 			aria-label="Search for cards"
-			class="search-input"
-		>
-			<SearchOutline slot="left" class="h-5 w-5" />
-		</Input>
+			class="search-input block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
+		/>
 		<Button type="submit" aria-label="Search for cards" disabled={!query.trim()}>Search</Button>
 	</form>
 

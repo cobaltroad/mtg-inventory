@@ -2,9 +2,15 @@
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import Sidebar from '$lib/components/Sidebar.svelte';
+	import SearchDrawer from '$lib/components/SearchDrawer.svelte';
 
 	let { children } = $props();
 	let sidebarOpen = $state(false);
+	let searchDrawerOpen = $state(false);
+
+	function handleSearchClick() {
+		searchDrawerOpen = true;
+	}
 
 	export const trailingSlash = 'ignore';
 </script>
@@ -12,11 +18,13 @@
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
 
 <div class="app-container">
-	<Sidebar bind:open={sidebarOpen} />
+	<Sidebar bind:open={sidebarOpen} onSearchClick={handleSearchClick} />
 
 	<main class="main-content">
 		{@render children()}
 	</main>
+
+	<SearchDrawer bind:open={searchDrawerOpen} />
 </div>
 
 <style>
