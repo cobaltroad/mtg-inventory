@@ -52,6 +52,7 @@ services:
         max-file: "3"
     networks:
       - mtg
+      - traefik-public
 
   frontend:
     build:
