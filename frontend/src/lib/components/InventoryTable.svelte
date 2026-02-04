@@ -45,9 +45,8 @@
 				<tr>
 					<th>Image</th>
 					<th>Card Name</th>
-					<th>Set</th>
 					<th>Quantity</th>
-					<th>Price</th>
+					<th>Value</th>
 					<th>Details</th>
 				</tr>
 			</thead>
@@ -76,20 +75,14 @@
 						<td>
 							<div class="card-name-cell">
 								<span class="card-name">{item.card_name}</span>
-								<span class="collector-number">#{item.collector_number}</span>
+								<span class="collector-number">{item.set.toUpperCase()} {item.collector_number}</span>
 							</div>
 						</td>
 						<td>
-							<div class="set-cell">
-								<span class="set-name">{item.set_name}</span>
-								<span class="set-code">({item.set.toUpperCase()})</span>
-							</div>
+							<span class="quantity-badge">{item.quantity}x</span>
 						</td>
 						<td>
-							<span class="quantity-badge">{item.quantity}</span>
-						</td>
-						<td>
-							{formatPrice(item.acquired_price_cents)}
+							TBD
 						</td>
 						<td>
 							<div class="details-cell">
@@ -101,6 +94,7 @@
 								{/if}
 								{#if item.acquired_date}
 									<span class="detail-text">Acquired: {item.acquired_date}</span>
+                  <span class="detail-text">@ {formatPrice(item.acquired_price_cents)}</span>
 								{/if}
 							</div>
 						</td>
