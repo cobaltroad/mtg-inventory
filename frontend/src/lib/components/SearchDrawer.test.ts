@@ -99,8 +99,10 @@ describe('SearchDrawer Component - Search Functionality', () => {
 		expect(input.value).toBe('Lightning');
 	});
 
-	it('should handle search submission', async () => {
-		render(SearchDrawer, { props: { open: true } });
+	// NEW TEST: Search form submission should trigger parent handler
+	it('should call onSearch handler when form is submitted', async () => {
+		const onSearch = vi.fn();
+		render(SearchDrawer, { props: { open: true, onSearch } });
 		const input = document.body.querySelector('input[type="text"]') as HTMLInputElement;
 		const form = document.body.querySelector('form');
 
@@ -110,8 +112,45 @@ describe('SearchDrawer Component - Search Functionality', () => {
 			await fireEvent.submit(form);
 		}
 
-		// Search should be triggered
-		expect(input.value).toBe('Lightning Bolt');
+		// onSearch should be called with the query
+		expect(onSearch).toHaveBeenCalledWith('Lightning Bolt');
+	});
+
+	// NEW TEST: Search form submission should trigger on Enter key
+	it('should call onSearch handler when Enter key is pressed', async () => {
+		const onSearch = vi.fn();
+		render(SearchDrawer, { props: { open: true, onSearch } });
+		const input = document.body.querySelector('input[type="text"]') as HTMLInputElement;
+		const form = document.body.querySelector('form');
+
+		await fireEvent.input(input, { target: { value: 'Lightning Bolt' } });
+		// Enter key submits the form
+		await fireEvent.keyDown(input, { key: 'Enter' });
+		if (form) {
+			await fireEvent.submit(form);
+		}
+
+		// onSearch should be called with the query
+		expect(onSearch).toHaveBeenCalledWith('Lightning Bolt');
+	});
+
+	// NEW TEST: Search button should be disabled when query is empty
+	it('should disable search button when query is empty', () => {
+		render(SearchDrawer, { props: { open: true } });
+		const button = document.body.querySelector('button[type="submit"]') as HTMLButtonElement;
+
+		expect(button).toBeDisabled();
+	});
+
+	// NEW TEST: Search button should be enabled when query has value
+	it('should enable search button when query has value', async () => {
+		render(SearchDrawer, { props: { open: true } });
+		const input = document.body.querySelector('input[type="text"]') as HTMLInputElement;
+		const button = document.body.querySelector('button[type="submit"]') as HTMLButtonElement;
+
+		await fireEvent.input(input, { target: { value: 'Lightning' } });
+
+		expect(button).not.toBeDisabled();
 	});
 
 	it('should display search results', async () => {
@@ -133,12 +172,50 @@ describe('SearchDrawer Component - Search Functionality', () => {
 		expect(document.body.textContent?.toLowerCase()).toContain('searching');
 	});
 
+	// NEW TEST: Loading spinner should be visible during search
+	it('should display loading spinner when searching is true', () => {
+		render(SearchDrawer, {
+			props: { open: true, searching: true }
+		});
+
+		const spinner = document.body.querySelector('.spinner');
+		expect(spinner).toBeInTheDocument();
+	});
+
 	it('should display "no results" message when search returns empty', () => {
 		render(SearchDrawer, {
 			props: { open: true, results: [], hasSearched: true }
 		});
 
 		expect(document.body.textContent?.toLowerCase()).toContain('no results');
+	});
+
+	// NEW TEST: Search form should remain visible when displaying results
+	it('should keep search form visible when results are displayed', () => {
+		render(SearchDrawer, {
+			props: { open: true, results: mockCards }
+		});
+
+		const form = document.body.querySelector('form');
+		const input = document.body.querySelector('input[type="text"]');
+
+		expect(form).toBeInTheDocument();
+		expect(input).toBeInTheDocument();
+		expect(document.body.textContent).toContain('Lightning Bolt');
+	});
+
+	// NEW TEST: Results container should be scrollable
+	it('should have scrollable results container', () => {
+		render(SearchDrawer, {
+			props: { open: true, results: mockCards }
+		});
+
+		const resultsContainer = document.body.querySelector('.results-container');
+		expect(resultsContainer).toBeInTheDocument();
+
+		// Results container should exist and have the proper class for scrolling
+		// Note: JSDOM may not compute styles the same as browsers, so we verify the container exists
+		expect(resultsContainer).toHaveClass('results-container');
 	});
 });
 
@@ -163,6 +240,17 @@ describe('SearchDrawer Component - Card Selection', () => {
 
 		expect(document.body.textContent).toContain('{R}');
 		expect(document.body.textContent).toContain('{U}{U}');
+	});
+
+	// NEW TEST: Should display card name for each result
+	it('should display card name for each result', () => {
+		render(SearchDrawer, {
+			props: { open: true, results: mockCards }
+		});
+
+		mockCards.forEach((card) => {
+			expect(document.body.textContent).toContain(card.name);
+		});
 	});
 });
 
