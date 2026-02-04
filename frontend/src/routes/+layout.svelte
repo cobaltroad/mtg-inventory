@@ -1,5 +1,6 @@
 <script lang="ts">
 	import './layout.css';
+  import '@fontsource-variable/montserrat';
 	import { base } from '$app/paths';
 	import favicon from '$lib/assets/favicon.svg';
 	import Sidebar from '$lib/components/Sidebar.svelte';

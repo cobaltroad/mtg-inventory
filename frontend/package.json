@@ -48,6 +48,7 @@
 		"vitest": "^4.0.0"
 	},
 	"dependencies": {
+		"@fontsource-variable/montserrat": "^5.2.8",
 		"lucide-svelte": "^0.468.0"
 	}
 }

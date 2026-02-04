@@ -75,15 +75,15 @@
 						<td>
 							<div class="card-name-cell">
 								<span class="card-name">{item.card_name}</span>
-								<span class="collector-number">{item.set.toUpperCase()} {item.collector_number}</span>
+								<span class="collector-number"
+									>{item.set.toUpperCase()} {item.collector_number}</span
+								>
 							</div>
 						</td>
 						<td>
 							<span class="quantity-badge">{item.quantity}x</span>
 						</td>
-						<td>
-							TBD
-						</td>
+						<td> TBD </td>
 						<td>
 							<div class="details-cell">
 								{#if item.treatment}
@@ -94,7 +94,7 @@
 								{/if}
 								{#if item.acquired_date}
 									<span class="detail-text">Acquired: {item.acquired_date}</span>
-                  <span class="detail-text">@ {formatPrice(item.acquired_price_cents)}</span>
+									<span class="detail-text">@ {formatPrice(item.acquired_price_cents)}</span>
 								{/if}
 							</div>
 						</td>
