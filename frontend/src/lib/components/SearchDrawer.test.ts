@@ -34,7 +34,9 @@ describe('SearchDrawer Component - Structure', () => {
 
 	it('should have search button', () => {
 		render(SearchDrawer, { props: { open: true } });
-		const button = document.body.querySelector('button[type="submit"], button[aria-label*="Search"]');
+		const button = document.body.querySelector(
+			'button[type="submit"], button[aria-label*="Search"]'
+		);
 		expect(button).toBeInTheDocument();
 	});
 
@@ -63,7 +65,9 @@ describe('SearchDrawer Component - Open/Close Behavior', () => {
 
 	it('should close when close button is clicked', async () => {
 		render(SearchDrawer, { props: { open: true } });
-		const closeButton = document.body.querySelector('button[aria-label*="Close"]') as HTMLButtonElement;
+		const closeButton = document.body.querySelector(
+			'button[aria-label*="Close"]'
+		) as HTMLButtonElement;
 
 		expect(closeButton).toBeInTheDocument();
 
@@ -182,7 +186,9 @@ describe('SearchDrawer Component - Accessibility', () => {
 		const input = document.body.querySelector('input[type="text"]');
 
 		// Input should have label or aria-label
-		expect(input?.getAttribute('aria-label') || document.body.querySelector('label[for]')).toBeTruthy();
+		expect(
+			input?.getAttribute('aria-label') || document.body.querySelector('label[for]')
+		).toBeTruthy();
 	});
 });
 

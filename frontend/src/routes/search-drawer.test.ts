@@ -17,7 +17,9 @@ describe('Search Drawer Integration - Sidebar Trigger', () => {
 		const { container } = render(Sidebar);
 
 		// Find the Search button in the sidebar
-		const searchButton = container.querySelector('button[aria-label*="Search"]') as HTMLButtonElement;
+		const searchButton = container.querySelector(
+			'button[aria-label*="Search"]'
+		) as HTMLButtonElement;
 		expect(searchButton).toBeInTheDocument();
 		expect(searchButton).toHaveAttribute('type', 'button');
 
@@ -35,7 +37,9 @@ describe('Search Drawer Integration - Sidebar Trigger', () => {
 		const onSearchClick = vi.fn();
 		const { container } = render(Sidebar, { props: { onSearchClick } });
 
-		const searchButton = container.querySelector('button[aria-label*="Search"]') as HTMLButtonElement;
+		const searchButton = container.querySelector(
+			'button[aria-label*="Search"]'
+		) as HTMLButtonElement;
 		await fireEvent.click(searchButton);
 
 		// Callback should be called
@@ -50,7 +54,9 @@ describe('Search Drawer Integration - Sidebar Trigger', () => {
 
 		const { container } = render(Sidebar);
 
-		const searchButton = container.querySelector('button[aria-label*="Search"]') as HTMLButtonElement;
+		const searchButton = container.querySelector(
+			'button[aria-label*="Search"]'
+		) as HTMLButtonElement;
 
 		expect(searchButton).toHaveAttribute('aria-label');
 		expect(searchButton.getAttribute('aria-label')).toContain('Search');
@@ -83,7 +89,9 @@ describe('Search Drawer Integration - Sidebar Trigger', () => {
 			const onSearchClick = vi.fn();
 			const { container } = render(Sidebar, { props: { onSearchClick } });
 
-			const searchButton = container.querySelector('button[aria-label*="Search"]') as HTMLButtonElement;
+			const searchButton = container.querySelector(
+				'button[aria-label*="Search"]'
+			) as HTMLButtonElement;
 			expect(searchButton).toBeInTheDocument();
 
 			cleanup();

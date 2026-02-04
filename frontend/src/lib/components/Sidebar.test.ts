@@ -35,7 +35,7 @@ describe('Sidebar Component - Navigation Links', () => {
 	});
 
 	it('should render all navigation items in correct order', () => {
-		const { container} = render(Sidebar);
+		const { container } = render(Sidebar);
 		const links = container.querySelectorAll('a.nav-link');
 		const buttons = container.querySelectorAll('button.nav-button');
 
@@ -151,7 +151,9 @@ describe('Sidebar Component - Search Drawer Trigger', () => {
 		const onSearchClick = vi.fn();
 		const { container } = render(Sidebar, { props: { onSearchClick } });
 
-		const searchButton = container.querySelector('button[aria-label*="Search"]') as HTMLButtonElement;
+		const searchButton = container.querySelector(
+			'button[aria-label*="Search"]'
+		) as HTMLButtonElement;
 		expect(searchButton).toBeInTheDocument();
 
 		await fireEvent.click(searchButton);

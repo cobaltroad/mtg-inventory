@@ -50,19 +50,34 @@
 	}
 </script>
 
-<Dialog open={open} onOpenChange={(details) => { open = details.open; }} closeOnEscape={true} trapFocus={true} closeOnInteractOutside={true}>
+<Dialog
+	{open}
+	onOpenChange={(details) => {
+		open = details.open;
+	}}
+	closeOnEscape={true}
+	trapFocus={true}
+	closeOnInteractOutside={true}
+>
 	<Portal>
-		<Dialog.Backdrop class="fixed inset-0 z-50 bg-black/50 transition-opacity data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+		<Dialog.Backdrop
+			class="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50 transition-opacity"
+		/>
 		<Dialog.Positioner class="fixed inset-0 z-50 flex justify-end">
 			<Dialog.Content
-				class="drawer-container h-screen w-full md:w-96 bg-white dark:bg-gray-800 shadow-xl flex flex-col transition-transform data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right"
+				class="drawer-container data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right flex h-screen w-full flex-col bg-white shadow-xl transition-transform md:w-96 dark:bg-gray-800"
 				data-testid="search-drawer"
 				role="dialog"
 				aria-label="Search cards"
 			>
 				<div class="drawer-header">
-					<Dialog.Title class="text-xl font-bold text-gray-900 dark:text-gray-100">Search Cards</Dialog.Title>
-					<Dialog.CloseTrigger class="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors" aria-label="Close search drawer">
+					<Dialog.Title class="text-xl font-bold text-gray-900 dark:text-gray-100"
+						>Search Cards</Dialog.Title
+					>
+					<Dialog.CloseTrigger
+						class="rounded-md p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100"
+						aria-label="Close search drawer"
+					>
 						<X class="h-5 w-5" />
 					</Dialog.CloseTrigger>
 				</div>
@@ -76,7 +91,12 @@
 						aria-label="Search for cards"
 						class="search-input block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
 					/>
-					<button type="submit" class="search-button" aria-label="Search for cards" disabled={!query.trim()}>Search</button>
+					<button
+						type="submit"
+						class="search-button"
+						aria-label="Search for cards"
+						disabled={!query.trim()}>Search</button
+					>
 				</form>
 
 				<div class="results-container">

@@ -70,8 +70,12 @@
 						{:else}
 							<a
 								href={item.href}
-								class="nav-link {currentPath === item.href?.replace(base, '') || '/' ? 'active' : ''}"
-								aria-current={currentPath === item.href?.replace(base, '') || '/' ? 'page' : undefined}
+								class="nav-link {currentPath === item.href?.replace(base, '') || '/'
+									? 'active'
+									: ''}"
+								aria-current={currentPath === item.href?.replace(base, '') || '/'
+									? 'page'
+									: undefined}
 							>
 								<Icon class="h-5 w-5" />
 								<span class="nav-label">{item.label}</span>
