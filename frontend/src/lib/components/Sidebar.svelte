@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { HomeOutline, SearchOutline, GridSolidOutline } from 'flowbite-svelte-icons';
+	import { House, Search, LayoutGrid, Menu } from 'lucide-svelte';
 	import { base } from '$app/paths';
+	import type { ComponentType } from 'svelte';
 
 	interface Props {
 		open?: boolean;
@@ -22,14 +23,14 @@
 	interface NavItem {
 		href?: string;
 		label: string;
-		icon: typeof HomeOutline | typeof SearchOutline | typeof GridSolidOutline;
+		icon: ComponentType;
 		isButton?: boolean;
 	}
 
 	const navItems: NavItem[] = [
-		{ href: `${base}/`, label: 'Home', icon: HomeOutline },
-		{ label: 'Search', icon: SearchOutline, isButton: true },
-		{ href: `${base}/inventory`, label: 'Inventory', icon: GridSolidOutline }
+		{ href: `${base}/`, label: 'Home', icon: House },
+		{ label: 'Search', icon: Search, isButton: true },
+		{ href: `${base}/inventory`, label: 'Inventory', icon: LayoutGrid }
 	];
 
 	const currentPath =
@@ -44,13 +45,7 @@
 		aria-label="Toggle navigation menu"
 		aria-expanded={open}
 	>
-		<svg class="h-6 w-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-			<path
-				fill-rule="evenodd"
-				d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-				clip-rule="evenodd"
-			></path>
-		</svg>
+		<Menu class="h-6 w-6" />
 	</button>
 
 	<div

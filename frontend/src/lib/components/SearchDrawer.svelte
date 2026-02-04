@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { Drawer, CloseButton, Button, Input } from 'flowbite-svelte';
-	import { SearchOutline } from 'flowbite-svelte-icons';
+	import { Dialog, Portal } from '@skeletonlabs/skeleton-svelte';
+	import { X } from 'lucide-svelte';
 
 	interface Card {
 		id: string;
@@ -37,16 +37,6 @@
 		}
 	});
 
-	function handleClose() {
-		open = false;
-	}
-
-	function handleKeyDown(event: KeyboardEvent) {
-		if (event.key === 'Escape') {
-			handleClose();
-		}
-	}
-
 	function handleSearch(event: Event) {
 		event.preventDefault();
 		// This would trigger search in parent component
@@ -60,65 +50,69 @@
 	}
 </script>
 
-<Drawer
-	bind:open
-	transitionType="fly"
-	placement="right"
-	width="w-full md:w-96"
-	class="drawer-container"
-	data-testid="search-drawer"
-	role="dialog"
-	aria-label="Search cards"
-	onkeydown={handleKeyDown}
->
-	<div class="drawer-header">
-		<h3 class="drawer-title">Search Cards</h3>
-		<CloseButton on:click={handleClose} aria-label="Close search drawer" />
-	</div>
+<Dialog open={open} onOpenChange={(details) => { open = details.open; }} closeOnEscape={true} trapFocus={true} closeOnInteractOutside={true}>
+	<Portal>
+		<Dialog.Backdrop class="fixed inset-0 z-50 bg-black/50 transition-opacity data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+		<Dialog.Positioner class="fixed inset-0 z-50 flex justify-end">
+			<Dialog.Content
+				class="drawer-container h-screen w-full md:w-96 bg-white dark:bg-gray-800 shadow-xl flex flex-col transition-transform data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right"
+				data-testid="search-drawer"
+				role="dialog"
+				aria-label="Search cards"
+			>
+				<div class="drawer-header">
+					<Dialog.Title class="text-xl font-bold text-gray-900 dark:text-gray-100">Search Cards</Dialog.Title>
+					<Dialog.CloseTrigger class="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors" aria-label="Close search drawer">
+						<X class="h-5 w-5" />
+					</Dialog.CloseTrigger>
+				</div>
 
-	<form onsubmit={handleSearch} class="search-form">
-		<input
-			type="text"
-			bind:value={query}
-			bind:this={inputElement}
-			placeholder="Enter card name..."
-			aria-label="Search for cards"
-			class="search-input block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
-		/>
-		<Button type="submit" aria-label="Search for cards" disabled={!query.trim()}>Search</Button>
-	</form>
+				<form onsubmit={handleSearch} class="search-form">
+					<input
+						type="text"
+						bind:value={query}
+						bind:this={inputElement}
+						placeholder="Enter card name..."
+						aria-label="Search for cards"
+						class="search-input block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
+					/>
+					<button type="submit" class="search-button" aria-label="Search for cards" disabled={!query.trim()}>Search</button>
+				</form>
 
-	<div class="results-container">
-		{#if searching}
-			<div class="search-state">
-				<div class="spinner"></div>
-				<p>Searching...</p>
-			</div>
-		{:else if hasSearched && results.length === 0}
-			<div class="search-state">
-				<p>No results found</p>
-			</div>
-		{:else if results.length > 0}
-			<ul class="results-list">
-				{#each results as card (card.id)}
-					<li>
-						<button
-							type="button"
-							class="result-item"
-							data-card-id={card.id}
-							onclick={() => selectCard(card)}
-						>
-							<span class="card-name">{card.name}</span>
-							{#if card.mana_cost}
-								<span class="mana-cost">{card.mana_cost}</span>
-							{/if}
-						</button>
-					</li>
-				{/each}
-			</ul>
-		{/if}
-	</div>
-</Drawer>
+				<div class="results-container">
+					{#if searching}
+						<div class="search-state">
+							<div class="spinner"></div>
+							<p>Searching...</p>
+						</div>
+					{:else if hasSearched && results.length === 0}
+						<div class="search-state">
+							<p>No results found</p>
+						</div>
+					{:else if results.length > 0}
+						<ul class="results-list">
+							{#each results as card (card.id)}
+								<li>
+									<button
+										type="button"
+										class="result-item"
+										data-card-id={card.id}
+										onclick={() => selectCard(card)}
+									>
+										<span class="card-name">{card.name}</span>
+										{#if card.mana_cost}
+											<span class="mana-cost">{card.mana_cost}</span>
+										{/if}
+									</button>
+								</li>
+							{/each}
+						</ul>
+					{/if}
+				</div>
+			</Dialog.Content>
+		</Dialog.Positioner>
+	</Portal>
+</Dialog>
 
 <style>
 	.drawer-header {
@@ -129,18 +123,31 @@
 		border-bottom: 1px solid #e5e7eb;
 	}
 
-	.drawer-title {
-		font-size: 1.25rem;
-		font-weight: 700;
-		margin: 0;
-		color: #111827;
-	}
-
 	.search-form {
 		padding: 1rem;
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
+	}
+
+	.search-button {
+		padding: 0.625rem 1rem;
+		background: #3b82f6;
+		color: white;
+		border: none;
+		border-radius: 0.5rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition: background 0.2s;
+	}
+
+	.search-button:hover:not(:disabled) {
+		background: #2563eb;
+	}
+
+	.search-button:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
 	}
 
 	.results-container {
@@ -219,10 +226,6 @@
 
 	:global(.dark) .drawer-header {
 		border-bottom-color: #374151;
-	}
-
-	:global(.dark) .drawer-title {
-		color: #e5e7eb;
 	}
 
 	:global(.dark) .result-item {
