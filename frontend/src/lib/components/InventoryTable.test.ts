@@ -180,7 +180,7 @@ describe('InventoryTable Component - Responsive Design', () => {
 });
 
 describe('InventoryTable Component - Styling', () => {
-	it('should use Flowbite table classes', () => {
+	it('should render table with proper structure', () => {
 		const { container } = render(InventoryTable, { props: { items: mockItems } });
 		const table = container.querySelector('table');
 
