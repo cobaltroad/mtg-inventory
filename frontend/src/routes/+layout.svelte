@@ -4,6 +4,7 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import SearchDrawer from '$lib/components/SearchDrawer.svelte';
+	import PrintingModal from '$lib/components/PrintingModal.svelte';
 	import type { Card } from '$lib/types/card';
 
 	let { children } = $props();
@@ -15,6 +16,10 @@
 	let searching = $state(false);
 	let results: Card[] = $state([]);
 	let hasSearched = $state(false);
+
+	// PrintingModal state
+	let selectedCard = $state<Card | null>(null);
+	let modalOpen = $state(false);
 
 	/**
 	 * Opens the search drawer when the search button in the sidebar is clicked.
@@ -44,6 +49,25 @@
 			searching = false;
 		}
 	}
+
+	/**
+	 * Handles card selection from search drawer.
+	 * Opens the PrintingModal with the selected card.
+	 * @param card - The selected card
+	 */
+	function handleCardSelect(card: Card) {
+		selectedCard = card;
+		modalOpen = true;
+	}
+
+	/**
+	 * Handles closing the PrintingModal.
+	 * Clears the selected card.
+	 */
+	function handleModalClose() {
+		modalOpen = false;
+		selectedCard = null;
+	}
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
@@ -61,7 +85,12 @@
 		{searching}
 		{hasSearched}
 		onSearch={handleSearch}
+		onCardSelect={handleCardSelect}
 	/>
+
+	{#if selectedCard}
+		<PrintingModal card={selectedCard} bind:open={modalOpen} onclose={handleModalClose} />
+	{/if}
 </div>
 
 <style>

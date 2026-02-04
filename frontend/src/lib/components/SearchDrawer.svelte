@@ -127,6 +127,12 @@
 										class="result-item"
 										data-card-id={card.id}
 										onclick={() => selectCard(card)}
+										onkeydown={(e) => {
+											if (e.key === 'Enter' || e.key === ' ') {
+												e.preventDefault();
+												selectCard(card);
+											}
+										}}
 									>
 										<span class="card-name">{card.name}</span>
 										{#if card.mana_cost}
