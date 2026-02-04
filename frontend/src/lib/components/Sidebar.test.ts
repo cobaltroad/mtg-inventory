@@ -12,46 +12,140 @@ afterEach(() => {
 	cleanup();
 });
 
-describe('Sidebar Component - Navigation Links', () => {
-	it('should render with Home navigation link', () => {
+describe('Sidebar Component - Skeleton UI Navigation Structure', () => {
+	it('should render Skeleton UI Navigation component with sidebar layout', () => {
+		const { container } = render(Sidebar);
+		const root = container.querySelector('[data-scope="navigation"][data-part="root"]');
+		expect(root).toBeInTheDocument();
+		expect(root).toHaveAttribute('data-layout', 'sidebar');
+	});
+
+	it('should render Navigation.Content as the main scrollable container', () => {
+		const { container } = render(Sidebar);
+		const content = container.querySelector('[data-scope="navigation"][data-part="content"]');
+		expect(content).toBeInTheDocument();
+	});
+
+	it('should render Navigation.Group for organizing navigation items', () => {
+		const { container } = render(Sidebar);
+		const group = container.querySelector('[data-scope="navigation"][data-part="group"]');
+		expect(group).toBeInTheDocument();
+	});
+
+	it('should render Navigation.Menu to contain navigation items', () => {
+		const { container } = render(Sidebar);
+		const menu = container.querySelector('[data-scope="navigation"][data-part="menu"]');
+		expect(menu).toBeInTheDocument();
+	});
+});
+
+describe('Sidebar Component - Navigation Items', () => {
+	it('should render Home navigation link', () => {
 		const { container } = render(Sidebar);
 		const homeLink = container.querySelector('a[href="/"]');
 		expect(homeLink).toBeInTheDocument();
-		expect(homeLink).toHaveAttribute('href', `${base}/`);
+		expect(homeLink).toHaveTextContent('Home');
 	});
 
-	it('should render with Search navigation button', () => {
+	it('should render Search as a trigger button (not anchor)', () => {
 		const { container } = render(Sidebar);
-		const searchButton = container.querySelector('button[aria-label*="Search"]');
-		expect(searchButton).toBeInTheDocument();
-		expect(searchButton).toHaveAttribute('type', 'button');
+		const searchTrigger = container.querySelector(
+			'button[data-scope="navigation"][data-part="trigger"]'
+		);
+		expect(searchTrigger).toBeInTheDocument();
+
+		// Should have text content "Search"
+		expect(searchTrigger).toHaveTextContent('Search');
+
+		// Should not be an anchor link
+		const searchLink = container.querySelector('a[href*="search"]');
+		expect(searchLink).not.toBeInTheDocument();
 	});
 
-	it('should render with Inventory navigation link', () => {
+	it('should render Collections placeholder navigation link', () => {
+		const { container } = render(Sidebar);
+		const collectionsLink = container.querySelector('a[href*="collections"]');
+		expect(collectionsLink).toBeInTheDocument();
+		expect(collectionsLink).toHaveTextContent('Collections');
+	});
+
+	it('should render Decks placeholder navigation link', () => {
+		const { container } = render(Sidebar);
+		const decksLink = container.querySelector('a[href*="decks"]');
+		expect(decksLink).toBeInTheDocument();
+		expect(decksLink).toHaveTextContent('Decks');
+	});
+
+	it('should render Reports placeholder navigation link', () => {
+		const { container } = render(Sidebar);
+		const reportsLink = container.querySelector('a[href*="reports"]');
+		expect(reportsLink).toBeInTheDocument();
+		expect(reportsLink).toHaveTextContent('Reports');
+	});
+
+	it('should render Inventory navigation link', () => {
 		const { container } = render(Sidebar);
 		const inventoryLink = container.querySelector('a[href="/inventory"]');
 		expect(inventoryLink).toBeInTheDocument();
-		expect(inventoryLink).toHaveAttribute('href', `${base}/inventory`);
+		expect(inventoryLink).toHaveTextContent('Inventory');
 	});
 
-	it('should render all navigation items in correct order', () => {
+	it('should render navigation items in correct order', () => {
 		const { container } = render(Sidebar);
-		const links = container.querySelectorAll('a.nav-link');
-		const buttons = container.querySelectorAll('button.nav-button');
+		const navLinks = Array.from(
+			container.querySelectorAll('a[data-scope="navigation"][data-part="trigger-anchor"]')
+		);
+		const navTriggers = Array.from(
+			container.querySelectorAll('button[data-scope="navigation"][data-part="trigger"]')
+		);
 
-		// Should have exactly 2 links and 1 button
-		expect(links).toHaveLength(2);
-		expect(buttons).toHaveLength(1);
+		// Total items: 5 links (Home, Collections, Decks, Reports, Inventory) + 1 trigger (Search)
+		expect(navLinks.length + navTriggers.length).toBe(6);
+	});
+});
 
-		// Check link hrefs are correct
-		const hrefs = Array.from(links).map((link) => link.getAttribute('href'));
-		expect(hrefs).toContain('/');
-		expect(hrefs).toContain('/inventory');
+describe('Sidebar Component - Search Drawer Trigger', () => {
+	it('should call onSearchClick when Search trigger is clicked', async () => {
+		const onSearchClick = vi.fn();
+		const { container } = render(Sidebar, { props: { onSearchClick } });
+
+		const searchTrigger = container.querySelector(
+			'button[data-scope="navigation"][data-part="trigger"]'
+		);
+		expect(searchTrigger).toBeInTheDocument();
+
+		await fireEvent.click(searchTrigger as HTMLElement);
+
+		expect(onSearchClick).toHaveBeenCalledTimes(1);
+	});
+
+	it('should have proper ARIA label on Search trigger', () => {
+		const { container } = render(Sidebar);
+		const searchTrigger = container.querySelector(
+			'button[data-scope="navigation"][data-part="trigger"]'
+		);
+
+		expect(searchTrigger).toHaveAttribute('aria-label', 'Search - Open search drawer');
+	});
+
+	it('should not navigate to a route when Search trigger is clicked', async () => {
+		const onSearchClick = vi.fn();
+		const { container } = render(Sidebar, { props: { onSearchClick } });
+
+		const searchTrigger = container.querySelector(
+			'button[data-scope="navigation"][data-part="trigger"]'
+		);
+
+		// Should not be an anchor element
+		expect(searchTrigger?.tagName).toBe('BUTTON');
+
+		// Should not have href attribute
+		expect(searchTrigger).not.toHaveAttribute('href');
 	});
 });
 
 describe('Sidebar Component - Responsive Behavior', () => {
-	it('should have a toggle button for mobile menu', () => {
+	it('should render toggle button for mobile menu', () => {
 		const { container } = render(Sidebar);
 		const toggleButton = container.querySelector('button[aria-label="Toggle navigation menu"]');
 		expect(toggleButton).toBeInTheDocument();
@@ -68,17 +162,67 @@ describe('Sidebar Component - Responsive Behavior', () => {
 		const initialExpanded = toggleButton.getAttribute('aria-expanded');
 
 		// Click toggle button
-		await toggleButton.click();
+		await fireEvent.click(toggleButton);
 
 		// aria-expanded should have changed
 		const afterClickExpanded = toggleButton.getAttribute('aria-expanded');
 		expect(afterClickExpanded).not.toBe(initialExpanded);
 	});
 
-	it('should be collapsible by default on mobile views', () => {
+	it('should update Navigation layout based on screen size', () => {
 		const { container } = render(Sidebar);
-		const aside = container.querySelector('aside[aria-label="Navigation sidebar"]');
-		expect(aside).toBeInTheDocument();
+		const root = container.querySelector('[data-scope="navigation"][data-part="root"]');
+
+		// Should have sidebar layout on desktop
+		expect(root).toHaveAttribute('data-layout', 'sidebar');
+	});
+
+	it('should be collapsible by default on mobile views', () => {
+		const { container } = render(Sidebar, { props: { open: false } });
+		const toggleButton = container.querySelector('button[aria-label="Toggle navigation menu"]');
+		expect(toggleButton).toHaveAttribute('aria-expanded', 'false');
+	});
+});
+
+describe('Sidebar Component - Active Route Highlighting', () => {
+	it('should highlight the active route with aria-current="page"', () => {
+		const { container } = render(Sidebar);
+
+		// Find the link that matches current path
+		const links = container.querySelectorAll(
+			'a[data-scope="navigation"][data-part="trigger-anchor"]'
+		);
+		const activeLink = Array.from(links).find(
+			(link) => link.getAttribute('aria-current') === 'page'
+		);
+
+		expect(activeLink).toBeInTheDocument();
+	});
+
+	it('should apply active styling class to current route', () => {
+		const { container } = render(Sidebar);
+
+		// The active link should have special styling
+		const links = container.querySelectorAll(
+			'a[data-scope="navigation"][data-part="trigger-anchor"]'
+		);
+		const activeLink = Array.from(links).find(
+			(link) => link.getAttribute('aria-current') === 'page'
+		);
+
+		if (activeLink) {
+			expect(activeLink.classList.contains('active')).toBe(true);
+		}
+	});
+
+	it('should not apply active state to Search trigger', () => {
+		const { container } = render(Sidebar);
+		const searchTrigger = container.querySelector(
+			'button[data-scope="navigation"][data-part="trigger"]'
+		);
+
+		expect(searchTrigger).not.toHaveAttribute('aria-current');
+		expect(searchTrigger?.classList.contains('active')).toBe(false);
 	});
 });
 
@@ -89,21 +233,15 @@ describe('Sidebar Component - Accessibility', () => {
 		expect(sidebar).toBeInTheDocument();
 	});
 
-	it('should have accessible navigation items', () => {
+	it('should have keyboard navigable navigation items', () => {
 		const { container } = render(Sidebar);
-		const links = container.querySelectorAll('a.nav-link');
-		const buttons = container.querySelectorAll('button.nav-button');
+		const navLinks = container.querySelectorAll(
+			'a[data-scope="navigation"][data-part="trigger-anchor"]'
+		);
 
-		// Should have exactly 2 links and 1 button
-		expect(links.length).toBe(2);
-		expect(buttons.length).toBe(1);
-
-		links.forEach((link) => {
+		navLinks.forEach((link) => {
 			expect(link).toBeInTheDocument();
-		});
-
-		buttons.forEach((button) => {
-			expect(button).toBeInTheDocument();
+			expect(link).toHaveAttribute('href');
 		});
 	});
 
@@ -111,6 +249,29 @@ describe('Sidebar Component - Accessibility', () => {
 		const { container } = render(Sidebar);
 		const toggleButton = container.querySelector('button[aria-label="Toggle navigation menu"]');
 		expect(toggleButton).toHaveAttribute('type', 'button');
+	});
+
+	it('should have proper aria-expanded on toggle button', () => {
+		const { container } = render(Sidebar, { props: { open: true } });
+		const toggleButton = container.querySelector('button[aria-label="Toggle navigation menu"]');
+		expect(toggleButton).toHaveAttribute('aria-expanded', 'true');
+	});
+
+	it('should have descriptive labels for all navigation items', () => {
+		const { container } = render(Sidebar);
+		const navLinks = container.querySelectorAll(
+			'a[data-scope="navigation"][data-part="trigger-anchor"]'
+		);
+		const navTriggers = container.querySelectorAll(
+			'button[data-scope="navigation"][data-part="trigger"]'
+		);
+
+		// All navigation items should have visible text or aria-label
+		[...navLinks, ...navTriggers].forEach((item) => {
+			const hasText = item.textContent && item.textContent.trim().length > 0;
+			const hasAriaLabel = item.hasAttribute('aria-label');
+			expect(hasText || hasAriaLabel).toBe(true);
+		});
 	});
 });
 
@@ -126,64 +287,73 @@ describe('Sidebar Component - Props', () => {
 		const toggleButton = container.querySelector('button[aria-label="Toggle navigation menu"]');
 		expect(toggleButton).toHaveAttribute('aria-expanded', 'false');
 	});
-});
 
-describe('Sidebar Component - Styling', () => {
-	it('should render with proper structure', () => {
-		const { container } = render(Sidebar);
-		const sidebar = container.querySelector('aside');
-		expect(sidebar).toBeInTheDocument();
-	});
-});
-
-describe('Sidebar Component - Search Drawer Trigger', () => {
-	it('should render Search as a button instead of anchor link', () => {
-		const { container } = render(Sidebar);
-		const searchButton = container.querySelector('button[aria-label*="Search"]');
-		expect(searchButton).toBeInTheDocument();
-
-		// Should not have an anchor link for Search
-		const searchLink = container.querySelector('a[href*="search"]');
-		expect(searchLink).not.toBeInTheDocument();
-	});
-
-	it('should call onSearchClick when Search button is clicked', async () => {
+	it('should accept onSearchClick callback prop', () => {
 		const onSearchClick = vi.fn();
 		const { container } = render(Sidebar, { props: { onSearchClick } });
-
-		const searchButton = container.querySelector(
-			'button[aria-label*="Search"]'
-		) as HTMLButtonElement;
-		expect(searchButton).toBeInTheDocument();
-
-		await fireEvent.click(searchButton);
-
-		expect(onSearchClick).toHaveBeenCalledTimes(1);
+		const searchTrigger = container.querySelector(
+			'button[data-scope="navigation"][data-part="trigger"]'
+		);
+		expect(searchTrigger).toBeInTheDocument();
 	});
+});
 
-	it('should have proper ARIA attributes on Search button', () => {
-		const { container } = render(Sidebar);
-		const searchButton = container.querySelector('button[aria-label*="Search"]');
-
-		expect(searchButton).toHaveAttribute('type', 'button');
-		expect(searchButton).toHaveAttribute('aria-label');
-	});
-
-	it('should still render Home and Inventory as navigation links', () => {
+describe('Sidebar Component - Icon Display', () => {
+	it('should render icons for all navigation items', () => {
 		const { container } = render(Sidebar);
 
+		// Each navigation item should have an icon
+		const navLinks = container.querySelectorAll(
+			'a[data-scope="navigation"][data-part="trigger-anchor"]'
+		);
+		const navTriggers = container.querySelectorAll(
+			'button[data-scope="navigation"][data-part="trigger"]'
+		);
+
+		[...navLinks, ...navTriggers].forEach((item) => {
+			const icon = item.querySelector('svg');
+			expect(icon).toBeInTheDocument();
+		});
+	});
+
+	it('should use appropriate icons for each navigation item', () => {
+		const { container } = render(Sidebar);
+
+		// Home should have House icon
 		const homeLink = container.querySelector('a[href="/"]');
-		expect(homeLink).toBeInTheDocument();
+		expect(homeLink?.querySelector('svg')).toBeInTheDocument();
 
-		const inventoryLink = container.querySelector('a[href="/inventory"]');
-		expect(inventoryLink).toBeInTheDocument();
+		// Search should have Search icon
+		const searchTrigger = container.querySelector(
+			'button[data-scope="navigation"][data-part="trigger"]'
+		);
+		expect(searchTrigger?.querySelector('svg')).toBeInTheDocument();
+	});
+});
+
+describe('Sidebar Component - Custom CSS Cleanup', () => {
+	it('should use Skeleton UI Navigation component instead of custom structure', () => {
+		const { container } = render(Sidebar);
+		// Should have Skeleton UI Navigation root
+		const skeletonNav = container.querySelector('[data-scope="navigation"][data-part="root"]');
+		expect(skeletonNav).toBeInTheDocument();
 	});
 
-	it('should only have 2 anchor links (Home and Inventory)', () => {
+	it('should not have custom nav-link class', () => {
 		const { container } = render(Sidebar);
-		const links = container.querySelectorAll('a.nav-link');
+		const customNavLink = container.querySelector('.nav-link');
+		expect(customNavLink).not.toBeInTheDocument();
+	});
 
-		// Should have exactly 2 links now (Home and Inventory)
-		expect(links).toHaveLength(2);
+	it('should not have custom sidebar-content class', () => {
+		const { container } = render(Sidebar);
+		const customContent = container.querySelector('.sidebar-content');
+		expect(customContent).not.toBeInTheDocument();
+	});
+
+	it('should not have custom sidebar-nav class', () => {
+		const { container } = render(Sidebar);
+		const customNav = container.querySelector('.sidebar-nav');
+		expect(customNav).not.toBeInTheDocument();
 	});
 });

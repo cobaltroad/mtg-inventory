@@ -1,43 +1,83 @@
 <script lang="ts">
-	import { House, Search, LayoutGrid, Menu } from 'lucide-svelte';
+	import { Navigation } from '@skeletonlabs/skeleton-svelte';
+	import { House, Search, FolderOpen, Layers, FileText, LayoutGrid, Menu } from 'lucide-svelte';
 	import { base } from '$app/paths';
 	import type { ComponentType } from 'svelte';
 
+	/**
+	 * Props for the Sidebar component
+	 */
 	interface Props {
+		/** Controls sidebar visibility on mobile. Bindable state. */
 		open?: boolean;
+		/** Callback function triggered when the Search navigation item is clicked */
 		onSearchClick?: () => void;
 	}
 
 	let { open = $bindable(false), onSearchClick }: Props = $props();
 
-	function toggleSidebar() {
-		open = !open;
-	}
-
-	function handleSearchClick() {
-		if (onSearchClick) {
-			onSearchClick();
-		}
-	}
-
+	/**
+	 * Represents a navigation item in the sidebar
+	 */
 	interface NavItem {
+		/** Navigation route. Omit for non-navigational triggers like Search */
 		href?: string;
+		/** Display label for the navigation item */
 		label: string;
+		/** Lucide icon component to display */
 		icon: ComponentType;
+		/** Whether this item is a button trigger instead of a navigation link */
 		isButton?: boolean;
 	}
 
+	/**
+	 * Navigation items configuration
+	 * Defines all sidebar navigation entries including links and action triggers
+	 */
 	const navItems: NavItem[] = [
 		{ href: `${base}/`, label: 'Home', icon: House },
 		{ label: 'Search', icon: Search, isButton: true },
+		{ href: `${base}/collections`, label: 'Collections', icon: FolderOpen },
+		{ href: `${base}/decks`, label: 'Decks', icon: Layers },
+		{ href: `${base}/reports`, label: 'Reports', icon: FileText },
 		{ href: `${base}/inventory`, label: 'Inventory', icon: LayoutGrid }
 	];
 
-	const currentPath =
+	/**
+	 * Current page path for determining active navigation state
+	 */
+	const currentPath: string =
 		typeof window !== 'undefined' ? window.location.pathname.replace(base, '') || '/' : '/';
+
+	/**
+	 * Toggles sidebar visibility on mobile devices
+	 */
+	function toggleSidebar(): void {
+		open = !open;
+	}
+
+	/**
+	 * Handles Search navigation item click
+	 * Delegates to the onSearchClick callback if provided
+	 */
+	function handleSearchClick(): void {
+		onSearchClick?.();
+	}
+
+	/**
+	 * Determines if a navigation link represents the current active route
+	 * @param href - The navigation link href to check
+	 * @returns true if the href matches the current path
+	 */
+	function isActive(href?: string): boolean {
+		if (!href) return false;
+		const normalizedHref = href.replace(base, '') || '/';
+		return currentPath === normalizedHref;
+	}
 </script>
 
 <aside aria-label="Navigation sidebar" class="sidebar-wrapper">
+	<!-- Mobile toggle button -->
 	<button
 		type="button"
 		onclick={toggleSidebar}
@@ -48,44 +88,42 @@
 		<Menu class="h-6 w-6" />
 	</button>
 
-	<div
-		class="sidebar-content {open ? 'sidebar-open' : 'sidebar-closed'}"
-		data-testid="sidebar-content"
+	<!-- Skeleton UI Navigation Component -->
+	<Navigation
+		layout="sidebar"
+		class="navigation-root {open ? 'navigation-open' : 'navigation-closed'}"
 	>
-		<nav class="sidebar-nav">
-			<ul class="space-y-2">
-				{#each navItems as item}
-					{@const Icon = item.icon}
-					<li>
+		<Navigation.Content>
+			<Navigation.Group>
+				<Navigation.Menu>
+					{#each navItems as item}
+						{@const Icon = item.icon}
 						{#if item.isButton}
-							<button
-								type="button"
+							<!-- Search trigger button -->
+							<Navigation.Trigger
 								onclick={handleSearchClick}
-								class="nav-link nav-button"
-								aria-label="Search - Open search drawer"
+								aria-label="{item.label} - Open search drawer"
+								class="nav-item"
 							>
 								<Icon class="h-5 w-5" />
-								<span class="nav-label">{item.label}</span>
-							</button>
+								<Navigation.TriggerText>{item.label}</Navigation.TriggerText>
+							</Navigation.Trigger>
 						{:else}
-							<a
+							<!-- Navigation link -->
+							<Navigation.TriggerAnchor
 								href={item.href}
-								class="nav-link {currentPath === item.href?.replace(base, '') || '/'
-									? 'active'
-									: ''}"
-								aria-current={currentPath === item.href?.replace(base, '') || '/'
-									? 'page'
-									: undefined}
+								class="nav-item {isActive(item.href) ? 'active' : ''}"
+								aria-current={isActive(item.href) ? 'page' : undefined}
 							>
 								<Icon class="h-5 w-5" />
-								<span class="nav-label">{item.label}</span>
-							</a>
+								<Navigation.TriggerText>{item.label}</Navigation.TriggerText>
+							</Navigation.TriggerAnchor>
 						{/if}
-					</li>
-				{/each}
-			</ul>
-		</nav>
-	</div>
+					{/each}
+				</Navigation.Menu>
+			</Navigation.Group>
+		</Navigation.Content>
+	</Navigation>
 </aside>
 
 <style>
@@ -99,7 +137,7 @@
 		left: 1rem;
 		z-index: 50;
 		padding: 0.5rem;
-		background: #1f2937;
+		background: rgb(31 41 55);
 		color: white;
 		border: none;
 		border-radius: 0.375rem;
@@ -108,89 +146,76 @@
 	}
 
 	.toggle-button:hover {
-		background: #374151;
+		background: rgb(55 65 81);
 	}
 
-	.sidebar-content {
+	:global(.navigation-root) {
 		position: fixed;
 		top: 0;
 		left: 0;
 		z-index: 40;
 		width: 16rem;
 		height: 100vh;
-		background: #f9fafb;
-		border-right: 1px solid #e5e7eb;
+		background: rgb(249 250 251);
+		border-right: 1px solid rgb(229 231 235);
 		transition: transform 0.3s ease-in-out;
 	}
 
-	.sidebar-closed {
+	:global(.navigation-closed) {
 		transform: translateX(-100%);
 	}
 
-	.sidebar-open {
+	:global(.navigation-open) {
 		transform: translateX(0);
 	}
 
 	@media (min-width: 768px) {
-		.sidebar-content {
+		:global(.navigation-root) {
 			transform: translateX(0) !important;
 		}
 	}
 
-	.sidebar-nav {
-		padding: 1rem;
-		overflow-y: auto;
-		height: 100%;
-	}
-
-	.nav-link {
+	:global(.nav-item) {
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
 		padding: 0.75rem 1rem;
-		color: #111827;
+		color: rgb(17 24 39);
 		text-decoration: none;
 		border-radius: 0.5rem;
 		transition: background 0.2s;
 		font-weight: 500;
-	}
-
-	.nav-button {
 		width: 100%;
-		background: transparent;
 		border: none;
+		background: transparent;
 		cursor: pointer;
 		text-align: left;
 	}
 
-	.nav-link:hover {
-		background: #e5e7eb;
+	:global(.nav-item:hover) {
+		background: rgb(229 231 235);
 	}
 
-	.nav-link.active {
-		background: #dbeafe;
-		color: #1e40af;
+	:global(.nav-item.active) {
+		background: rgb(219 234 254);
+		color: rgb(30 64 175);
 	}
 
-	.nav-label {
-		flex: 1;
+	:global(.dark .navigation-root) {
+		background: rgb(31 41 55);
+		border-right-color: rgb(55 65 81);
 	}
 
-	:global(.dark) .sidebar-content {
-		background: #1f2937;
-		border-right-color: #374151;
+	:global(.dark .nav-item) {
+		color: rgb(229 231 235);
 	}
 
-	:global(.dark) .nav-link {
-		color: #e5e7eb;
+	:global(.dark .nav-item:hover) {
+		background: rgb(55 65 81);
 	}
 
-	:global(.dark) .nav-link:hover {
-		background: #374151;
-	}
-
-	:global(.dark) .nav-link.active {
-		background: #1e3a8a;
-		color: #dbeafe;
+	:global(.dark .nav-item.active) {
+		background: rgb(30 58 138);
+		color: rgb(219 234 254);
 	}
 </style>
