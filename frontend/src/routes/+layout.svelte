@@ -12,7 +12,6 @@
 		searchDrawerOpen = true;
 	}
 
-	export const trailingSlash = 'ignore';
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
