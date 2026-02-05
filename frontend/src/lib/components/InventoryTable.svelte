@@ -74,7 +74,7 @@
 						</td>
 						<td>
 							<div class="card-name-cell">
-								<span class="card-name">{item.card_name}</span>
+								<span class="font-beleren card-name">{item.card_name}</span>
 								<span class="collector-number"
 									>{item.set.toUpperCase()} {item.collector_number}</span
 								>
