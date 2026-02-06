@@ -14,6 +14,7 @@ const MOCK_INVENTORY_ITEMS = [
 		set: 'lea',
 		set_name: 'Limited Edition Alpha',
 		collector_number: '234',
+		released_at: '1993-08-05',
 		image_url: 'https://cards.scryfall.io/normal/front/b/l/black-lotus.jpg',
 		acquired_date: '2025-01-15',
 		acquired_price_cents: 5000,
@@ -32,6 +33,7 @@ const MOCK_INVENTORY_ITEMS = [
 		set: 'lea',
 		set_name: 'Limited Edition Alpha',
 		collector_number: '48',
+		released_at: '1993-08-05',
 		image_url: 'https://cards.scryfall.io/normal/front/a/r/ancestral-recall.jpg',
 		acquired_date: null,
 		acquired_price_cents: null,
@@ -206,12 +208,9 @@ describe('Inventory Page - Data Display', () => {
 		});
 
 		await waitFor(() => {
-			// Check for set name (appears twice - once for each card)
-			const setNames = screen.getAllByText('Limited Edition Alpha');
-			expect(setNames.length).toBe(2);
-			// Check for collector numbers
-			expect(screen.getByText('#234')).toBeInTheDocument();
-			expect(screen.getByText('#48')).toBeInTheDocument();
+			// Check for set and collector numbers (format: "LEA 234")
+			expect(screen.getByText(/LEA 234/)).toBeInTheDocument();
+			expect(screen.getByText(/LEA 48/)).toBeInTheDocument();
 		});
 	});
 
@@ -225,9 +224,9 @@ describe('Inventory Page - Data Display', () => {
 		});
 
 		await waitFor(() => {
-			// Check for quantity values in table
-			expect(screen.getByText('3')).toBeInTheDocument(); // Black Lotus quantity
-			expect(screen.getByText('1')).toBeInTheDocument(); // Ancestral Recall quantity
+			// Check for quantity badges (format: "3x", "1x")
+			expect(screen.getByText('3x')).toBeInTheDocument(); // Black Lotus quantity
+			expect(screen.getByText('1x')).toBeInTheDocument(); // Ancestral Recall quantity
 		});
 	});
 
@@ -243,7 +242,7 @@ describe('Inventory Page - Data Display', () => {
 		await waitFor(() => {
 			expect(screen.getByText('Foil')).toBeInTheDocument();
 			expect(screen.getByText('Acquired: 2025-01-15')).toBeInTheDocument();
-			expect(screen.getByText('$50.00')).toBeInTheDocument();
+			expect(screen.getByText(/\$50\.00/)).toBeInTheDocument();
 		});
 	});
 
