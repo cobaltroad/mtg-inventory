@@ -102,6 +102,9 @@ class UpdateCardPricesJob < ApplicationJob
     execution_time = (Time.current - start_time).round(2)
     Rails.logger.info("Completed price update job in #{execution_time} seconds")
     Rails.logger.info("Updated prices for #{total_successful} cards")
+
+    # Detect price changes and create alerts
+    detect_price_changes
   end
 
   # Process a single card (legacy single-card mode)
@@ -174,5 +177,22 @@ class UpdateCardPricesJob < ApplicationJob
   # Extracted as method to allow stubbing in tests
   def sleep_between_batches
     sleep(BATCH_DELAY)
+  end
+
+  # Detect significant price changes and create alerts for users
+  def detect_price_changes
+    Rails.logger.info("Detecting price changes for alerts...")
+    start_time = Time.current
+
+    begin
+      service = PriceAlertService.new
+      alerts = service.detect_price_changes
+
+      execution_time = (Time.current - start_time).round(2)
+      Rails.logger.info("Created #{alerts.count} price alerts in #{execution_time} seconds")
+    rescue StandardError => e
+      Rails.logger.error("Error detecting price changes: #{e.message}")
+      # Don't raise - we don't want to fail the whole job if alert detection fails
+    end
   end
 end
