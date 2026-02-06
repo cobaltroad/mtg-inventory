@@ -2,7 +2,11 @@ require "test_helper"
 
 class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
   def setup
-    @user = User.create!(email: "test@example.com", name: "Test User")
+    CollectionItem.delete_all
+    PriceAlert.delete_all
+    User.delete_all
+    # Create the default user that current_user will resolve to
+    @user = User.create!(email: User::DEFAULT_EMAIL, name: "Default User")
   end
 
   # ---------------------------------------------------------------------------
@@ -44,7 +48,7 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
       dismissed: true
     )
 
-    get "/projects/mtg/api/price_alerts", params: { user_id: @user.id }
+    get "/projects/mtg/api/price_alerts"
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -60,7 +64,7 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "index returns empty array when no active alerts exist" do
-    get "/projects/mtg/api/price_alerts", params: { user_id: @user.id }
+    get "/projects/mtg/api/price_alerts"
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -88,7 +92,7 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
       percentage_change: 30.0
     )
 
-    get "/projects/mtg/api/price_alerts", params: { user_id: @user.id }
+    get "/projects/mtg/api/price_alerts"
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -117,7 +121,7 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
       created_at: 1.hour.ago
     )
 
-    get "/projects/mtg/api/price_alerts", params: { user_id: @user.id }
+    get "/projects/mtg/api/price_alerts"
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -139,7 +143,7 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
       )
     end
 
-    get "/projects/mtg/api/price_alerts", params: { user_id: @user.id }
+    get "/projects/mtg/api/price_alerts"
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -160,7 +164,7 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
       percentage_change: 30.0
     )
 
-    patch "/projects/mtg/api/price_alerts/#{alert.id}/dismiss", params: { user_id: @user.id }
+    patch "/projects/mtg/api/price_alerts/#{alert.id}/dismiss"
 
     assert_response :success
     alert.reload
@@ -169,7 +173,7 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "dismiss returns 404 for non-existent alert" do
-    patch "/projects/mtg/api/price_alerts/99999/dismiss", params: { user_id: @user.id }
+    patch "/projects/mtg/api/price_alerts/99999/dismiss"
 
     assert_response :not_found
   end
@@ -186,7 +190,7 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
       percentage_change: 30.0
     )
 
-    patch "/projects/mtg/api/price_alerts/#{alert.id}/dismiss", params: { user_id: @user.id }
+    patch "/projects/mtg/api/price_alerts/#{alert.id}/dismiss"
 
     assert_response :forbidden
     alert.reload

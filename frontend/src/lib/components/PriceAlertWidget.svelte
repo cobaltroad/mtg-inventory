@@ -18,14 +18,11 @@
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 
-	// TODO: Replace with actual user ID from authentication
-	const USER_ID = 1;
-
 	async function fetchAlerts() {
 		try {
 			loading = true;
 			error = null;
-			const response = await fetch(`${base}/api/price_alerts?user_id=${USER_ID}`);
+			const response = await fetch(`${base}/api/price_alerts`);
 
 			if (!response.ok) {
 				throw new Error('Failed to fetch price alerts');
@@ -42,7 +39,7 @@
 
 	async function dismissAlert(alertId: number) {
 		try {
-			const response = await fetch(`${base}/api/price_alerts/${alertId}/dismiss?user_id=${USER_ID}`, {
+			const response = await fetch(`${base}/api/price_alerts/${alertId}/dismiss`, {
 				method: 'PATCH'
 			});
 

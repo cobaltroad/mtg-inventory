@@ -1,10 +1,9 @@
 class PriceAlertsController < ApplicationController
   # GET /api/price_alerts
-  # Returns active (non-dismissed) price alerts for a user,
+  # Returns active (non-dismissed) price alerts for the current user,
   # limited to the top 10 most recent alerts.
   def index
-    user_id = params[:user_id]
-    alerts = PriceAlert.for_user(User.find(user_id))
+    alerts = PriceAlert.for_user(current_user)
                        .active
                        .recent
                        .limit(10)
@@ -15,7 +14,6 @@ class PriceAlertsController < ApplicationController
   # PATCH /api/price_alerts/:id/dismiss
   # Marks a price alert as dismissed.
   def dismiss
-    user_id = params[:user_id]
     alert = PriceAlert.find_by(id: params[:id])
 
     if alert.nil?
@@ -23,7 +21,7 @@ class PriceAlertsController < ApplicationController
       return
     end
 
-    if alert.user_id != user_id.to_i
+    if alert.user_id != current_user.id
       render json: { error: "Forbidden" }, status: :forbidden
       return
     end
