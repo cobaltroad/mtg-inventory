@@ -1,12 +1,18 @@
 <script lang="ts">
-	import { base } from '$app/paths';
+	import { getContext } from 'svelte';
+
+	const openSearchDrawer = getContext<() => void>('openSearchDrawer');
+
+	function handleSearchClick() {
+		openSearchDrawer();
+	}
 </script>
 
 <div class="empty-state">
 	<div class="empty-icon">📦</div>
 	<h2>Your inventory is empty</h2>
 	<p>Start building your collection by searching for cards and adding them to your inventory.</p>
-	<a href="{base}/search" class="cta-button">Search for Cards</a>
+	<button class="cta-button" onclick={handleSearchClick}>Search for Cards</button>
 </div>
 
 <style>
@@ -46,12 +52,23 @@
 		background: #3b82f6;
 		color: white;
 		text-decoration: none;
+		border: none;
 		border-radius: 8px;
+		font-size: 1rem;
 		font-weight: 600;
+		cursor: pointer;
 		transition: background 0.2s;
 	}
 
 	.cta-button:hover {
 		background: #2563eb;
+	}
+
+	:global(.dark) .empty-state h2 {
+		color: #f9fafb;
+	}
+
+	:global(.dark) .empty-state p {
+		color: #9ca3af;
 	}
 </style>

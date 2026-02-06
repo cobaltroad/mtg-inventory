@@ -8,8 +8,44 @@
 	import SearchDrawer from '$lib/components/SearchDrawer.svelte';
 	import PrintingModal from '$lib/components/PrintingModal.svelte';
 	import type { Card } from '$lib/types/card';
+	import { onMount, setContext } from 'svelte';
 
 	let { children } = $props();
+
+	// Provide search drawer control to child components
+	setContext('openSearchDrawer', () => {
+		searchDrawerOpen = true;
+	});
+
+	// Dark mode management
+	onMount(() => {
+		// Check for saved preference or use system preference
+		const savedTheme = localStorage.getItem('theme');
+		const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+		if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+			document.documentElement.classList.add('dark');
+		} else {
+			document.documentElement.classList.remove('dark');
+		}
+
+		// Listen for system theme changes
+		const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+		const handleChange = (e: MediaQueryListEvent) => {
+			if (!localStorage.getItem('theme')) {
+				if (e.matches) {
+					document.documentElement.classList.add('dark');
+				} else {
+					document.documentElement.classList.remove('dark');
+				}
+			}
+		};
+		mediaQuery.addEventListener('change', handleChange);
+
+		return () => {
+			mediaQuery.removeEventListener('change', handleChange);
+		};
+	});
 	// UI state
 	let sidebarOpen = $state(false);
 	let searchDrawerOpen = $state(false);

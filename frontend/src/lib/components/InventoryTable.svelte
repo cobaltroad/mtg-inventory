@@ -155,21 +155,22 @@
 					<tr>
 						<td>
 							<div class="image-cell">
-								{#if !imageStates[item.id]?.loaded && !imageStates[item.id]?.error}
-									<div class="image-placeholder">Loading...</div>
-								{/if}
 								{#if imageStates[item.id]?.error}
 									<div class="image-placeholder error">No image</div>
+								{:else}
+									<img
+										src={item.image_url}
+										alt={item.card_name}
+										loading="lazy"
+										onload={() => handleImageLoad(item.id)}
+										onerror={() => handleImageError(item.id)}
+										class="card-thumbnail"
+										class:loading={!imageStates[item.id]?.loaded}
+									/>
+									{#if !imageStates[item.id]?.loaded}
+										<div class="image-placeholder-overlay">Loading...</div>
+									{/if}
 								{/if}
-								<img
-									src={item.image_url}
-									alt={item.card_name}
-									loading="lazy"
-									onload={() => handleImageLoad(item.id)}
-									onerror={() => handleImageError(item.id)}
-									style:display={imageStates[item.id]?.loaded ? 'block' : 'none'}
-									class="card-thumbnail"
-								/>
 							</div>
 						</td>
 						<td>
@@ -341,6 +342,27 @@
 		border-radius: 0.375rem;
 	}
 
+	.card-thumbnail.loading {
+		opacity: 0.3;
+	}
+
+	.image-placeholder-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(243, 244, 246, 0.8);
+		border-radius: 0.375rem;
+		color: #6b7280;
+		font-size: 0.75rem;
+		text-align: center;
+		pointer-events: none;
+	}
+
 	.image-placeholder {
 		display: flex;
 		align-items: center;
@@ -358,6 +380,21 @@
 	.image-placeholder.error {
 		background: #fee2e2;
 		color: #991b1b;
+	}
+
+	:global(.dark) .image-placeholder-overlay {
+		background: rgba(55, 65, 81, 0.8);
+		color: #9ca3af;
+	}
+
+	:global(.dark) .image-placeholder {
+		background: #374151;
+		color: #9ca3af;
+	}
+
+	:global(.dark) .image-placeholder.error {
+		background: #7f1d1d;
+		color: #fca5a5;
 	}
 
 	.card-name-cell {

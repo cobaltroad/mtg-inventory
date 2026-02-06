@@ -623,6 +623,34 @@
 		cursor: pointer;
 	}
 
+	:global(.dark) dialog {
+		background: #1f2937;
+	}
+
+	:global(.dark) .modal-header {
+		background: #1f2937;
+		border-bottom-color: #374151;
+	}
+
+	:global(.dark) .modal-header h2 {
+		color: #f9fafb;
+	}
+
+	:global(.dark) .image-preview-area {
+		background: #374151;
+	}
+
+	:global(.dark) .form-field label {
+		color: #d1d5db;
+	}
+
+	:global(.dark) .form-input,
+	:global(.dark) .form-select {
+		background: #1f2937;
+		border-color: #4b5563;
+		color: #f9fafb;
+	}
+
 	@media (max-width: 768px) {
 		dialog {
 			width: 95vw;

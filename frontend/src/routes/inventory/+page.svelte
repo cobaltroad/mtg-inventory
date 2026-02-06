@@ -185,7 +185,7 @@
 	}
 
 	:global(.dark) .page-title {
-		color: #e5e7eb;
+		color: #f9fafb;
 	}
 
 	:global(.dark) .item-count {

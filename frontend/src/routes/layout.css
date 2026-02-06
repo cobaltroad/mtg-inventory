@@ -61,3 +61,13 @@ body {
   font-family: "Beleren-smallcaps-italic", ui-serif, Georgia, serif;
   font-weight: 700;
 }
+
+/* Dark mode header colors */
+:global(.dark) h1,
+:global(.dark) h2,
+:global(.dark) h3,
+:global(.dark) h4,
+:global(.dark) h5,
+:global(.dark) h6 {
+  color: #f9fafb;
+}

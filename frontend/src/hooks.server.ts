@@ -21,19 +21,21 @@ function filterHeaders(source: Headers): Headers {
 /**
  * SvelteKit server hook.
  *
- * Any request whose path starts with `/api/` (or `${basePath}/api/` when a base
- * path is configured) is proxied to the Rails backend (located at VITE_API_URL
- * inside the Docker network). The full pathname is forwarded unchanged so the
- * backend can handle it at its configured PUBLIC_API_PATH.
+ * Any request whose path starts with `/api/` or `/rails/` (or `${basePath}/api/`
+ * or `${basePath}/rails/` when a base path is configured) is proxied to the Rails
+ * backend (located at VITE_API_URL inside the Docker network). The full pathname
+ * is forwarded unchanged so the backend can handle it at its configured paths.
  * All other requests pass through to SvelteKit's normal route resolution.
  */
 export const handle: Handle = async ({ event, resolve }) => {
 	const basePath = process.env.PUBLIC_BASE_PATH || '';
 
-	// Match either /api/ or /base/api/ paths
+	// Match either /api/ or /rails/ paths (with or without base path)
 	const isApiRequest =
 		event.url.pathname.startsWith('/api/') ||
-		(basePath && event.url.pathname.startsWith(`${basePath}/api/`));
+		event.url.pathname.startsWith('/rails/') ||
+		(basePath && event.url.pathname.startsWith(`${basePath}/api/`)) ||
+		(basePath && event.url.pathname.startsWith(`${basePath}/rails/`));
 
 	if (!isApiRequest) {
 		return resolve(event);
