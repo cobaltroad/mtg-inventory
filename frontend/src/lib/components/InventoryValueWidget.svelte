@@ -160,8 +160,8 @@
 
 	// Lifecycle
 	onMount(async () => {
-		// Dynamically import Chart.js auto bundle to avoid SSR issues
-		const chartModule = await import('chart.js/auto');
+		// Dynamically import Chart.js with explicit ES module path for Vite
+		const chartModule = await import('chart.js/auto/auto.js');
 		Chart = chartModule.default;
 
 		// Import date adapter
