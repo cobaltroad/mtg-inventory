@@ -27,6 +27,13 @@ Rails.application.routes.draw do
 
     # Manual price update endpoint
     post "prices/update", to: "prices#update"
+
+    # Price alerts
+    resources :price_alerts, only: [ :index ] do
+      member do
+        patch :dismiss
+      end
+    end
   end
 
   # Test/development-only probe route to verify current_user resolution.
