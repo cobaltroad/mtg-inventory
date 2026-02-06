@@ -672,4 +672,86 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
     # Verify total is now 55
     assert_equal 55, CardPrice.count
   end
+
+  # ---------------------------------------------------------------------------
+  # Price Alert Detection Integration
+  # ---------------------------------------------------------------------------
+
+  test "batch mode triggers price alert detection after updating prices" do
+    user = @user_one
+    card_id = "alert-test-card"
+
+    # Create inventory item
+    CollectionItem.create!(
+      user: user,
+      card_id: card_id,
+      collection_type: "inventory",
+      quantity: 1
+    )
+
+    # Create old price (1 day ago)
+    CardPrice.create!(
+      card_id: card_id,
+      usd_cents: 100,
+      fetched_at: 1.day.ago
+    )
+
+    # Stub new price with 30% increase
+    stub_scryfall_price_request(card_id, { usd: "1.30" })
+
+    log_output = capture_log do
+      # Should create price record and price alert
+      assert_difference "CardPrice.count", 1 do
+        assert_difference "PriceAlert.count", 1 do
+          UpdateCardPricesJob.perform_now(nil)
+        end
+      end
+    end
+
+    # Should log alert detection
+    assert_match(/Detecting price changes for alerts/i, log_output)
+    assert_match(/Created 1 price alerts/i, log_output)
+
+    # Verify alert was created correctly
+    alert = PriceAlert.last
+    assert_equal user, alert.user
+    assert_equal card_id, alert.card_id
+    assert_equal "price_increase", alert.alert_type
+    assert_equal 100, alert.old_price_cents
+    assert_equal 130, alert.new_price_cents
+  end
+
+  test "batch mode continues even if price alert detection fails" do
+    user = @user_one
+    card_id = "alert-error-card"
+
+    CollectionItem.create!(
+      user: user,
+      card_id: card_id,
+      collection_type: "inventory",
+      quantity: 1
+    )
+
+    stub_scryfall_price_request(card_id, { usd: "1.00" })
+
+    # Create a mock service that raises an error
+    failing_service = Object.new
+    def failing_service.detect_price_changes
+      raise StandardError.new("Alert error")
+    end
+
+    PriceAlertService.stub(:new, failing_service) do
+      log_output = capture_log do
+        # Should still create price record even if alert detection fails
+        assert_difference "CardPrice.count", 1 do
+          assert_no_difference "PriceAlert.count" do
+            UpdateCardPricesJob.perform_now(nil)
+          end
+        end
+      end
+
+      # Should log error but not fail the job
+      assert_match(/Error detecting price changes/i, log_output)
+    end
+  end
 end
