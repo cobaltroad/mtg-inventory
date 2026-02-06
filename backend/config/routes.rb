@@ -15,6 +15,7 @@ Rails.application.routes.draw do
     resources :inventory, only: [ :index, :create, :update, :destroy ] do
       collection do
         post :move_from_wishlist
+        get :value
       end
     end
 

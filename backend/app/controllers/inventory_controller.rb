@@ -36,6 +36,26 @@ class InventoryController < ApplicationController
     end
   end
 
+  # Calculates the total current market value of the user's inventory.
+  # Uses treatment-based pricing (foil, etched, normal) and excludes cards without price data.
+  # Results are cached for 1 hour and invalidated on inventory/price updates.
+  #
+  # Returns JSON with:
+  # - total_value_cents: sum of (quantity × market_price) for all cards
+  # - total_cards: total count of all cards in inventory
+  # - valued_cards: count of cards with price data
+  # - excluded_cards: count of cards without price data
+  # - last_updated: timestamp of most recent price update
+  def value
+    cache_key = "inventory_value_user_#{current_user.id}"
+
+    result = Rails.cache.fetch(cache_key, expires_in: 1.hour) do
+      InventoryValueCalculator.new(current_user).calculate
+    end
+
+    render json: result
+  end
+
   # Transfers a card from the user's wishlist to their inventory.
   # If an inventory row already exists for the card, its quantity is
   # incremented by the wishlist quantity.  The entire operation runs in a
