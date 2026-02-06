@@ -22,6 +22,9 @@ Rails.application.routes.draw do
 
     get "cards/search", to: "card_search#index"
     get "cards/:id/printings", to: "card_printings#show"
+
+    # Manual price update endpoint
+    post "prices/update", to: "prices#update"
   end
 
   # Test/development-only probe route to verify current_user resolution.

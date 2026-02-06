@@ -64,6 +64,44 @@ npm run test:watch        # Run tests in watch mode
 - Dark mode support via `class` strategy
 - Semantic HTML with accessibility features
 
+**Frontend Coding Guidelines:**
+
+- **API Calls**: Always use `${base}/api` for API endpoints to ensure proper routing in all environments
+  ```typescript
+  import { base } from '$app/paths';
+
+  // ✅ Correct - works in Docker, production, and dev
+  const response = await fetch(`${base}/api/inventory`, { ... });
+
+  // ❌ Wrong - hardcoded URLs break in Docker/production
+  const response = await fetch('http://localhost:3000/api/inventory', { ... });
+  ```
+
+- **Import Patterns**: Use SvelteKit path aliases for clean imports
+  ```typescript
+  import Component from '$lib/components/Component.svelte';
+  import { util } from '$lib/utils/util';
+  import type { Type } from '$lib/types/type';
+  ```
+
+- **State Management**: Use Svelte 5 runes (`$state`, `$derived`, `$effect`, `$props`)
+  ```typescript
+  let count = $state(0);
+  let doubled = $derived(count * 2);
+  ```
+
+- **Error Handling**: Always handle API errors with user-friendly messages
+  ```typescript
+  try {
+    const response = await fetch(`${base}/api/endpoint`, { ... });
+    if (!response.ok) throw new Error('Operation failed');
+    // handle success
+  } catch (err) {
+    console.error('Error:', err);
+    // show user-friendly error message
+  }
+  ```
+
 ## Architecture
 
 ```

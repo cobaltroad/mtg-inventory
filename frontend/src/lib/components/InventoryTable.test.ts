@@ -61,7 +61,7 @@ describe('InventoryTable Component - Table Structure', () => {
 
 		const headerTexts = Array.from(headers).map((h) => h.textContent?.toLowerCase().trim());
 		expect(headerTexts).toContain('card name');
-		expect(headerTexts).toContain('set');
+		expect(headerTexts).toContain('value');
 		expect(headerTexts).toContain('quantity');
 	});
 
@@ -82,11 +82,11 @@ describe('InventoryTable Component - Data Display', () => {
 		});
 	});
 
-	it('should display set information correctly', () => {
+	it('should display set code correctly', () => {
 		const { container } = render(InventoryTable, { props: { items: mockItems } });
 
 		mockItems.forEach((item) => {
-			expect(container.textContent).toContain(item.set_name);
+			expect(container.textContent).toContain(item.set.toUpperCase());
 		});
 	});
 
@@ -176,6 +176,94 @@ describe('InventoryTable Component - Responsive Design', () => {
 			expect(img).toHaveAttribute('src');
 			expect(img).toHaveAttribute('alt');
 		});
+	});
+});
+
+describe('InventoryTable Component - Price Display', () => {
+	it('should display unit price for single card', () => {
+		const itemsWithPrice: InventoryItem[] = [
+			{
+				...mockItems[0],
+				quantity: 1,
+				unit_price_cents: 250,
+				total_price_cents: 250
+			}
+		];
+
+		const { container } = render(InventoryTable, { props: { items: itemsWithPrice } });
+		expect(container.textContent).toContain('$2.50');
+	});
+
+	it('should display unit and total price for multiple copies', () => {
+		const itemsWithPrice: InventoryItem[] = [
+			{
+				...mockItems[0],
+				quantity: 4,
+				unit_price_cents: 250,
+				total_price_cents: 1000
+			}
+		];
+
+		const { container } = render(InventoryTable, { props: { items: itemsWithPrice } });
+		expect(container.textContent).toContain('Unit: $2.50');
+		expect(container.textContent).toContain('Total: $10.00');
+	});
+
+	it('should display "Price N/A" when no price data exists', () => {
+		const itemsWithoutPrice: InventoryItem[] = [
+			{
+				...mockItems[0],
+				unit_price_cents: null,
+				total_price_cents: null,
+				price_updated_at: null
+			}
+		];
+
+		const { container } = render(InventoryTable, { props: { items: itemsWithoutPrice } });
+		expect(container.textContent).toContain('Price N/A');
+	});
+
+	it('should handle undefined prices', () => {
+		const itemsWithUndefinedPrice: InventoryItem[] = [
+			{
+				...mockItems[0],
+				unit_price_cents: undefined,
+				total_price_cents: undefined,
+				price_updated_at: undefined
+			}
+		];
+
+		const { container } = render(InventoryTable, { props: { items: itemsWithUndefinedPrice } });
+		expect(container.textContent).toContain('Price N/A');
+	});
+
+	it('should display zero prices correctly', () => {
+		const itemsWithZeroPrice: InventoryItem[] = [
+			{
+				...mockItems[0],
+				quantity: 1,
+				unit_price_cents: 0,
+				total_price_cents: 0
+			}
+		];
+
+		const { container } = render(InventoryTable, { props: { items: itemsWithZeroPrice } });
+		expect(container.textContent).toContain('$0.00');
+	});
+
+	it('should show both prices for high quantities', () => {
+		const itemsWithMultiple: InventoryItem[] = [
+			{
+				...mockItems[0],
+				quantity: 10,
+				unit_price_cents: 150,
+				total_price_cents: 1500
+			}
+		];
+
+		const { container } = render(InventoryTable, { props: { items: itemsWithMultiple } });
+		expect(container.textContent).toContain('Unit: $1.50');
+		expect(container.textContent).toContain('Total: $15.00');
 	});
 });
 

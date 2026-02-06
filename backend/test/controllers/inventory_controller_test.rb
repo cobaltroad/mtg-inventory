@@ -1213,6 +1213,261 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     assert_equal "2021-05-15", item["released_at"]
   end
 
+  # ---------------------------------------------------------------------------
+  # #index with price enrichment -- includes market value data
+  # ---------------------------------------------------------------------------
+  test "GET /api/inventory includes price data for normal cards" do
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: "priced_card",
+      collection_type: "inventory",
+      quantity: 1,
+      treatment: "Normal"
+    )
+
+    CardPrice.create!(
+      card_id: "priced_card",
+      fetched_at: 1.hour.ago,
+      usd_cents: 250,
+      usd_foil_cents: 500
+    )
+
+    stub_scryfall_card_details("priced_card", name: "Priced Card")
+
+    get api_path("/inventory")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    assert_equal 1, items.size
+
+    item = items.first
+    assert_equal 250, item["unit_price_cents"]
+    assert_equal 250, item["total_price_cents"]
+    assert_not_nil item["price_updated_at"]
+  end
+
+  test "GET /api/inventory includes foil price for foil cards" do
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: "foil_card",
+      collection_type: "inventory",
+      quantity: 2,
+      treatment: "Foil"
+    )
+
+    CardPrice.create!(
+      card_id: "foil_card",
+      fetched_at: 2.hours.ago,
+      usd_cents: 300,
+      usd_foil_cents: 800
+    )
+
+    stub_scryfall_card_details("foil_card", name: "Foil Card")
+
+    get api_path("/inventory")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    item = items.first
+
+    assert_equal 800, item["unit_price_cents"]
+    assert_equal 1600, item["total_price_cents"]
+  end
+
+  test "GET /api/inventory uses fallback price when foil price is nil" do
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: "foil_fallback_card",
+      collection_type: "inventory",
+      quantity: 1,
+      treatment: "Foil"
+    )
+
+    CardPrice.create!(
+      card_id: "foil_fallback_card",
+      fetched_at: 1.hour.ago,
+      usd_cents: 150,
+      usd_foil_cents: nil
+    )
+
+    stub_scryfall_card_details("foil_fallback_card", name: "Foil Fallback")
+
+    get api_path("/inventory")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    item = items.first
+
+    assert_equal 150, item["unit_price_cents"]
+    assert_equal 150, item["total_price_cents"]
+  end
+
+  test "GET /api/inventory includes etched price for etched cards" do
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: "etched_card",
+      collection_type: "inventory",
+      quantity: 3,
+      treatment: "Etched"
+    )
+
+    CardPrice.create!(
+      card_id: "etched_card",
+      fetched_at: 1.hour.ago,
+      usd_cents: 200,
+      usd_etched_cents: 450
+    )
+
+    stub_scryfall_card_details("etched_card", name: "Etched Card")
+
+    get api_path("/inventory")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    item = items.first
+
+    assert_equal 450, item["unit_price_cents"]
+    assert_equal 1350, item["total_price_cents"]
+  end
+
+  test "GET /api/inventory uses fallback price when etched price is nil" do
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: "etched_fallback_card",
+      collection_type: "inventory",
+      quantity: 1,
+      treatment: "Etched"
+    )
+
+    CardPrice.create!(
+      card_id: "etched_fallback_card",
+      fetched_at: 1.hour.ago,
+      usd_cents: 180,
+      usd_etched_cents: nil
+    )
+
+    stub_scryfall_card_details("etched_fallback_card", name: "Etched Fallback")
+
+    get api_path("/inventory")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    item = items.first
+
+    assert_equal 180, item["unit_price_cents"]
+    assert_equal 180, item["total_price_cents"]
+  end
+
+  test "GET /api/inventory returns null prices when no price data exists" do
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: "no_price_card",
+      collection_type: "inventory",
+      quantity: 1
+    )
+
+    stub_scryfall_card_details("no_price_card", name: "No Price Card")
+
+    get api_path("/inventory")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    item = items.first
+
+    assert_nil item["unit_price_cents"]
+    assert_nil item["total_price_cents"]
+    assert_nil item["price_updated_at"]
+  end
+
+  test "GET /api/inventory calculates total price correctly for multiple copies" do
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: "multi_card",
+      collection_type: "inventory",
+      quantity: 5,
+      treatment: "Normal"
+    )
+
+    CardPrice.create!(
+      card_id: "multi_card",
+      fetched_at: 1.hour.ago,
+      usd_cents: 125
+    )
+
+    stub_scryfall_card_details("multi_card", name: "Multi Card")
+
+    get api_path("/inventory")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    item = items.first
+
+    assert_equal 125, item["unit_price_cents"]
+    assert_equal 625, item["total_price_cents"]
+  end
+
+  test "GET /api/inventory uses most recent price when multiple prices exist" do
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: "historic_price_card",
+      collection_type: "inventory",
+      quantity: 1
+    )
+
+    # Older price
+    CardPrice.create!(
+      card_id: "historic_price_card",
+      fetched_at: 7.days.ago,
+      usd_cents: 100
+    )
+
+    # Newer price (should be used)
+    CardPrice.create!(
+      card_id: "historic_price_card",
+      fetched_at: 1.hour.ago,
+      usd_cents: 175
+    )
+
+    stub_scryfall_card_details("historic_price_card", name: "Historic Price Card")
+
+    get api_path("/inventory")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    item = items.first
+
+    assert_equal 175, item["unit_price_cents"]
+  end
+
+  test "GET /api/inventory includes price_updated_at timestamp" do
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: "timestamp_card",
+      collection_type: "inventory",
+      quantity: 1
+    )
+
+    fetched_time = 3.hours.ago
+    CardPrice.create!(
+      card_id: "timestamp_card",
+      fetched_at: fetched_time,
+      usd_cents: 200
+    )
+
+    stub_scryfall_card_details("timestamp_card", name: "Timestamp Card")
+
+    get api_path("/inventory")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    item = items.first
+
+    assert_not_nil item["price_updated_at"]
+    # Compare timestamps (allowing for small time differences due to test execution)
+    parsed_time = Time.parse(item["price_updated_at"])
+    assert_in_delta fetched_time.to_i, parsed_time.to_i, 1
+  end
+
   private
 
 end

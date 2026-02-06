@@ -12,6 +12,9 @@ export interface InventoryItem {
 	acquired_price_cents?: number | null;
 	treatment?: string | null;
 	language?: string | null;
+	unit_price_cents?: number | null;
+	total_price_cents?: number | null;
+	price_updated_at?: string | null;
 	created_at: string;
 	updated_at: string;
 	user_id: number;

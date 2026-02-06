@@ -32,6 +32,49 @@ class CollectionItem < ApplicationRecord
 
   validate :acquired_date_cannot_be_in_future
 
+  # ---------------------------------------------------------------------------
+  # Price enrichment methods
+  # ---------------------------------------------------------------------------
+
+  # Returns the most recent CardPrice record for this item's card_id.
+  # Used to fetch current market pricing data for valuation.
+  #
+  # @return [CardPrice, nil] The latest price record, or nil if none exist
+  def latest_price
+    CardPrice.latest_for(card_id)
+  end
+
+  # Returns the unit price in cents based on the item's treatment.
+  # Selects the appropriate price field from CardPrice:
+  # - Foil treatment: uses usd_foil_cents, falls back to usd_cents
+  # - Etched treatment: uses usd_etched_cents, falls back to usd_cents
+  # - Normal/nil treatment: uses usd_cents
+  #
+  # @return [Integer, nil] Price in cents, or nil if no price data available
+  def unit_price_cents
+    price = latest_price
+    return nil if price.nil?
+
+    case treatment&.downcase
+    when "foil"
+      price.usd_foil_cents || price.usd_cents
+    when "etched"
+      price.usd_etched_cents || price.usd_cents
+    else
+      price.usd_cents
+    end
+  end
+
+  # Returns the total price for all copies of this item (unit price × quantity).
+  #
+  # @return [Integer, nil] Total price in cents, or nil if no price data available
+  def total_price_cents
+    unit_price = unit_price_cents
+    return nil if unit_price.nil?
+
+    unit_price * quantity
+  end
+
   private
 
   def acquired_date_cannot_be_in_future

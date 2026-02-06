@@ -376,4 +376,234 @@ class CollectionItemTest < ActiveSupport::TestCase
     assert item.invalid?
     assert_includes item.errors[:language], "is not included in the list"
   end
+
+  # ---------------------------------------------------------------------------
+  # Price enrichment methods
+  # ---------------------------------------------------------------------------
+  test "latest_price returns the most recent CardPrice for the card" do
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: "price_test_card",
+      collection_type: "inventory",
+      quantity: 1
+    )
+
+    # Create older price
+    old_price = CardPrice.create!(
+      card_id: "price_test_card",
+      fetched_at: 2.days.ago,
+      usd_cents: 100
+    )
+
+    # Create newer price
+    new_price = CardPrice.create!(
+      card_id: "price_test_card",
+      fetched_at: 1.day.ago,
+      usd_cents: 150
+    )
+
+    assert_equal new_price.id, item.latest_price.id
+  end
+
+  test "latest_price returns nil when no prices exist" do
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: "no_price_card",
+      collection_type: "inventory",
+      quantity: 1
+    )
+
+    assert_nil item.latest_price
+  end
+
+  test "unit_price_cents returns usd_cents for normal treatment" do
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: "normal_card",
+      collection_type: "inventory",
+      quantity: 1,
+      treatment: "Normal"
+    )
+
+    CardPrice.create!(
+      card_id: "normal_card",
+      fetched_at: 1.day.ago,
+      usd_cents: 200,
+      usd_foil_cents: 500
+    )
+
+    assert_equal 200, item.unit_price_cents
+  end
+
+  test "unit_price_cents returns usd_cents for nil treatment" do
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: "nil_treatment_card",
+      collection_type: "inventory",
+      quantity: 1,
+      treatment: nil
+    )
+
+    CardPrice.create!(
+      card_id: "nil_treatment_card",
+      fetched_at: 1.day.ago,
+      usd_cents: 300,
+      usd_foil_cents: 600
+    )
+
+    assert_equal 300, item.unit_price_cents
+  end
+
+  test "unit_price_cents returns usd_foil_cents for Foil treatment" do
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: "foil_card",
+      collection_type: "inventory",
+      quantity: 1,
+      treatment: "Foil"
+    )
+
+    CardPrice.create!(
+      card_id: "foil_card",
+      fetched_at: 1.day.ago,
+      usd_cents: 200,
+      usd_foil_cents: 500
+    )
+
+    assert_equal 500, item.unit_price_cents
+  end
+
+  test "unit_price_cents falls back to usd_cents when foil price is nil" do
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: "foil_fallback_card",
+      collection_type: "inventory",
+      quantity: 1,
+      treatment: "Foil"
+    )
+
+    CardPrice.create!(
+      card_id: "foil_fallback_card",
+      fetched_at: 1.day.ago,
+      usd_cents: 200,
+      usd_foil_cents: nil
+    )
+
+    assert_equal 200, item.unit_price_cents
+  end
+
+  test "unit_price_cents returns usd_etched_cents for Etched treatment" do
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: "etched_card",
+      collection_type: "inventory",
+      quantity: 1,
+      treatment: "Etched"
+    )
+
+    CardPrice.create!(
+      card_id: "etched_card",
+      fetched_at: 1.day.ago,
+      usd_cents: 200,
+      usd_etched_cents: 400
+    )
+
+    assert_equal 400, item.unit_price_cents
+  end
+
+  test "unit_price_cents falls back to usd_cents when etched price is nil" do
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: "etched_fallback_card",
+      collection_type: "inventory",
+      quantity: 1,
+      treatment: "Etched"
+    )
+
+    CardPrice.create!(
+      card_id: "etched_fallback_card",
+      fetched_at: 1.day.ago,
+      usd_cents: 200,
+      usd_etched_cents: nil
+    )
+
+    assert_equal 200, item.unit_price_cents
+  end
+
+  test "unit_price_cents returns nil when no price data exists" do
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: "no_price_data_card",
+      collection_type: "inventory",
+      quantity: 1
+    )
+
+    assert_nil item.unit_price_cents
+  end
+
+  test "unit_price_cents returns nil when price exists but all price fields are nil" do
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: "all_nil_prices_card",
+      collection_type: "inventory",
+      quantity: 1,
+      treatment: "Foil"
+    )
+
+    CardPrice.create!(
+      card_id: "all_nil_prices_card",
+      fetched_at: 1.day.ago,
+      usd_cents: nil,
+      usd_foil_cents: nil,
+      usd_etched_cents: nil
+    )
+
+    assert_nil item.unit_price_cents
+  end
+
+  test "total_price_cents returns unit price multiplied by quantity" do
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: "total_price_card",
+      collection_type: "inventory",
+      quantity: 4,
+      treatment: "Normal"
+    )
+
+    CardPrice.create!(
+      card_id: "total_price_card",
+      fetched_at: 1.day.ago,
+      usd_cents: 250
+    )
+
+    assert_equal 1000, item.total_price_cents
+  end
+
+  test "total_price_cents returns nil when unit price is nil" do
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: "no_total_price_card",
+      collection_type: "inventory",
+      quantity: 3
+    )
+
+    assert_nil item.total_price_cents
+  end
+
+  test "total_price_cents handles quantity of 1" do
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: "single_card",
+      collection_type: "inventory",
+      quantity: 1
+    )
+
+    CardPrice.create!(
+      card_id: "single_card",
+      fetched_at: 1.day.ago,
+      usd_cents: 350
+    )
+
+    assert_equal 350, item.total_price_cents
+  end
 end

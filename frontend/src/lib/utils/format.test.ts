@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatPrice, formatDate, pluralize } from './format';
+import { formatPrice, formatDate, pluralize, formatCurrency } from './format';
 
 describe('formatPrice', () => {
 	it('should format price in cents to USD string', () => {
@@ -51,5 +51,36 @@ describe('pluralize', () => {
 	it('should use custom plural form when provided', () => {
 		expect(pluralize(2, 'person', 'people')).toBe('people');
 		expect(pluralize(1, 'person', 'people')).toBe('person');
+	});
+});
+
+describe('formatCurrency', () => {
+	it('should return "Price N/A" when unit price is null', () => {
+		expect(formatCurrency(null, null, 1)).toBe('Price N/A');
+		expect(formatCurrency(undefined, undefined, 1)).toBe('Price N/A');
+	});
+
+	it('should return unit price for quantity of 1', () => {
+		expect(formatCurrency(250, 250, 1)).toBe('$2.50');
+		expect(formatCurrency(1000, 1000, 1)).toBe('$10.00');
+	});
+
+	it('should show unit and total price for multiple copies', () => {
+		expect(formatCurrency(250, 750, 3)).toBe('Unit: $2.50 | Total: $7.50');
+		expect(formatCurrency(125, 625, 5)).toBe('Unit: $1.25 | Total: $6.25');
+	});
+
+	it('should handle quantity > 1 but total price is null', () => {
+		expect(formatCurrency(250, null, 3)).toBe('$2.50');
+		expect(formatCurrency(250, undefined, 3)).toBe('$2.50');
+	});
+
+	it('should format zero prices correctly', () => {
+		expect(formatCurrency(0, 0, 1)).toBe('$0.00');
+		expect(formatCurrency(0, 0, 5)).toBe('Unit: $0.00 | Total: $0.00');
+	});
+
+	it('should handle large quantities', () => {
+		expect(formatCurrency(100, 10000, 100)).toBe('Unit: $1.00 | Total: $100.00');
 	});
 });

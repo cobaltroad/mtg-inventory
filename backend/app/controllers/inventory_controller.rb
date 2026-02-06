@@ -97,10 +97,16 @@ class InventoryController < ApplicationController
     nil
   end
 
-  # Serializes a collection item with its card details
+  # Serializes a collection item with its card details and price data
   def serialize_item_with_details(item, card_details)
     # Use cached image URL if available, otherwise fall back to Scryfall
     image_url, image_cached = resolve_image_url(item, card_details[:image_url])
+
+    # Get price data
+    latest_price = item.latest_price
+    unit_price = item.unit_price_cents
+    total_price = item.total_price_cents
+    price_updated_at = latest_price&.fetched_at
 
     {
       id: item.id,
@@ -117,6 +123,9 @@ class InventoryController < ApplicationController
       acquired_price_cents: item.acquired_price_cents,
       treatment: item.treatment,
       language: item.language,
+      unit_price_cents: unit_price,
+      total_price_cents: total_price,
+      price_updated_at: price_updated_at,
       created_at: item.created_at,
       updated_at: item.updated_at,
       user_id: item.user_id,

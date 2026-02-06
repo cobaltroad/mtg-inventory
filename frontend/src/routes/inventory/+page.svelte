@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { base } from '$app/paths';
 	import InventoryTable from '$lib/components/InventoryTable.svelte';
 	import EmptyInventory from '$lib/components/EmptyInventory.svelte';
 	import FilterBar from '$lib/components/FilterBar.svelte';
@@ -16,6 +17,8 @@
 	let allItems = $state(data.items || []);
 	let error = $derived(data.error || null);
 	let loading = $state(false);
+	let refreshingPrices = $state(false);
+	let refreshMessage = $state('');
 
 	// Update allItems when data changes
 	$effect(() => {
@@ -61,13 +64,83 @@
 	function handleFilterChange(newFilter: string) {
 		currentFilter = newFilter;
 	}
+
+	async function refreshPrices() {
+		refreshingPrices = true;
+		refreshMessage = '';
+
+		try {
+			const response = await fetch(`${base}/api/prices/update`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				}
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to refresh prices');
+			}
+
+			const result = await response.json();
+			refreshMessage = `Price update started for ${result.cards_to_update} cards. Refresh the page in a few moments to see updated prices.`;
+
+			// Auto-clear message after 10 seconds
+			setTimeout(() => {
+				refreshMessage = '';
+			}, 10000);
+		} catch (err) {
+			refreshMessage = 'Failed to refresh prices. Please try again.';
+			console.error('Price refresh error:', err);
+		} finally {
+			refreshingPrices = false;
+		}
+	}
 </script>
 
 <div class="inventory-page">
 	<header class="page-header">
-		<h1 class="page-title">My Inventory</h1>
-		{#if allItems.length > 0 && !loading}
-			<p class="item-count">{itemCountText()}</p>
+		<div class="header-content">
+			<div class="header-text">
+				<h1 class="page-title">My Inventory</h1>
+				{#if allItems.length > 0 && !loading}
+					<p class="item-count">{itemCountText()}</p>
+				{/if}
+			</div>
+			{#if allItems.length > 0}
+				<button
+					class="refresh-prices-btn"
+					onclick={refreshPrices}
+					disabled={refreshingPrices}
+				>
+					{#if refreshingPrices}
+						<span class="spinner"></span>
+						Refreshing...
+					{:else}
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							width="16"
+							height="16"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						>
+							<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+							<path d="M21 3v5h-5" />
+							<path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+							<path d="M3 21v-5h5" />
+						</svg>
+						Refresh Prices
+					{/if}
+				</button>
+			{/if}
+		</div>
+		{#if refreshMessage}
+			<div class="refresh-message" class:success={refreshMessage.includes('started')}>
+				{refreshMessage}
+			</div>
 		{/if}
 	</header>
 
@@ -112,6 +185,18 @@
 		margin-bottom: 2rem;
 	}
 
+	.header-content {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 1rem;
+		margin-bottom: 0.5rem;
+	}
+
+	.header-text {
+		flex: 1;
+	}
+
 	.page-title {
 		font-size: 2rem;
 		font-weight: 700;
@@ -123,6 +208,80 @@
 		color: #6b7280;
 		font-size: 1rem;
 		margin: 0;
+	}
+
+	.refresh-prices-btn {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.625rem 1rem;
+		background: #3b82f6;
+		color: white;
+		border: none;
+		border-radius: 0.5rem;
+		font-size: 0.875rem;
+		font-weight: 500;
+		cursor: pointer;
+		transition: all 0.2s;
+		white-space: nowrap;
+	}
+
+	.refresh-prices-btn:hover:not(:disabled) {
+		background: #2563eb;
+		transform: translateY(-1px);
+		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+	}
+
+	.refresh-prices-btn:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+
+	.refresh-prices-btn svg {
+		flex-shrink: 0;
+	}
+
+	.spinner {
+		width: 16px;
+		height: 16px;
+		border: 2px solid rgba(255, 255, 255, 0.3);
+		border-top-color: white;
+		border-radius: 50%;
+		animation: spin 0.6s linear infinite;
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	.refresh-message {
+		padding: 0.75rem 1rem;
+		border-radius: 0.5rem;
+		font-size: 0.875rem;
+		margin-top: 1rem;
+		background: #fef2f2;
+		border: 1px solid #fecaca;
+		color: #991b1b;
+	}
+
+	.refresh-message.success {
+		background: #f0fdf4;
+		border-color: #bbf7d0;
+		color: #166534;
+	}
+
+	:global(.dark) .refresh-message {
+		background: #7f1d1d;
+		border-color: #991b1b;
+		color: #fecaca;
+	}
+
+	:global(.dark) .refresh-message.success {
+		background: #14532d;
+		border-color: #166534;
+		color: #bbf7d0;
 	}
 
 	.alert {
@@ -202,6 +361,16 @@
 		.controls-bar {
 			flex-direction: column;
 			align-items: stretch;
+		}
+
+		.header-content {
+			flex-direction: column;
+			align-items: flex-start;
+		}
+
+		.refresh-prices-btn {
+			width: 100%;
+			justify-content: center;
 		}
 	}
 </style>
