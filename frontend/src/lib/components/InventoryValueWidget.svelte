@@ -2,17 +2,17 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { base } from '$app/paths';
 	import { formatCurrency } from '$lib/utils/currency';
-	import type { Chart as ChartType } from 'chart.js';
 
 	// Chart will be imported dynamically on mount to avoid SSR issues
 	let Chart: any = null;
+	let ChartType: any = null;
 
 	// Component state
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 	let timePeriod = $state<number>(30);
 	let timelineData = $state<any>(null);
-	let chartInstance: ChartType | null = null;
+	let chartInstance: any = null;
 	let canvasElement = $state<HTMLCanvasElement | undefined>(undefined);
 
 	// Fetch inventory value timeline data
@@ -160,25 +160,14 @@
 
 	// Lifecycle
 	onMount(async () => {
-		// Dynamically import Chart.js to avoid SSR issues
-		const chartModule = await import('chart.js');
-		Chart = chartModule.Chart;
+		// Dynamically import Chart.js auto bundle to avoid SSR issues
+		const chartModule = await import('chart.js/auto');
+		Chart = chartModule.default;
 
 		// Import date adapter
-		await import('chartjs-adapter-date-fns');
+		const { _adapters } = await import('chartjs-adapter-date-fns');
 
-		// Register Chart.js components
-		Chart.register(
-			chartModule.LineController,
-			chartModule.LineElement,
-			chartModule.PointElement,
-			chartModule.LinearScale,
-			chartModule.TimeScale,
-			chartModule.Title,
-			chartModule.Tooltip,
-			chartModule.Legend,
-			chartModule.Filler
-		);
+		// No need to register - auto bundle includes everything
 
 		fetchTimeline();
 	});
