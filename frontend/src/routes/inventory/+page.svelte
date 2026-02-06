@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { base } from '$app/paths';
 	import InventoryTable from '$lib/components/InventoryTable.svelte';
 	import EmptyInventory from '$lib/components/EmptyInventory.svelte';
 	import FilterBar from '$lib/components/FilterBar.svelte';
@@ -69,7 +70,7 @@
 		refreshMessage = '';
 
 		try {
-			const response = await fetch('http://localhost:3000/api/prices/update', {
+			const response = await fetch(`${base}/api/prices/update`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
