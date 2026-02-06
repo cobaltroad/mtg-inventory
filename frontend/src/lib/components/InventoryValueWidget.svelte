@@ -48,7 +48,7 @@
 	}
 
 	// Prepare data for chart
-	$derived.by(() => {
+	let chartData = $derived.by(() => {
 		if (!timelineData) return [];
 		return timelineData.timeline.map((point: any) => ({
 			date: new Date(point.date),
