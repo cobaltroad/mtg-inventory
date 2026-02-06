@@ -5,6 +5,10 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
   # RED Phase: Test price history endpoint
   # ---------------------------------------------------------------------------
 
+  def api_path(path)
+    "#{ENV.fetch('PUBLIC_API_PATH', '/api')}#{path}"
+  end
+
   setup do
     @card_id = "test-card-uuid-123"
 
@@ -63,14 +67,14 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
   # ---------------------------------------------------------------------------
 
   test "should get price history for card" do
-    get "/api/cards/#{@card_id}/price_history"
+    get api_path("/cards/#{@card_id}/price_history")
 
     assert_response :success
     assert_equal "application/json; charset=utf-8", response.content_type
   end
 
   test "should return JSON with expected structure" do
-    get "/api/cards/#{@card_id}/price_history"
+    get api_path("/cards/#{@card_id}/price_history")
 
     json_response = JSON.parse(response.body)
 
@@ -85,7 +89,7 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
   # ---------------------------------------------------------------------------
 
   test "should return 7 days of history when time_period is 7" do
-    get "/api/cards/#{@card_id}/price_history", params: { time_period: 7 }
+    get api_path("/cards/#{@card_id}/price_history"), params: { time_period: 7 }
 
     json_response = JSON.parse(response.body)
     prices = json_response["prices"]
@@ -96,7 +100,7 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should return 30 days of history when time_period is 30" do
-    get "/api/cards/#{@card_id}/price_history", params: { time_period: 30 }
+    get api_path("/cards/#{@card_id}/price_history"), params: { time_period: 30 }
 
     json_response = JSON.parse(response.body)
     prices = json_response["prices"]
@@ -107,7 +111,7 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should return 90 days of history when time_period is 90" do
-    get "/api/cards/#{@card_id}/price_history", params: { time_period: 90 }
+    get api_path("/cards/#{@card_id}/price_history"), params: { time_period: 90 }
 
     json_response = JSON.parse(response.body)
     prices = json_response["prices"]
@@ -118,7 +122,7 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should return 365 days of history when time_period is 365" do
-    get "/api/cards/#{@card_id}/price_history", params: { time_period: 365 }
+    get api_path("/cards/#{@card_id}/price_history"), params: { time_period: 365 }
 
     json_response = JSON.parse(response.body)
     prices = json_response["prices"]
@@ -129,7 +133,7 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should return all history when time_period is all" do
-    get "/api/cards/#{@card_id}/price_history", params: { time_period: "all" }
+    get api_path("/cards/#{@card_id}/price_history"), params: { time_period: "all" }
 
     json_response = JSON.parse(response.body)
     prices = json_response["prices"]
@@ -140,7 +144,7 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should default to 30 days when time_period not specified" do
-    get "/api/cards/#{@card_id}/price_history"
+    get api_path("/cards/#{@card_id}/price_history")
 
     json_response = JSON.parse(response.body)
     prices = json_response["prices"]
@@ -155,7 +159,7 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
   # ---------------------------------------------------------------------------
 
   test "should return prices ordered by fetched_at ASC for chart display" do
-    get "/api/cards/#{@card_id}/price_history", params: { time_period: "all" }
+    get api_path("/cards/#{@card_id}/price_history"), params: { time_period: "all" }
 
     json_response = JSON.parse(response.body)
     prices = json_response["prices"]
@@ -176,7 +180,7 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
   # ---------------------------------------------------------------------------
 
   test "should include all treatment prices in each record" do
-    get "/api/cards/#{@card_id}/price_history", params: { time_period: 7 }
+    get api_path("/cards/#{@card_id}/price_history"), params: { time_period: 7 }
 
     json_response = JSON.parse(response.body)
     price_record = json_response["prices"].first
@@ -198,7 +202,7 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
       fetched_at: 1.day.ago
     )
 
-    get "/api/cards/#{card_id_sparse}/price_history"
+    get api_path("/cards/#{card_id_sparse}/price_history")
 
     json_response = JSON.parse(response.body)
     price_record = json_response["prices"].first
@@ -213,7 +217,7 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
   # ---------------------------------------------------------------------------
 
   test "should calculate percentage change for normal treatment" do
-    get "/api/cards/#{@card_id}/price_history", params: { time_period: "all" }
+    get api_path("/cards/#{@card_id}/price_history"), params: { time_period: "all" }
 
     json_response = JSON.parse(response.body)
     summary = json_response["summary"]
@@ -226,7 +230,7 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should calculate percentage change for foil treatment" do
-    get "/api/cards/#{@card_id}/price_history", params: { time_period: "all" }
+    get api_path("/cards/#{@card_id}/price_history"), params: { time_period: "all" }
 
     json_response = JSON.parse(response.body)
     summary = json_response["summary"]
@@ -239,7 +243,7 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should calculate percentage change for etched treatment" do
-    get "/api/cards/#{@card_id}/price_history", params: { time_period: "all" }
+    get api_path("/cards/#{@card_id}/price_history"), params: { time_period: "all" }
 
     json_response = JSON.parse(response.body)
     summary = json_response["summary"]
@@ -257,7 +261,7 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
     CardPrice.create!(card_id: decreasing_card, usd_cents: 3000, fetched_at: 7.days.ago)
     CardPrice.create!(card_id: decreasing_card, usd_cents: 2000, fetched_at: Time.current)
 
-    get "/api/cards/#{decreasing_card}/price_history"
+    get api_path("/cards/#{decreasing_card}/price_history")
 
     json_response = JSON.parse(response.body)
     summary = json_response["summary"]
@@ -273,7 +277,7 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
     CardPrice.create!(card_id: stable_card, usd_cents: 2000, fetched_at: 7.days.ago)
     CardPrice.create!(card_id: stable_card, usd_cents: 2000, fetched_at: Time.current)
 
-    get "/api/cards/#{stable_card}/price_history"
+    get api_path("/cards/#{stable_card}/price_history")
 
     json_response = JSON.parse(response.body)
     summary = json_response["summary"]
@@ -298,7 +302,7 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
       fetched_at: Time.current
     )
 
-    get "/api/cards/#{normal_only_card}/price_history"
+    get api_path("/cards/#{normal_only_card}/price_history")
 
     json_response = JSON.parse(response.body)
     summary = json_response["summary"]
@@ -315,7 +319,7 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
   test "should handle card with no price history" do
     nonexistent_card = "no-prices-uuid"
 
-    get "/api/cards/#{nonexistent_card}/price_history"
+    get api_path("/cards/#{nonexistent_card}/price_history")
 
     assert_response :success
     json_response = JSON.parse(response.body)
@@ -333,7 +337,7 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
       fetched_at: Time.current
     )
 
-    get "/api/cards/#{single_price_card}/price_history"
+    get api_path("/cards/#{single_price_card}/price_history")
 
     json_response = JSON.parse(response.body)
 
@@ -349,7 +353,7 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
     CardPrice.create!(card_id: sparse_card, usd_cents: 1000, fetched_at: 90.days.ago)
     CardPrice.create!(card_id: sparse_card, usd_cents: 1500, fetched_at: Time.current)
 
-    get "/api/cards/#{sparse_card}/price_history", params: { time_period: 90 }
+    get api_path("/cards/#{sparse_card}/price_history"), params: { time_period: 90 }
 
     json_response = JSON.parse(response.body)
     prices = json_response["prices"]
@@ -359,7 +363,7 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should filter by card_id correctly" do
-    get "/api/cards/#{@card_id}/price_history", params: { time_period: "all" }
+    get api_path("/cards/#{@card_id}/price_history"), params: { time_period: "all" }
 
     json_response = JSON.parse(response.body)
     prices = json_response["prices"]
@@ -374,7 +378,7 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should handle invalid time_period parameter gracefully" do
-    get "/api/cards/#{@card_id}/price_history", params: { time_period: "invalid" }
+    get api_path("/cards/#{@card_id}/price_history"), params: { time_period: "invalid" }
 
     # Should default to 30 days
     json_response = JSON.parse(response.body)
@@ -397,7 +401,7 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
     end
 
     start_time = Time.current
-    get "/api/cards/#{large_card_id}/price_history", params: { time_period: "all" }
+    get api_path("/cards/#{large_card_id}/price_history"), params: { time_period: "all" }
     elapsed_time = Time.current - start_time
 
     assert_response :success
