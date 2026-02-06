@@ -23,6 +23,12 @@ export default defineConfig(({ mode }) => {
 			port: 5173,
 			allowedHosts: env.APP_DOMAIN ? [env.APP_DOMAIN, `.${env.APP_DOMAIN}`] : [],
 			hmr: hmrConfig
+		},
+		ssr: {
+			noExternal: ['chart.js', 'chartjs-adapter-date-fns']
+		},
+		optimizeDeps: {
+			include: ['chart.js/auto/auto.js', 'chartjs-adapter-date-fns']
 		}
 	};
 });
