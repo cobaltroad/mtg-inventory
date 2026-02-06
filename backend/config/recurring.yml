@@ -17,5 +17,5 @@ production:
   daily_card_price_update:
     class: UpdateCardPricesJob
     queue: default
-    schedule: every day at 2am
+    schedule: every day at 7am
     args: []
