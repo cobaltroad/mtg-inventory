@@ -56,6 +56,33 @@ class InventoryController < ApplicationController
     render json: result
   end
 
+  # Returns inventory value timeline data showing how total inventory value
+  # has changed over time.
+  #
+  # Query Parameters:
+  #   time_period - Optional. One of: 7, 30, 90. Defaults to 30.
+  #
+  # Returns JSON with:
+  # - time_period: selected time period
+  # - timeline: array of {date, value_cents} objects
+  # - summary: {start_value_cents, end_value_cents, change_cents, percentage_change}
+  def value_timeline
+    time_period = normalize_time_period(params[:time_period])
+
+    # Calculate inventory value timeline
+    service = InventoryValueTimelineService.new(
+      user: current_user,
+      time_period: time_period
+    )
+    result = service.call
+
+    render json: {
+      time_period: time_period.to_s,
+      timeline: serialize_timeline(result[:timeline]),
+      summary: result[:summary]
+    }
+  end
+
   # Transfers a card from the user's wishlist to their inventory.
   # If an inventory row already exists for the card, its quantity is
   # incremented by the wishlist quantity.  The entire operation runs in a
@@ -206,5 +233,30 @@ class InventoryController < ApplicationController
 
   def collection_type
     "inventory"
+  end
+
+  # Valid time period options for timeline queries
+  VALID_TIME_PERIODS = [ 7, 30, 90 ].freeze
+  DEFAULT_TIME_PERIOD = 30
+
+  # Normalizes and validates the time_period parameter for value_timeline
+  def normalize_time_period(period)
+    normalized = period.to_i
+
+    if VALID_TIME_PERIODS.include?(normalized)
+      normalized
+    else
+      DEFAULT_TIME_PERIOD
+    end
+  end
+
+  # Serializes timeline data points to JSON-friendly format
+  def serialize_timeline(timeline)
+    timeline.map do |point|
+      {
+        date: point[:date].iso8601,
+        value_cents: point[:value_cents]
+      }
+    end
   end
 end

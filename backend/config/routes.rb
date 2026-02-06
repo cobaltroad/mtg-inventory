@@ -16,6 +16,7 @@ Rails.application.routes.draw do
       collection do
         post :move_from_wishlist
         get :value
+        get :value_timeline
       end
     end
 
