@@ -860,6 +860,40 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     refute uncached_item_response["image_cached"], "Uncached item should not be marked as cached"
   end
 
+  # ---------------------------------------------------------------------------
+  # #index with released_at field (Story #39)
+  # ---------------------------------------------------------------------------
+  test "GET /api/inventory includes released_at field for sorting by release date" do
+    CollectionItem.create!(user: @user, card_id: "uuid-release", collection_type: "inventory", quantity: 1)
+
+    stub_request(:get, "https://api.scryfall.com/cards/uuid-release")
+      .to_return(
+        status: 200,
+        body: {
+          id: "uuid-release",
+          name: "Test Card",
+          set: "M21",
+          set_name: "Core Set 2021",
+          collector_number: "100",
+          released_at: "2020-07-03",
+          image_uris: {
+            normal: "https://cards.scryfall.io/normal/front/t/e/test.jpg"
+          }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    get api_path("/inventory")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    assert_equal 1, items.size
+
+    item = items.first
+    assert_equal "uuid-release", item["card_id"]
+    assert_equal "2020-07-03", item["released_at"], "Should include released_at field from Scryfall"
+  end
+
   private
 
 end

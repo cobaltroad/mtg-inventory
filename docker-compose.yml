@@ -54,6 +54,42 @@ services:
       - mtg
       - traefik-public
 
+  jobs:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.backend
+      args:
+        RUBY_VERSION: ${RUBY_VERSION}
+    container_name: mtg_jobs
+    command: bin/jobs
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      EDITOR: nano
+      RUBY_VERSION: ${RUBY_VERSION}
+      BUNDLE_PATH: /bundle
+      RAILS_ENV: development
+      RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
+      DB_HOST: db
+      DB_USER: ${POSTGRES_USER_NAME}
+      DB_PASS: ${POSTGRES_USER_PASSWORD}
+      DB_NAME: ${POSTGRES_DB_NAME}
+      DATABASE_URL: ${POSTGRES_DB_URL}
+      APP_DOMAIN: ${APP_DOMAIN}
+      PUBLIC_API_PATH: ${PUBLIC_API_PATH}
+    volumes:
+      - ./backend:/backend  # Rails code
+      - bundle_cache:/bundle       # Gems
+    labels:
+      - "traefik.enable=false"
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - mtg
+
   frontend:
     build:
       context: ./frontend
