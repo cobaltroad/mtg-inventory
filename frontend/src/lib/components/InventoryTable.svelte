@@ -1,13 +1,28 @@
 <script lang="ts">
 	import type { InventoryItem } from '$lib/types/inventory';
 	import { formatPrice } from '$lib/utils/format';
+	import QuantityEditor from './QuantityEditor.svelte';
+	import RemoveConfirmation from './RemoveConfirmation.svelte';
+	import Toast from './Toast.svelte';
+	import { Trash2 } from 'lucide-svelte';
 
 	interface Props {
 		items: InventoryItem[];
 		loading?: boolean;
+		onItemsChange?: (items: InventoryItem[]) => void;
 	}
 
-	let { items, loading = false }: Props = $props();
+	let { items, loading = false, onItemsChange }: Props = $props();
+
+	// Optimistic updates state
+	let localItems = $state<InventoryItem[]>(items);
+	let removingItemId = $state<number | null>(null);
+	let toast = $state<{ message: string; type: 'success' | 'error' } | null>(null);
+
+	// Update local items when props change
+	$effect(() => {
+		localItems = items;
+	});
 
 	/**
 	 * Track image loading states for lazy-loaded card images
@@ -26,6 +41,89 @@
 	 */
 	function handleImageError(id: number) {
 		imageStates[id] = { loaded: false, error: true };
+	}
+
+	/**
+	 * Update quantity for an item
+	 */
+	async function handleQuantityUpdate(item: InventoryItem, newQuantity: number) {
+		const originalQuantity = item.quantity;
+
+		// Optimistic update
+		localItems = localItems.map((i) => (i.id === item.id ? { ...i, quantity: newQuantity } : i));
+
+		try {
+			const response = await fetch(`/api/inventory/${item.id}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ quantity: newQuantity })
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to update quantity');
+			}
+
+			const updatedItem = await response.json();
+
+			// Update with server response
+			localItems = localItems.map((i) => (i.id === item.id ? updatedItem : i));
+
+			if (onItemsChange) {
+				onItemsChange(localItems);
+			}
+
+			toast = { message: 'Quantity updated', type: 'success' };
+		} catch (err) {
+			// Rollback on failure
+			localItems = localItems.map((i) => (i.id === item.id ? { ...i, quantity: originalQuantity } : i));
+
+			toast = { message: 'Failed to update quantity', type: 'error' };
+		}
+	}
+
+	/**
+	 * Remove an item from inventory
+	 */
+	async function handleRemove(item: InventoryItem) {
+		const originalItems = [...localItems];
+
+		// Optimistic removal
+		localItems = localItems.filter((i) => i.id !== item.id);
+
+		try {
+			const response = await fetch(`/api/inventory/${item.id}`, {
+				method: 'DELETE'
+			});
+
+			if (!response.ok) {
+				throw new Error('Failed to remove item');
+			}
+
+			if (onItemsChange) {
+				onItemsChange(localItems);
+			}
+
+			toast = { message: `Removed ${item.card_name} from inventory`, type: 'success' };
+		} catch (err) {
+			// Rollback on failure
+			localItems = originalItems;
+
+			toast = { message: 'Failed to remove item', type: 'error' };
+		} finally {
+			removingItemId = null;
+		}
+	}
+
+	function showRemoveConfirmation(itemId: number) {
+		removingItemId = itemId;
+	}
+
+	function hideRemoveConfirmation() {
+		removingItemId = null;
+	}
+
+	function dismissToast() {
+		toast = null;
 	}
 </script>
 
@@ -48,10 +146,11 @@
 					<th>Quantity</th>
 					<th>Value</th>
 					<th>Details</th>
+					<th>Actions</th>
 				</tr>
 			</thead>
 			<tbody>
-				{#each items as item (item.id)}
+				{#each localItems as item (item.id)}
 					<tr>
 						<td>
 							<div class="image-cell">
@@ -81,7 +180,10 @@
 							</div>
 						</td>
 						<td>
-							<span class="quantity-badge">{item.quantity}x</span>
+							<QuantityEditor
+								initialQuantity={item.quantity}
+								onSave={(newQuantity) => handleQuantityUpdate(item, newQuantity)}
+							/>
 						</td>
 						<td> TBD </td>
 						<td>
@@ -98,11 +200,37 @@
 								{/if}
 							</div>
 						</td>
+						<td>
+							<button
+								class="remove-btn"
+								onclick={() => showRemoveConfirmation(item.id)}
+								title="Remove from inventory"
+								data-testid="remove-btn-{item.id}"
+							>
+								<Trash2 size={18} />
+							</button>
+						</td>
 					</tr>
+
+					{#if removingItemId === item.id}
+						<RemoveConfirmation
+							cardName={item.card_name}
+							setCode={item.set}
+							collectorNumber={item.collector_number}
+							onConfirm={() => handleRemove(item)}
+							onCancel={hideRemoveConfirmation}
+							show={true}
+						/>
+					{/if}
 				{/each}
 			</tbody>
 		</table>
 	</div>
+{/if}
+
+{#if toast}
+	<Toast message={toast.message} type={toast.type} onDismiss={dismissToast} />
+{/if}
 {/if}
 
 <style>
@@ -311,6 +439,33 @@
 	.detail-text {
 		font-size: 0.75rem;
 		color: #6b7280;
+	}
+
+	.remove-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.5rem;
+		background: transparent;
+		border: none;
+		border-radius: 0.375rem;
+		color: #6b7280;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.remove-btn:hover {
+		background: #fee2e2;
+		color: #dc2626;
+	}
+
+	:global(.dark) .remove-btn {
+		color: #9ca3af;
+	}
+
+	:global(.dark) .remove-btn:hover {
+		background: #7f1d1d;
+		color: #fca5a5;
 	}
 
 	@media (max-width: 768px) {
