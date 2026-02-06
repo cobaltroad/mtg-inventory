@@ -3,6 +3,7 @@
   import '@fontsource-variable/montserrat';
 	import { base } from '$app/paths';
 	import favicon from '$lib/assets/favicon.svg';
+	import { AppBar } from '@skeletonlabs/skeleton-svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import SearchDrawer from '$lib/components/SearchDrawer.svelte';
 	import PrintingModal from '$lib/components/PrintingModal.svelte';
@@ -12,6 +13,7 @@
 	// UI state
 	let sidebarOpen = $state(false);
 	let searchDrawerOpen = $state(false);
+	let sidebarMode = $state<'sidebar' | 'rail'>('sidebar');
 
 	// Search state
 	let searching = $state(false);
@@ -27,6 +29,13 @@
 	 */
 	function handleSearchClick() {
 		searchDrawerOpen = true;
+	}
+
+	/**
+	 * Toggles between sidebar and rail navigation modes.
+	 */
+	function toggleSidebarMode() {
+		sidebarMode = sidebarMode === 'sidebar' ? 'rail' : 'sidebar';
 	}
 
 	/**
@@ -74,11 +83,24 @@
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
 
 <div class="app-container">
-	<Sidebar bind:open={sidebarOpen} onSearchClick={handleSearchClick} />
+	<Sidebar
+		bind:open={sidebarOpen}
+		mode={sidebarMode}
+		onSearchClick={handleSearchClick}
+		onToggleMode={toggleSidebarMode}
+	/>
 
-	<main class="main-content">
-		{@render children()}
-	</main>
+	<div class="content-wrapper" class:rail-mode={sidebarMode === 'rail'}>
+		<AppBar class="app-bar-root">
+			{#snippet headline()}
+				<span class="app-title">MTG Inventory</span>
+			{/snippet}
+		</AppBar>
+
+		<main class="main-content">
+			{@render children()}
+		</main>
+	</div>
 
 	<SearchDrawer
 		bind:open={searchDrawerOpen}
@@ -100,15 +122,40 @@
 		min-height: 100vh;
 	}
 
-	.main-content {
+	.content-wrapper {
 		flex: 1;
+		display: flex;
+		flex-direction: column;
 		margin-left: 0;
 		transition: margin-left 0.3s ease-in-out;
 	}
 
 	@media (min-width: 768px) {
-		.main-content {
-			margin-left: 16rem; /* Width of sidebar */
+		.content-wrapper {
+			margin-left: 16rem; /* Sidebar width */
 		}
+
+		.content-wrapper.rail-mode {
+			margin-left: 5rem; /* Rail width */
+		}
+	}
+
+	:global(.app-bar-root) {
+		position: sticky;
+		top: 0;
+		height: 3em;
+		z-index: 10;
+		background-color: var(--color-surface-900);
+		border-bottom: 1px solid var(--color-surface-700);
+	}
+
+	.app-title {
+		font-size: 1.25rem;
+		font-weight: 600;
+		color: var(--color-surface-50);
+	}
+
+	.main-content {
+		flex: 1;
 	}
 </style>

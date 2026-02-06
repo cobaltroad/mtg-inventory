@@ -860,6 +860,132 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     refute uncached_item_response["image_cached"], "Uncached item should not be marked as cached"
   end
 
+  # ---------------------------------------------------------------------------
+  # #index with released_at field (Story #39)
+  # ---------------------------------------------------------------------------
+  test "GET /api/inventory includes released_at field for sorting by release date" do
+    CollectionItem.create!(user: @user, card_id: "uuid-release", collection_type: "inventory", quantity: 1)
+
+    stub_request(:get, "https://api.scryfall.com/cards/uuid-release")
+      .to_return(
+        status: 200,
+        body: {
+          id: "uuid-release",
+          name: "Test Card",
+          set: "M21",
+          set_name: "Core Set 2021",
+          collector_number: "100",
+          released_at: "2020-07-03",
+          image_uris: {
+            normal: "https://cards.scryfall.io/normal/front/t/e/test.jpg"
+          }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    get api_path("/inventory")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    assert_equal 1, items.size
+
+    item = items.first
+    assert_equal "uuid-release", item["card_id"]
+    assert_equal "2020-07-03", item["released_at"], "Should include released_at field from Scryfall"
+  end
+
+  test "GET /api/inventory includes created_at field for sorting by date added" do
+    # Create items at different times
+    first_item = CollectionItem.create!(
+      user: @user,
+      card_id: "uuid-first",
+      collection_type: "inventory",
+      quantity: 1,
+      created_at: 3.days.ago
+    )
+    second_item = CollectionItem.create!(
+      user: @user,
+      card_id: "uuid-second",
+      collection_type: "inventory",
+      quantity: 1,
+      created_at: 1.day.ago
+    )
+
+    stub_scryfall_card_details("uuid-first", name: "First Card")
+    stub_scryfall_card_details("uuid-second", name: "Second Card")
+
+    get api_path("/inventory")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    assert_equal 2, items.size
+
+    # Verify both items have created_at timestamps
+    items.each do |item|
+      assert_not_nil item["created_at"], "Should include created_at field for sorting by date added"
+      assert item["created_at"].is_a?(String), "created_at should be a string (ISO8601 format)"
+    end
+
+    # Find items by card_id
+    first_item_response = items.find { |i| i["card_id"] == "uuid-first" }
+    second_item_response = items.find { |i| i["card_id"] == "uuid-second" }
+
+    # Verify the timestamps match the created items
+    assert_equal first_item.created_at.iso8601(3), first_item_response["created_at"]
+    assert_equal second_item.created_at.iso8601(3), second_item_response["created_at"]
+  end
+
+  test "GET /api/inventory includes all fields required for filtering and sorting" do
+    CollectionItem.create!(
+      user: @user,
+      card_id: "uuid-complete",
+      collection_type: "inventory",
+      quantity: 5,
+      created_at: 2.days.ago
+    )
+
+    stub_request(:get, "https://api.scryfall.com/cards/uuid-complete")
+      .to_return(
+        status: 200,
+        body: {
+          id: "uuid-complete",
+          name: "Complete Test Card",
+          set: "XYZ",
+          set_name: "Test Expansion",
+          collector_number: "42",
+          released_at: "2021-05-15",
+          image_uris: {
+            normal: "https://cards.scryfall.io/normal/front/c/c/complete.jpg"
+          }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    get api_path("/inventory")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    assert_equal 1, items.size
+
+    item = items.first
+    # Fields required for filtering
+    assert_not_nil item["set"], "Should include set for filtering"
+    assert_not_nil item["set_name"], "Should include set_name for filtering"
+
+    # Fields required for sorting
+    assert_not_nil item["card_name"], "Should include card_name for sorting by name"
+    assert_not_nil item["quantity"], "Should include quantity for sorting by quantity"
+    assert_not_nil item["released_at"], "Should include released_at for sorting by release date"
+    assert_not_nil item["created_at"], "Should include created_at for sorting by date added"
+
+    # Verify actual values
+    assert_equal "Complete Test Card", item["card_name"]
+    assert_equal "XYZ", item["set"]
+    assert_equal "Test Expansion", item["set_name"]
+    assert_equal 5, item["quantity"]
+    assert_equal "2021-05-15", item["released_at"]
+  end
+
   private
 
 end
