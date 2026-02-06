@@ -5,6 +5,7 @@
 	import RemoveConfirmation from './RemoveConfirmation.svelte';
 	import Toast from './Toast.svelte';
 	import { Trash2 } from 'lucide-svelte';
+	import { base } from '$app/paths';
 
 	interface Props {
 		items: InventoryItem[];
@@ -53,7 +54,7 @@
 		localItems = localItems.map((i) => (i.id === item.id ? { ...i, quantity: newQuantity } : i));
 
 		try {
-			const response = await fetch(`/api/inventory/${item.id}`, {
+			const response = await fetch(`${base}/api/inventory/${item.id}`, {
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ quantity: newQuantity })
@@ -91,7 +92,7 @@
 		localItems = localItems.filter((i) => i.id !== item.id);
 
 		try {
-			const response = await fetch(`/api/inventory/${item.id}`, {
+			const response = await fetch(`${base}/api/inventory/${item.id}`, {
 				method: 'DELETE'
 			});
 
