@@ -231,7 +231,6 @@
 {#if toast}
 	<Toast message={toast.message} type={toast.type} onDismiss={dismissToast} />
 {/if}
-{/if}
 
 <style>
 	.loading-container,
