@@ -45,24 +45,14 @@ class CollectionItem < ApplicationRecord
   end
 
   # Returns the unit price in cents based on the item's treatment.
-  # Selects the appropriate price field from CardPrice:
-  # - Foil treatment: uses usd_foil_cents, falls back to usd_cents
-  # - Etched treatment: uses usd_etched_cents, falls back to usd_cents
-  # - Normal/nil treatment: uses usd_cents
+  # Delegates to CardPrice#price_for_treatment to select the appropriate price field.
   #
   # @return [Integer, nil] Price in cents, or nil if no price data available
   def unit_price_cents
     price = latest_price
     return nil if price.nil?
 
-    case treatment&.downcase
-    when "foil"
-      price.usd_foil_cents || price.usd_cents
-    when "etched"
-      price.usd_etched_cents || price.usd_cents
-    else
-      price.usd_cents
-    end
+    price.price_for_treatment(treatment)
   end
 
   # Returns the total price for all copies of this item (unit price × quantity).

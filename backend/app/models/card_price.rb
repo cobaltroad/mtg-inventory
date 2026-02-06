@@ -61,4 +61,27 @@ class CardPrice < ApplicationRecord
       .where(fetched_at: start_date..end_date)
       .order(fetched_at: :desc)
   end
+
+  # ---------------------------------------------------------------------------
+  # Instance Methods
+  # ---------------------------------------------------------------------------
+
+  # Returns the appropriate price in cents based on treatment type.
+  # Selects the correct price field based on treatment and falls back appropriately:
+  # - Foil treatment: uses usd_foil_cents, falls back to usd_cents
+  # - Etched treatment: uses usd_etched_cents, falls back to usd_cents
+  # - Normal/nil treatment: uses usd_cents
+  #
+  # @param treatment [String, nil] The treatment type (e.g., "Foil", "Etched", "Normal")
+  # @return [Integer, nil] Price in cents, or nil if no price data available
+  def price_for_treatment(treatment)
+    case treatment&.downcase
+    when "foil"
+      usd_foil_cents || usd_cents
+    when "etched"
+      usd_etched_cents || usd_cents
+    else
+      usd_cents
+    end
+  end
 end
