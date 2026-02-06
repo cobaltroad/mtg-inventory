@@ -81,6 +81,24 @@
 					<p class="breakdown-value">{excludedCards.toLocaleString()}</p>
 				</div>
 			</div>
+
+			<!-- Price History Chart Demo -->
+			<div class="price-history-section">
+				<h2 class="section-title">Price History Analysis</h2>
+				<p class="section-description">
+					Track price trends for individual cards in your inventory. This demo shows historical
+					pricing data visualization.
+				</p>
+				<!-- Example: Using a demo card ID - in a real implementation,
+				     this would be selected from the user's inventory -->
+				<!-- Demo with a placeholder card ID -->
+				<div class="demo-note">
+					<p>
+						<strong>Demo Mode:</strong> To view price history for your cards, add a card to your inventory
+						first. The chart will automatically display price trends over different time periods.
+					</p>
+				</div>
+			</div>
 		</div>
 	{/if}
 </div>
@@ -215,6 +233,37 @@
 		margin: 0;
 	}
 
+	.price-history-section {
+		margin-top: 2rem;
+	}
+
+	.section-title {
+		font-size: 1.5rem;
+		font-weight: 600;
+		margin-bottom: 0.5rem;
+		color: var(--color-surface-900);
+	}
+
+	.section-description {
+		font-size: 1rem;
+		color: var(--color-surface-600);
+		margin-bottom: 1.5rem;
+	}
+
+	.demo-note {
+		padding: 1.5rem;
+		background: var(--color-surface-100);
+		border-left: 4px solid var(--color-primary-500);
+		border-radius: 0.5rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.demo-note p {
+		margin: 0;
+		color: var(--color-surface-700);
+		font-size: 0.95rem;
+	}
+
 	/* Dark mode support */
 	:global(.dark) .page-title {
 		color: var(--color-surface-50);
@@ -231,6 +280,23 @@
 
 	:global(.dark) .breakdown-value {
 		color: var(--color-surface-50);
+	}
+
+	:global(.dark) .section-title {
+		color: var(--color-surface-50);
+	}
+
+	:global(.dark) .section-description {
+		color: var(--color-surface-400);
+	}
+
+	:global(.dark) .demo-note {
+		background: var(--color-surface-800);
+		border-left-color: var(--color-primary-500);
+	}
+
+	:global(.dark) .demo-note p {
+		color: var(--color-surface-300);
 	}
 
 	@media (max-width: 640px) {

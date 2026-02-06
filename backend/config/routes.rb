@@ -23,6 +23,7 @@ Rails.application.routes.draw do
 
     get "cards/search", to: "card_search#index"
     get "cards/:id/printings", to: "card_printings#show"
+    get "cards/:card_id/price_history", to: "card_price_history#show"
 
     # Manual price update endpoint
     post "prices/update", to: "prices#update"
