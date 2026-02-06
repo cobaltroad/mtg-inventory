@@ -41,7 +41,7 @@
 		/>
 	</div>
 	<div class="card-details">
-		<h3 class="card-name">{item.card_name}</h3>
+		<h3 class="font-beleren card-name">{item.card_name}</h3>
 		<div class="card-info">
 			<span class="set-info">{item.set_name} ({item.set.toUpperCase()})</span>
 			<span class="collector-number">#{item.collector_number}</span>

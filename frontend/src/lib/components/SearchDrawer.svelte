@@ -134,7 +134,7 @@
 											}
 										}}
 									>
-										<span class="card-name">{card.name}</span>
+										<span class="font-beleren card-name">{card.name}</span>
 										{#if card.mana_cost}
 											<span class="mana-cost">{card.mana_cost}</span>
 										{/if}

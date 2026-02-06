@@ -10,6 +10,8 @@ Rails.application.routes.draw do
   # namespace so controllers live at the top level (matching the existing
   # flat-controller convention in this app).
   scope ENV.fetch("PUBLIC_API_PATH", "/api") do
+    mount ActiveStorage::Engine => "/rails/active_storage"
+
     resources :inventory, only: [ :index, :create, :update, :destroy ] do
       collection do
         post :move_from_wishlist
