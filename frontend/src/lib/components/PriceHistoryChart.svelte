@@ -78,6 +78,48 @@
 		}
 	}
 
+	// Treatment configuration for datasets
+	const treatmentConfig = {
+		normal: {
+			label: 'Normal',
+			field: 'usd_cents',
+			color: 'rgb(59, 130, 246)',
+			show: () => showNormal
+		},
+		foil: {
+			label: 'Foil',
+			field: 'usd_foil_cents',
+			color: 'rgb(251, 146, 60)',
+			show: () => showFoil
+		},
+		etched: {
+			label: 'Etched',
+			field: 'usd_etched_cents',
+			color: 'rgb(168, 85, 247)',
+			show: () => showEtched
+		}
+	};
+
+	// Create dataset for a treatment type
+	function createDataset(treatment: keyof typeof treatmentConfig) {
+		const config = treatmentConfig[treatment];
+		const data = priceData.prices
+			.map((p: any) => ({
+				x: new Date(p.fetched_at),
+				y: p[config.field] ? p[config.field] / 100 : null
+			}))
+			.filter((d: any) => d.y !== null);
+
+		return {
+			label: config.label,
+			data,
+			borderColor: config.color,
+			backgroundColor: config.color.replace('rgb', 'rgba').replace(')', ', 0.1)'),
+			tension: 0.1,
+			spanGaps: false
+		};
+	}
+
 	// Create Chart.js chart
 	function createChart() {
 		if (!priceData || !canvasElement) return;
@@ -87,64 +129,13 @@
 			chartInstance.destroy();
 		}
 
-		// Prepare datasets
+		// Prepare datasets for active treatments
 		const datasets: any[] = [];
 
-		// Normal treatment
-		if (showNormal && priceData.summary.normal) {
-			const normalData = priceData.prices
-				.map((p: any) => ({
-					x: new Date(p.fetched_at),
-					y: p.usd_cents ? p.usd_cents / 100 : null
-				}))
-				.filter((d: any) => d.y !== null);
-
-			datasets.push({
-				label: 'Normal',
-				data: normalData,
-				borderColor: 'rgb(59, 130, 246)',
-				backgroundColor: 'rgba(59, 130, 246, 0.1)',
-				tension: 0.1,
-				spanGaps: false
-			});
-		}
-
-		// Foil treatment
-		if (showFoil && priceData.summary.foil) {
-			const foilData = priceData.prices
-				.map((p: any) => ({
-					x: new Date(p.fetched_at),
-					y: p.usd_foil_cents ? p.usd_foil_cents / 100 : null
-				}))
-				.filter((d: any) => d.y !== null);
-
-			datasets.push({
-				label: 'Foil',
-				data: foilData,
-				borderColor: 'rgb(251, 146, 60)',
-				backgroundColor: 'rgba(251, 146, 60, 0.1)',
-				tension: 0.1,
-				spanGaps: false
-			});
-		}
-
-		// Etched treatment
-		if (showEtched && priceData.summary.etched) {
-			const etchedData = priceData.prices
-				.map((p: any) => ({
-					x: new Date(p.fetched_at),
-					y: p.usd_etched_cents ? p.usd_etched_cents / 100 : null
-				}))
-				.filter((d: any) => d.y !== null);
-
-			datasets.push({
-				label: 'Etched',
-				data: etchedData,
-				borderColor: 'rgb(168, 85, 247)',
-				backgroundColor: 'rgba(168, 85, 247, 0.1)',
-				tension: 0.1,
-				spanGaps: false
-			});
+		for (const [treatment, config] of Object.entries(treatmentConfig)) {
+			if (config.show() && priceData.summary[treatment]) {
+				datasets.push(createDataset(treatment as keyof typeof treatmentConfig));
+			}
 		}
 
 		// Create chart

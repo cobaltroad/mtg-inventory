@@ -4,6 +4,19 @@
 # allowing users to track price trends over time for different card treatments
 # (normal, foil, etched).
 class CardPriceHistoryController < ApplicationController
+  # Valid time period options for price history queries
+  VALID_TIME_PERIODS = [ 7, 30, 90, 365, "all" ].freeze
+
+  # Treatment types and their corresponding price fields
+  TREATMENTS = {
+    "normal" => :usd_cents,
+    "foil" => :usd_foil_cents,
+    "etched" => :usd_etched_cents
+  }.freeze
+
+  # Default time period when none is specified
+  DEFAULT_TIME_PERIOD = 30
+
   # GET /api/cards/:card_id/price_history
   #
   # Returns historical price data for a specific card with support for:
@@ -56,17 +69,16 @@ class CardPriceHistoryController < ApplicationController
   private
 
   # Normalizes and validates the time_period parameter
-  # Returns a valid time period value or defaults to 30
+  # Returns a valid time period value or defaults to DEFAULT_TIME_PERIOD
   def normalize_time_period(period)
-    valid_periods = [ 7, 30, 90, 365, "all" ]
     normalized = period.to_s
 
     if normalized == "all"
       "all"
-    elsif valid_periods.include?(normalized.to_i)
+    elsif VALID_TIME_PERIODS.include?(normalized.to_i)
       normalized.to_i
     else
-      30 # default
+      DEFAULT_TIME_PERIOD
     end
   end
 
@@ -103,14 +115,7 @@ class CardPriceHistoryController < ApplicationController
 
     summary = {}
 
-    # Calculate for each treatment type
-    treatments = {
-      "normal" => :usd_cents,
-      "foil" => :usd_foil_cents,
-      "etched" => :usd_etched_cents
-    }
-
-    treatments.each do |treatment_name, price_field|
+    TREATMENTS.each do |treatment_name, price_field|
       treatment_summary = calculate_treatment_summary(prices, price_field)
       summary[treatment_name] = treatment_summary if treatment_summary
     end
