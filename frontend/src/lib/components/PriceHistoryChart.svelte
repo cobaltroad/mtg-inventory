@@ -2,30 +2,10 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { base } from '$app/paths';
 	import { formatCurrency } from '$lib/utils/currency';
-	import {
-		Chart,
-		LineController,
-		LineElement,
-		PointElement,
-		LinearScale,
-		TimeScale,
-		Title,
-		Tooltip,
-		Legend
-	} from 'chart.js';
-	import 'chartjs-adapter-date-fns';
+	import type { Chart as ChartType } from 'chart.js';
 
-	// Register Chart.js components
-	Chart.register(
-		LineController,
-		LineElement,
-		PointElement,
-		LinearScale,
-		TimeScale,
-		Title,
-		Tooltip,
-		Legend
-	);
+	// Chart will be imported dynamically on mount to avoid SSR issues
+	let Chart: any = null;
 
 	// Component props
 	let { cardId }: { cardId: string } = $props();
@@ -35,7 +15,7 @@
 	let error = $state<string | null>(null);
 	let timePeriod = $state<number | string>(30);
 	let priceData = $state<any>(null);
-	let chartInstance: Chart | null = null;
+	let chartInstance: ChartType | null = null;
 	let canvasElement = $state<HTMLCanvasElement | undefined>(undefined);
 
 	// Treatment visibility toggles
@@ -122,7 +102,7 @@
 
 	// Create Chart.js chart
 	function createChart() {
-		if (!priceData || !canvasElement) return;
+		if (!Chart || !priceData || !canvasElement) return;
 
 		// Destroy existing chart
 		if (chartInstance) {
@@ -238,7 +218,26 @@
 	}
 
 	// Lifecycle
-	onMount(() => {
+	onMount(async () => {
+		// Dynamically import Chart.js to avoid SSR issues
+		const chartModule = await import('chart.js');
+		Chart = chartModule.Chart;
+
+		// Import date adapter
+		await import('chartjs-adapter-date-fns');
+
+		// Register Chart.js components
+		Chart.register(
+			chartModule.LineController,
+			chartModule.LineElement,
+			chartModule.PointElement,
+			chartModule.LinearScale,
+			chartModule.TimeScale,
+			chartModule.Title,
+			chartModule.Tooltip,
+			chartModule.Legend
+		);
+
 		fetchPriceHistory();
 	});
 

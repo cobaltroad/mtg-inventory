@@ -3,7 +3,6 @@
 	import { base } from '$app/paths';
 	import { formatCurrency } from '$lib/utils/currency';
 	import { formatTimestamp } from '$lib/utils/datetime';
-	import PriceHistoryChart from '$lib/components/PriceHistoryChart.svelte';
 
 	// Component state
 	let loading = $state(true);
