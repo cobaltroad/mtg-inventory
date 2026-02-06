@@ -1,6 +1,16 @@
 <script lang="ts">
 	import { Navigation } from '@skeletonlabs/skeleton-svelte';
-	import { House, Search, FolderOpen, Layers, FileText, LayoutGrid, Menu } from 'lucide-svelte';
+	import {
+		House,
+		Search,
+		FolderOpen,
+		Layers,
+		FileText,
+		LayoutGrid,
+		Menu,
+		PanelLeftOpen,
+		PanelLeftClose
+	} from 'lucide-svelte';
 	import { base } from '$app/paths';
 	import type { ComponentType } from 'svelte';
 
@@ -12,9 +22,13 @@
 		open?: boolean;
 		/** Callback function triggered when the Search navigation item is clicked */
 		onSearchClick?: () => void;
+		/** Layout mode: 'sidebar' (full width with labels) or 'rail' (compact with icons only) */
+		mode?: 'sidebar' | 'rail';
+		/** Callback function triggered when toggling between sidebar and rail modes */
+		onToggleMode?: () => void;
 	}
 
-	let { open = $bindable(false), onSearchClick }: Props = $props();
+	let { open = $bindable(false), onSearchClick, mode = 'sidebar', onToggleMode }: Props = $props();
 
 	/**
 	 * Represents a navigation item in the sidebar
@@ -65,6 +79,14 @@
 	}
 
 	/**
+	 * Handles toggle mode button click
+	 * Delegates to the onToggleMode callback if provided
+	 */
+	function handleToggleMode(): void {
+		onToggleMode?.();
+	}
+
+	/**
 	 * Determines if a navigation link represents the current active route
 	 * @param href - The navigation link href to check
 	 * @returns true if the href matches the current path
@@ -90,8 +112,8 @@
 
 	<!-- Skeleton UI Navigation Component -->
 	<Navigation
-		layout="sidebar"
-		class="navigation-root {open ? 'navigation-open' : 'navigation-closed'}"
+		layout={mode}
+		class="navigation-root navigation-{mode} {open ? 'navigation-open' : 'navigation-closed'}"
 	>
 		<Navigation.Content>
 			<Navigation.Group>
@@ -120,6 +142,23 @@
 							</Navigation.TriggerAnchor>
 						{/if}
 					{/each}
+
+					<!-- Sidebar/Rail mode toggle -->
+					<div class="mode-toggle-wrapper">
+						<Navigation.Trigger
+							onclick={handleToggleMode}
+							aria-label={mode === 'sidebar' ? 'Switch to rail mode' : 'Switch to sidebar mode'}
+							class="nav-item mode-toggle"
+						>
+							{#if mode === 'sidebar'}
+								<PanelLeftClose class="h-5 w-5" />
+								<Navigation.TriggerText>Collapse</Navigation.TriggerText>
+							{:else}
+								<PanelLeftOpen class="h-5 w-5" />
+								<Navigation.TriggerText>Expand</Navigation.TriggerText>
+							{/if}
+						</Navigation.Trigger>
+					</div>
 				</Navigation.Menu>
 			</Navigation.Group>
 		</Navigation.Content>
@@ -154,11 +193,21 @@
 		top: 0;
 		left: 0;
 		z-index: 40;
-		width: 16rem;
 		height: 100vh;
 		background: rgb(249 250 251);
 		border-right: 1px solid rgb(229 231 235);
-		transition: transform 0.3s ease-in-out;
+		transition: all 0.3s ease-in-out;
+		display: flex;
+		flex-direction: column;
+		padding: 1rem;
+	}
+
+	:global(.navigation-sidebar) {
+		width: 16rem;
+	}
+
+	:global(.navigation-rail) {
+		width: 5rem;
 	}
 
 	:global(.navigation-closed) {
@@ -192,6 +241,27 @@
 		text-align: left;
 	}
 
+	/* Rail mode: center icons and hide text */
+	:global(.navigation-rail .nav-item) {
+		justify-content: center;
+		padding: 0.75rem;
+	}
+
+	:global(.navigation-rail .nav-item span) {
+		display: none;
+	}
+
+	/* Make navigation stretch full height for proper bottom alignment */
+	:global(.navigation-root > *),
+	:global(.navigation-root nav),
+	:global(.navigation-root [role='group']),
+	:global(.navigation-root [role='menu']),
+	:global(.navigation-root ul) {
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+	}
+
 	:global(.nav-item:hover) {
 		background: rgb(229 231 235);
 	}
@@ -217,5 +287,28 @@
 	:global(.dark .nav-item.active) {
 		background: rgb(30 58 138);
 		color: rgb(219 234 254);
+	}
+
+	.mode-toggle-wrapper {
+		margin-top: auto;
+		padding: 1rem 0 1rem 0;
+		border-top: 1px solid rgb(229 231 235);
+	}
+
+	/* In rail mode, adjust padding for centered layout */
+	:global(.navigation-rail) .mode-toggle-wrapper {
+		padding: 1rem 0;
+	}
+
+	:global(.dark .mode-toggle-wrapper) {
+		border-top-color: rgb(55 65 81);
+	}
+
+	:global(.mode-toggle) {
+		opacity: 0.8;
+	}
+
+	:global(.mode-toggle:hover) {
+		opacity: 1;
 	}
 </style>
