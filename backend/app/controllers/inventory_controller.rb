@@ -91,6 +91,7 @@ class InventoryController < ApplicationController
       set: card_details[:set],
       set_name: card_details[:set_name],
       collector_number: card_details[:collector_number],
+      released_at: card_details[:released_at],
       image_url: image_url,
       image_cached: image_cached,
       acquired_date: item.acquired_date,
