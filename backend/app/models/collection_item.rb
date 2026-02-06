@@ -21,7 +21,7 @@ class CollectionItem < ApplicationRecord
   validates :card_id, presence: true
   validates :card_id, uniqueness: { scope: [ :user_id, :collection_type ], message: "has already been taken" }
   validates :collection_type, presence: true, inclusion: { in: COLLECTION_TYPES }
-  validates :quantity, presence: true, numericality: { only_integer: true, greater_than: 0 }
+  validates :quantity, presence: true, numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: 999 }
 
   # Enhanced tracking field validations (optional fields)
   validates :acquired_price_cents,

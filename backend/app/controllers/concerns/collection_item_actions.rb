@@ -50,7 +50,7 @@ module CollectionItemActions
     return unless item # find_item! already rendered 404
 
     item.destroy
-    render json: { message: "Deleted" }
+    head :no_content
   end
 
   private
