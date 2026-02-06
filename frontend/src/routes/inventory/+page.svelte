@@ -13,9 +13,19 @@
 	let { data }: { data: PageData } = $props();
 
 	// State management
-	let allItems = $derived(data.items || []);
+	let allItems = $state(data.items || []);
 	let error = $derived(data.error || null);
 	let loading = $state(false);
+
+	// Update allItems when data changes
+	$effect(() => {
+		allItems = data.items || [];
+	});
+
+	// Handle items change from InventoryTable
+	function handleItemsChange(updatedItems: typeof allItems) {
+		allItems = updatedItems;
+	}
 
 	// Filtering and sorting state
 	let currentFilter = $state('');
@@ -86,7 +96,7 @@
 				</button>
 			</div>
 		{:else}
-			<InventoryTable items={displayItems} {loading} />
+			<InventoryTable items={displayItems} {loading} onItemsChange={handleItemsChange} />
 		{/if}
 	{/if}
 </div>

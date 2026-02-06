@@ -281,49 +281,238 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   # ---------------------------------------------------------------------------
-  # #update -- updates quantity on an existing item
+  # #update -- updates quantity on an existing item (Issue #40)
   # ---------------------------------------------------------------------------
-  test "PATCH /api/inventory/:id updates quantity" do
+  test "PATCH /api/inventory/:id updates quantity and returns updated item" do
     item = CollectionItem.create!(user: @user, card_id: "update_card", collection_type: "inventory", quantity: 1)
+
+    stub_request(:get, "https://api.scryfall.com/cards/update_card")
+      .to_return(
+        status: 200,
+        body: {
+          id: "update_card",
+          name: "Updated Card",
+          set: "upd",
+          set_name: "Update Set",
+          collector_number: "42",
+          released_at: "2024-01-01",
+          image_uris: {
+            normal: "https://cards.scryfall.io/normal/front/u/p/updated.jpg"
+          }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
 
     patch api_path("/inventory/#{item.id}"), params: { quantity: 5 }, as: :json
 
     assert_response :success
     body = JSON.parse(response.body)
     assert_equal 5, body["quantity"]
+    assert_equal "update_card", body["card_id"]
+    assert_equal "Updated Card", body["card_name"]
+    assert_equal "upd", body["set"]
+    assert_equal "Update Set", body["set_name"]
+    assert_equal "inventory", body["collection_type"]
+    assert_equal @user.id, body["user_id"]
+
+    # Verify database was updated
+    item.reload
+    assert_equal 5, item.quantity
     assert_equal 1, CollectionItem.where(user: @user, card_id: "update_card", collection_type: "inventory").count
   end
 
-  test "PATCH /api/inventory/:id returns not_found for another user's item" do
+  test "PATCH /api/inventory/:id accepts quantity of 1 (minimum valid)" do
+    item = CollectionItem.create!(user: @user, card_id: "min_qty_card", collection_type: "inventory", quantity: 5)
+
+    stub_request(:get, "https://api.scryfall.com/cards/min_qty_card")
+      .to_return(
+        status: 200,
+        body: {
+          id: "min_qty_card",
+          name: "Min Quantity Card",
+          set: "min",
+          set_name: "Min Set",
+          collector_number: "1",
+          released_at: "2024-01-01",
+          image_uris: { normal: "https://cards.scryfall.io/normal/front/m/i/min.jpg" }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    patch api_path("/inventory/#{item.id}"), params: { quantity: 1 }, as: :json
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    assert_equal 1, body["quantity"]
+  end
+
+  test "PATCH /api/inventory/:id accepts quantity of 999 (maximum valid)" do
+    item = CollectionItem.create!(user: @user, card_id: "max_qty_card", collection_type: "inventory", quantity: 1)
+
+    stub_request(:get, "https://api.scryfall.com/cards/max_qty_card")
+      .to_return(
+        status: 200,
+        body: {
+          id: "max_qty_card",
+          name: "Max Quantity Card",
+          set: "max",
+          set_name: "Max Set",
+          collector_number: "999",
+          released_at: "2024-01-01",
+          image_uris: { normal: "https://cards.scryfall.io/normal/front/m/a/max.jpg" }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    patch api_path("/inventory/#{item.id}"), params: { quantity: 999 }, as: :json
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    assert_equal 999, body["quantity"]
+  end
+
+  test "PATCH /api/inventory/:id returns 422 for quantity of 0" do
+    item = CollectionItem.create!(user: @user, card_id: "zero_qty_card", collection_type: "inventory", quantity: 5)
+
+    patch api_path("/inventory/#{item.id}"), params: { quantity: 0 }, as: :json
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_includes body["errors"].join(" "), "greater than 0"
+
+    # Verify quantity was not changed
+    item.reload
+    assert_equal 5, item.quantity
+  end
+
+  test "PATCH /api/inventory/:id returns 422 for negative quantity" do
+    item = CollectionItem.create!(user: @user, card_id: "negative_qty_card", collection_type: "inventory", quantity: 3)
+
+    patch api_path("/inventory/#{item.id}"), params: { quantity: -1 }, as: :json
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_includes body["errors"].join(" "), "greater than 0"
+
+    # Verify quantity was not changed
+    item.reload
+    assert_equal 3, item.quantity
+  end
+
+  test "PATCH /api/inventory/:id returns 422 for quantity greater than 999" do
+    item = CollectionItem.create!(user: @user, card_id: "huge_qty_card", collection_type: "inventory", quantity: 1)
+
+    patch api_path("/inventory/#{item.id}"), params: { quantity: 1000 }, as: :json
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_includes body["errors"].join(" "), "less than or equal to 999"
+
+    # Verify quantity was not changed
+    item.reload
+    assert_equal 1, item.quantity
+  end
+
+  test "PATCH /api/inventory/:id returns 404 for non-existent item" do
+    patch api_path("/inventory/99999"), params: { quantity: 5 }, as: :json
+
+    assert_response :not_found
+    body = JSON.parse(response.body)
+    assert_equal "Not found", body["error"]
+  end
+
+  test "PATCH /api/inventory/:id returns 404 for another user's item" do
     other_user = User.create!(email: "other_update@example.com", name: "Other")
     item = CollectionItem.create!(user: other_user, card_id: "other_card", collection_type: "inventory", quantity: 1)
 
     patch api_path("/inventory/#{item.id}"), params: { quantity: 10 }, as: :json
 
     assert_response :not_found
+
+    # Verify other user's item was not changed
+    item.reload
+    assert_equal 1, item.quantity
   end
 
-  test "PATCH /api/inventory/:id returns unprocessable_entity for invalid quantity" do
-    item = CollectionItem.create!(user: @user, card_id: "bad_update", collection_type: "inventory", quantity: 1)
+  test "PATCH /api/inventory/:id preserves other fields when updating quantity" do
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: "preserve_fields_card",
+      collection_type: "inventory",
+      quantity: 2,
+      acquired_date: Date.parse("2025-01-15"),
+      acquired_price_cents: 1500,
+      treatment: "Foil",
+      language: "Japanese"
+    )
 
-    patch api_path("/inventory/#{item.id}"), params: { quantity: -1 }, as: :json
+    stub_request(:get, "https://api.scryfall.com/cards/preserve_fields_card")
+      .to_return(
+        status: 200,
+        body: {
+          id: "preserve_fields_card",
+          name: "Preserve Fields Card",
+          set: "pre",
+          set_name: "Preserve Set",
+          collector_number: "100",
+          released_at: "2024-01-01",
+          image_uris: { normal: "https://cards.scryfall.io/normal/front/p/r/preserve.jpg" }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
 
-    assert_response :unprocessable_entity
+    patch api_path("/inventory/#{item.id}"), params: { quantity: 7 }, as: :json
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    assert_equal 7, body["quantity"]
+    assert_equal "2025-01-15", body["acquired_date"]
+    assert_equal 1500, body["acquired_price_cents"]
+    assert_equal "Foil", body["treatment"]
+    assert_equal "Japanese", body["language"]
   end
 
   # ---------------------------------------------------------------------------
-  # #destroy -- removes item
+  # #destroy -- removes item (Issue #40)
   # ---------------------------------------------------------------------------
-  test "DELETE /api/inventory/:id removes the item" do
+  test "DELETE /api/inventory/:id removes the item and returns 204 No Content" do
     item = CollectionItem.create!(user: @user, card_id: "delete_card", collection_type: "inventory", quantity: 1)
 
     delete api_path("/inventory/#{item.id}")
 
-    assert_response :success
+    assert_response :no_content
+    assert response.body.blank?, "Response body should be empty for 204 No Content"
     assert_equal 0, CollectionItem.where(id: item.id).count
   end
 
-  test "DELETE /api/inventory/:id returns not_found for another user's item" do
+  test "DELETE /api/inventory/:id removes item with all associated data" do
+    item = CollectionItem.create!(
+      user: @user,
+      card_id: "delete_full_card",
+      collection_type: "inventory",
+      quantity: 5,
+      acquired_date: Date.parse("2025-01-10"),
+      acquired_price_cents: 2000,
+      treatment: "Foil",
+      language: "German"
+    )
+    item_id = item.id
+
+    delete api_path("/inventory/#{item_id}")
+
+    assert_response :no_content
+    assert_equal 0, CollectionItem.where(id: item_id).count
+  end
+
+  test "DELETE /api/inventory/:id returns 404 for non-existent item" do
+    delete api_path("/inventory/99999")
+
+    assert_response :not_found
+    body = JSON.parse(response.body)
+    assert_equal "Not found", body["error"]
+  end
+
+  test "DELETE /api/inventory/:id returns 404 for another user's item" do
     other_user = User.create!(email: "other_delete@example.com", name: "Other")
     item = CollectionItem.create!(user: other_user, card_id: "cant_delete", collection_type: "inventory", quantity: 1)
 
@@ -331,6 +520,44 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :not_found
     assert_equal 1, CollectionItem.where(id: item.id).count
+  end
+
+  test "DELETE /api/inventory/:id does not affect other user's items" do
+    # Current user's item
+    my_item = CollectionItem.create!(user: @user, card_id: "my_delete_card", collection_type: "inventory", quantity: 2)
+
+    # Another user with same card
+    other_user = User.create!(email: "other_user@example.com", name: "Other User")
+    other_item = CollectionItem.create!(user: other_user, card_id: "my_delete_card", collection_type: "inventory", quantity: 3)
+
+    delete api_path("/inventory/#{my_item.id}")
+
+    assert_response :no_content
+
+    # My item should be deleted
+    assert_equal 0, CollectionItem.where(id: my_item.id).count
+
+    # Other user's item should still exist
+    assert_equal 1, CollectionItem.where(id: other_item.id).count
+    other_item.reload
+    assert_equal 3, other_item.quantity
+  end
+
+  test "DELETE /api/inventory/:id does not affect current user's wishlist items" do
+    inventory_item = CollectionItem.create!(user: @user, card_id: "shared_card", collection_type: "inventory", quantity: 1)
+    wishlist_item = CollectionItem.create!(user: @user, card_id: "shared_card", collection_type: "wishlist", quantity: 2)
+
+    delete api_path("/inventory/#{inventory_item.id}")
+
+    assert_response :no_content
+
+    # Inventory item should be deleted
+    assert_equal 0, CollectionItem.where(id: inventory_item.id).count
+
+    # Wishlist item should still exist
+    assert_equal 1, CollectionItem.where(id: wishlist_item.id).count
+    wishlist_item.reload
+    assert_equal 2, wishlist_item.quantity
   end
 
   # ---------------------------------------------------------------------------
