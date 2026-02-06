@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
+	import { browser } from '$app/environment';
 	import { base } from '$app/paths';
 	import { formatCurrency } from '$lib/utils/currency';
 
@@ -186,6 +187,7 @@
 	});
 </script>
 
+{#if browser}
 {#if !loading && timelineData && timelineData.summary.end_value_cents > 0}
 	<div class="inventory-value-widget card variant-ghost-surface p-4">
 		<h2 class="h3 mb-4">Inventory Value Over Time</h2>
@@ -270,6 +272,7 @@
 			<div class="h-48 bg-surface-300-600-token rounded"></div>
 		</div>
 	</div>
+{/if}
 {/if}
 
 <style>
