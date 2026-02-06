@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { InventoryItem } from '$lib/types/inventory';
-	import { formatPrice } from '$lib/utils/format';
+	import { formatPrice, formatCurrency } from '$lib/utils/format';
 	import QuantityEditor from './QuantityEditor.svelte';
 	import RemoveConfirmation from './RemoveConfirmation.svelte';
 	import Toast from './Toast.svelte';
@@ -187,7 +187,11 @@
 								onSave={(newQuantity) => handleQuantityUpdate(item, newQuantity)}
 							/>
 						</td>
-						<td> TBD </td>
+						<td>
+							<div class="price-cell">
+								{formatCurrency(item.unit_price_cents, item.total_price_cents, item.quantity)}
+							</div>
+						</td>
 						<td>
 							<div class="details-cell">
 								{#if item.treatment}
@@ -455,6 +459,17 @@
 		border-radius: 9999px;
 		font-weight: 600;
 		font-size: 0.875rem;
+	}
+
+	.price-cell {
+		font-size: 0.875rem;
+		color: #111827;
+		font-weight: 500;
+		white-space: nowrap;
+	}
+
+	:global(.dark) .price-cell {
+		color: #f9fafb;
 	}
 
 	.details-cell {

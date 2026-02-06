@@ -40,3 +40,29 @@ export function pluralize(count: number, singular: string, plural?: string): str
 	if (count === 1) return singular;
 	return plural || `${singular}s`;
 }
+
+/**
+ * Formats currency value for display in inventory
+ * @param unitPrice - Unit price in cents
+ * @param totalPrice - Total price in cents (for multiple copies)
+ * @param quantity - Number of copies
+ * @returns Formatted currency string or "Price N/A"
+ */
+export function formatCurrency(
+	unitPrice: number | null | undefined,
+	totalPrice: number | null | undefined,
+	quantity: number
+): string {
+	if (unitPrice === null || unitPrice === undefined) {
+		return 'Price N/A';
+	}
+
+	const unitPriceStr = formatPrice(unitPrice);
+
+	if (quantity > 1 && totalPrice !== null && totalPrice !== undefined) {
+		const totalPriceStr = formatPrice(totalPrice);
+		return `Unit: ${unitPriceStr} | Total: ${totalPriceStr}`;
+	}
+
+	return unitPriceStr;
+}
