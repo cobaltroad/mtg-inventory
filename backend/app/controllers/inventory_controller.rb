@@ -110,7 +110,7 @@ class InventoryController < ApplicationController
   # Otherwise returns Scryfall URL as fallback.
   def resolve_image_url(item, scryfall_url)
     if item.cached_image.attached?
-      cached_url = "/project/mtg/api#{rails_blob_url(item.cached_image, only_path: true)}"
+      cached_url = rails_blob_url(item.cached_image, only_path: true)
       puts "Cached image: #{cached_url}"
       [ cached_url, true ]
     else
