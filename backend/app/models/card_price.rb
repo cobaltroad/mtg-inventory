@@ -47,4 +47,18 @@ class CardPrice < ApplicationRecord
       .order(fetched_at: :desc)
       .first
   end
+
+  # Returns price records for a card within a specified date range.
+  # Uses the composite index (card_id, fetched_at DESC) for efficient lookup.
+  # Results are ordered by fetched_at DESC (most recent first).
+  #
+  # @param card_id [String] The Scryfall card UUID
+  # @param start_date [Time, Date] Start of date range (inclusive)
+  # @param end_date [Time, Date] End of date range (inclusive)
+  # @return [ActiveRecord::Relation] Price records within the date range
+  def self.for_date_range(card_id, start_date, end_date)
+    where(card_id: card_id)
+      .where(fetched_at: start_date..end_date)
+      .order(fetched_at: :desc)
+  end
 end
