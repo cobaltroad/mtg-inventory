@@ -1,0 +1,50 @@
+# Stores historical pricing data for Magic: The Gathering cards.
+# Prices are fetched from Scryfall API and stored in cents to avoid
+# floating-point precision issues.
+#
+# Each record represents a price snapshot at a specific point in time,
+# allowing for price history tracking and valuation calculations.
+class CardPrice < ApplicationRecord
+  # ---------------------------------------------------------------------------
+  # Validations
+  # ---------------------------------------------------------------------------
+
+  validates :card_id, presence: true
+  validates :fetched_at, presence: true
+
+  validates :usd_cents,
+    numericality: {
+      only_integer: true,
+      greater_than_or_equal_to: 0,
+      allow_nil: true
+    }
+
+  validates :usd_foil_cents,
+    numericality: {
+      only_integer: true,
+      greater_than_or_equal_to: 0,
+      allow_nil: true
+    }
+
+  validates :usd_etched_cents,
+    numericality: {
+      only_integer: true,
+      greater_than_or_equal_to: 0,
+      allow_nil: true
+    }
+
+  # ---------------------------------------------------------------------------
+  # Scopes and Class Methods
+  # ---------------------------------------------------------------------------
+
+  # Returns the most recent price record for a given card_id.
+  # Uses the composite index (card_id, fetched_at DESC) for efficient lookup.
+  #
+  # @param card_id [String] The Scryfall card UUID
+  # @return [CardPrice, nil] The latest price record, or nil if none exist
+  def self.latest_for(card_id)
+    where(card_id: card_id)
+      .order(fetched_at: :desc)
+      .first
+  end
+end
