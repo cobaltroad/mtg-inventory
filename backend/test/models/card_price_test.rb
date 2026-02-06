@@ -214,4 +214,112 @@ class CardPriceTest < ActiveSupport::TestCase
     card_price.reload
     assert_equal specific_time.to_i, card_price.fetched_at.to_i
   end
+
+  # ---------------------------------------------------------------------------
+  # Test date range queries for historical price tracking
+  # ---------------------------------------------------------------------------
+
+  test "for_date_range returns prices within specified date range" do
+    card_id = "test-uuid-date-range"
+
+    # Create prices over 30 days
+    old_price = CardPrice.create!(
+      card_id: card_id,
+      usd_cents: 1000,
+      fetched_at: 30.days.ago
+    )
+
+    start_range_price = CardPrice.create!(
+      card_id: card_id,
+      usd_cents: 1200,
+      fetched_at: 7.days.ago
+    )
+
+    middle_price = CardPrice.create!(
+      card_id: card_id,
+      usd_cents: 1500,
+      fetched_at: 3.days.ago
+    )
+
+    recent_price = CardPrice.create!(
+      card_id: card_id,
+      usd_cents: 1800,
+      fetched_at: 1.day.ago
+    )
+
+    # Query last 7 days (use beginning_of_day to ensure inclusive)
+    results = CardPrice.for_date_range(card_id, 7.days.ago.beginning_of_day, Time.current)
+
+    # Should include 3 records (7 days ago, 3 days ago, 1 day ago)
+    assert_equal 3, results.count
+    assert_includes results, start_range_price
+    assert_includes results, middle_price
+    assert_includes results, recent_price
+    refute_includes results, old_price
+  end
+
+  test "for_date_range returns results ordered by fetched_at DESC" do
+    card_id = "test-uuid-order"
+
+    oldest = CardPrice.create!(card_id: card_id, usd_cents: 1000, fetched_at: 5.days.ago)
+    middle = CardPrice.create!(card_id: card_id, usd_cents: 1200, fetched_at: 3.days.ago)
+    newest = CardPrice.create!(card_id: card_id, usd_cents: 1500, fetched_at: 1.day.ago)
+
+    results = CardPrice.for_date_range(card_id, 6.days.ago, Time.current)
+
+    assert_equal 3, results.count
+    assert_equal newest.id, results[0].id
+    assert_equal middle.id, results[1].id
+    assert_equal oldest.id, results[2].id
+  end
+
+  test "for_date_range filters by card_id" do
+    card_id_a = "test-uuid-filter-a"
+    card_id_b = "test-uuid-filter-b"
+
+    CardPrice.create!(card_id: card_id_a, usd_cents: 1000, fetched_at: 2.days.ago)
+    CardPrice.create!(card_id: card_id_b, usd_cents: 2000, fetched_at: 2.days.ago)
+
+    results = CardPrice.for_date_range(card_id_a, 3.days.ago, Time.current)
+
+    assert_equal 1, results.count
+    assert_equal card_id_a, results.first.card_id
+  end
+
+  test "for_date_range returns empty array when no records in range" do
+    card_id = "test-uuid-empty-range"
+
+    CardPrice.create!(card_id: card_id, usd_cents: 1000, fetched_at: 10.days.ago)
+
+    # Query future dates
+    results = CardPrice.for_date_range(card_id, 1.day.from_now, 2.days.from_now)
+
+    assert_empty results
+  end
+
+  test "for_date_range handles inclusive boundaries" do
+    card_id = "test-uuid-boundaries"
+
+    boundary_start = CardPrice.create!(
+      card_id: card_id,
+      usd_cents: 1000,
+      fetched_at: 5.days.ago.beginning_of_day
+    )
+
+    boundary_end = CardPrice.create!(
+      card_id: card_id,
+      usd_cents: 2000,
+      fetched_at: 1.day.ago.end_of_day
+    )
+
+    results = CardPrice.for_date_range(
+      card_id,
+      5.days.ago.beginning_of_day,
+      1.day.ago.end_of_day
+    )
+
+    assert_equal 2, results.count
+    assert_includes results, boundary_start
+    assert_includes results, boundary_end
+  end
 end

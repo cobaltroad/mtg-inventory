@@ -1,0 +1,8 @@
+# Test fixtures for User model
+one:
+  email: user_one@test.com
+  name: Test User One
+
+two:
+  email: user_two@test.com
+  name: Test User Two
