@@ -286,12 +286,32 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   test "PATCH /api/inventory/:id updates quantity and returns updated item" do
     item = CollectionItem.create!(user: @user, card_id: "update_card", collection_type: "inventory", quantity: 1)
 
+    stub_request(:get, "https://api.scryfall.com/cards/update_card")
+      .to_return(
+        status: 200,
+        body: {
+          id: "update_card",
+          name: "Updated Card",
+          set: "upd",
+          set_name: "Update Set",
+          collector_number: "42",
+          released_at: "2024-01-01",
+          image_uris: {
+            normal: "https://cards.scryfall.io/normal/front/u/p/updated.jpg"
+          }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
     patch api_path("/inventory/#{item.id}"), params: { quantity: 5 }, as: :json
 
     assert_response :success
     body = JSON.parse(response.body)
     assert_equal 5, body["quantity"]
     assert_equal "update_card", body["card_id"]
+    assert_equal "Updated Card", body["card_name"]
+    assert_equal "upd", body["set"]
+    assert_equal "Update Set", body["set_name"]
     assert_equal "inventory", body["collection_type"]
     assert_equal @user.id, body["user_id"]
 
@@ -304,6 +324,21 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   test "PATCH /api/inventory/:id accepts quantity of 1 (minimum valid)" do
     item = CollectionItem.create!(user: @user, card_id: "min_qty_card", collection_type: "inventory", quantity: 5)
 
+    stub_request(:get, "https://api.scryfall.com/cards/min_qty_card")
+      .to_return(
+        status: 200,
+        body: {
+          id: "min_qty_card",
+          name: "Min Quantity Card",
+          set: "min",
+          set_name: "Min Set",
+          collector_number: "1",
+          released_at: "2024-01-01",
+          image_uris: { normal: "https://cards.scryfall.io/normal/front/m/i/min.jpg" }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
     patch api_path("/inventory/#{item.id}"), params: { quantity: 1 }, as: :json
 
     assert_response :success
@@ -313,6 +348,21 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
 
   test "PATCH /api/inventory/:id accepts quantity of 999 (maximum valid)" do
     item = CollectionItem.create!(user: @user, card_id: "max_qty_card", collection_type: "inventory", quantity: 1)
+
+    stub_request(:get, "https://api.scryfall.com/cards/max_qty_card")
+      .to_return(
+        status: 200,
+        body: {
+          id: "max_qty_card",
+          name: "Max Quantity Card",
+          set: "max",
+          set_name: "Max Set",
+          collector_number: "999",
+          released_at: "2024-01-01",
+          image_uris: { normal: "https://cards.scryfall.io/normal/front/m/a/max.jpg" }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
 
     patch api_path("/inventory/#{item.id}"), params: { quantity: 999 }, as: :json
 
@@ -395,6 +445,21 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
       treatment: "Foil",
       language: "Japanese"
     )
+
+    stub_request(:get, "https://api.scryfall.com/cards/preserve_fields_card")
+      .to_return(
+        status: 200,
+        body: {
+          id: "preserve_fields_card",
+          name: "Preserve Fields Card",
+          set: "pre",
+          set_name: "Preserve Set",
+          collector_number: "100",
+          released_at: "2024-01-01",
+          image_uris: { normal: "https://cards.scryfall.io/normal/front/p/r/preserve.jpg" }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
 
     patch api_path("/inventory/#{item.id}"), params: { quantity: 7 }, as: :json
 

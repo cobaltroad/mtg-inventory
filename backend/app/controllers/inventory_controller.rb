@@ -17,6 +17,25 @@ class InventoryController < ApplicationController
     render json: sorted_items
   end
 
+  # Override update to return enriched item with card details
+  def update
+    item = find_item!(params[:id])
+    return unless item # find_item! already rendered 404
+
+    if item.update(quantity: quantity_param)
+      card_details = fetch_card_details(item.card_id)
+      if card_details
+        enriched_item = serialize_item_with_details(item, card_details)
+        render json: enriched_item
+      else
+        # Fallback if card details unavailable
+        render json: item
+      end
+    else
+      render json: { errors: item.errors.full_messages }, status: :unprocessable_entity
+    end
+  end
+
   # Transfers a card from the user's wishlist to their inventory.
   # If an inventory row already exists for the card, its quantity is
   # incremented by the wishlist quantity.  The entire operation runs in a
