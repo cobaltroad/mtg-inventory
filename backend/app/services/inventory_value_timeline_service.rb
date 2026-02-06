@@ -96,7 +96,7 @@ class InventoryValueTimelineService
       price_record = price_map[item.card_id]
       next if price_record.nil?
 
-      unit_price = get_treatment_price(price_record, item.treatment)
+      unit_price = price_record.price_for_treatment(item.treatment)
       next if unit_price.nil?
 
       total_value += unit_price * item.quantity
@@ -122,18 +122,6 @@ class InventoryValueTimelineService
     end
 
     price_map
-  end
-
-  # Gets the appropriate price based on treatment type
-  def get_treatment_price(price_record, treatment)
-    case treatment&.downcase
-    when "foil"
-      price_record.usd_foil_cents || price_record.usd_cents
-    when "etched"
-      price_record.usd_etched_cents || price_record.usd_cents
-    else
-      price_record.usd_cents
-    end
   end
 
   # Calculates summary statistics for the timeline
