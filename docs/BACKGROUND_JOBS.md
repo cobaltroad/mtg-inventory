@@ -6,30 +6,44 @@ This document describes all background jobs in the MTG Inventory application, th
 
 The application uses **Solid Queue** for background job processing. Jobs run automatically based on the schedules defined in `backend/config/recurring.yml`, but can also be triggered manually for testing or maintenance.
 
+## Distributed Scraping Architecture
+
+The commander scraping system uses a **two-phase distributed approach** to respect EDHREC's rate limits and avoid overwhelming their servers:
+
+1. **Weekly Discovery Phase** - `ScrapeEdhrecCommandersJob` fetches the top 20 commanders list and creates/updates commander records **without** scraping decklists
+2. **Distributed Decklist Phase** - Individual `ScrapeCommanderDecklistJob` jobs are scheduled **1 hour apart**, spreading the load over ~20 hours throughout the week
+
+**Rate Limiting** (enforced by `RateLimiter` service):
+- EDHREC requests: minimum 2 second delay between requests
+- Scryfall API requests: minimum 100ms delay between requests
+- 429 responses: exponential backoff with automatic retries
+
+This architecture reduces peak request rate from ~20 commanders/minute to 1 commander/hour while maintaining reliability through isolated job execution and independent failure handling.
+
+---
+
 ## Scheduled Jobs
 
-### 1. Scrape EDHREC Commanders
+### 1. Commander Discovery (Weekly)
 
 **Job:** `ScrapeEdhrecCommandersJob`
 **Schedule:**
 - Development: Every Saturday at 8am
 - Production: Every Sunday at 8am
 
-**Purpose:** Fetches the top 20 EDH commanders from EDHREC and scrapes their complete decklists, including card names, quantities, and Scryfall IDs.
+**Purpose:** **Discovery Phase Only** - Fetches the top 20 EDH commander rankings from EDHREC and creates/updates commander records. Does NOT scrape decklists. Instead, schedules individual `ScrapeCommanderDecklistJob` jobs 1 hour apart for distributed processing.
 
 **What it does:**
-1. Fetches commander rankings from EDHREC
+1. Fetches commander rankings from EDHREC (list only)
 2. For each commander (with real-time progress tracking):
-   - Creates/updates commander record
-   - Fetches complete decklist
-   - Stores cards in JSONB format
-3. Logs comprehensive summary with success/failure counts
+   - Creates/updates commander record with name, rank, and URL
+   - Schedules a `ScrapeCommanderDecklistJob` for 1 hour later (incrementing by 1 hour for each)
+3. Logs comprehensive summary with scheduling status
 
 **Progress Logging:**
 - Start banner with timestamp
 - Real-time progress: `[X/Y] (%)` for each commander
-- Detailed step-by-step processing (DEBUG level)
-- Individual success/failure indicators
+- Shows scheduled time for each decklist job
 - Final summary with statistics and timing
 
 **Example Log Output:**
@@ -46,8 +60,8 @@ docker compose logs -f backend
 Job start:
 ```
 ================================================================================
-ScrapeEdhrecCommandersJob: STARTING
-Started at: 2026-02-07 15:30:00 UTC
+ScrapeEdhrecCommandersJob: STARTING DISCOVERY PHASE
+Started at: 2026-02-07 08:00:00 UTC
 ================================================================================
 ScrapeEdhrecCommandersJob: Fetching top commanders from EDHREC...
 ScrapeEdhrecCommandersJob: Found 20 commanders to process
@@ -57,17 +71,13 @@ Individual commander processing:
 ```
 ┌─ [1/20] (5.0%) Processing: Atraxa, Praetors' Voice (Rank #1)
   └─ Commander record saved
-  └─ Fetching decklist from EDHREC...
-  └─ Retrieved 100 cards from decklist
-  └─ Decklist saved with 100 cards
-└─ ✓ SUCCESS: Atraxa, Praetors' Voice - 100 cards saved
+  └─ Scheduled ScrapeCommanderDecklistJob for 2026-02-07 09:00:00 UTC (in 1 hour)
+└─ ✓ SUCCESS: Atraxa, Praetors' Voice - Decklist job scheduled
 
 ┌─ [2/20] (10.0%) Processing: Muldrotha, the Gravetide (Rank #2)
   └─ Commander record saved
-  └─ Fetching decklist from EDHREC...
-  └─ Retrieved 99 cards from decklist
-  └─ Decklist saved with 99 cards
-└─ ✓ SUCCESS: Muldrotha, the Gravetide - 99 cards saved
+  └─ Scheduled ScrapeCommanderDecklistJob for 2026-02-07 10:00:00 UTC (in 2 hours)
+└─ ✓ SUCCESS: Muldrotha, the Gravetide - Decklist job scheduled
 
 ... (continues for all 20 commanders) ...
 ```
@@ -75,63 +85,56 @@ Individual commander processing:
 Job completion:
 ```
 ================================================================================
-ScrapeEdhrecCommandersJob: COMPLETED
+ScrapeEdhrecCommandersJob: DISCOVERY PHASE COMPLETED
 ================================================================================
-Finished at:              2026-02-07 15:35:42 UTC
-Execution time:           342.5s
+Finished at:              2026-02-07 08:02:15 UTC
+Execution time:           135.2s
 --------------------------------------------------------------------------------
 Total commanders:         20
-Successfully scraped:     20 (100.0%)
+Successfully scheduled:   20 (100.0%)
 Failed:                   0 (0.0%)
 --------------------------------------------------------------------------------
-Total cards processed:    1980
-Average cards/commander:  99.0
+Decklist jobs scheduled over next 20 hours
+First job starts:         2026-02-07 09:00:00 UTC
+Last job completes:       2026-02-08 04:00:00 UTC
 ================================================================================
 ```
 
-Example with errors and retries:
+Example with failures:
 ```
 ┌─ [15/20] (75.0%) Processing: Example Commander (Rank #15)
-ScrapeEdhrecCommandersJob: Retry 1/3 for 'Example Commander' - Network timeout
   └─ Commander record saved
-  └─ Fetching decklist from EDHREC...
-  └─ Retrieved 97 cards from decklist
-  └─ Decklist saved with 97 cards
-└─ ✓ SUCCESS: Example Commander - 97 cards saved
+  └─ Scheduled ScrapeCommanderDecklistJob for 2026-02-07 23:00:00 UTC
+└─ ✓ SUCCESS: Example Commander - Decklist job scheduled
 
 ┌─ [16/20] (80.0%) Processing: Failing Commander (Rank #16)
-ScrapeEdhrecCommandersJob: Retry 1/3 for 'Failing Commander' - Page not found
-ScrapeEdhrecCommandersJob: Retry 2/3 for 'Failing Commander' - Page not found
-ScrapeEdhrecCommandersJob: Retry 3/3 for 'Failing Commander' - Page not found
-ScrapeEdhrecCommandersJob: Max retries exceeded for 'Failing Commander' - Page not found
-└─ ✗ FAILED: Failing Commander - Page not found
+  └─ ERROR: Failed to fetch commander data - Network timeout
+└─ ✗ FAILED: Failing Commander - Network timeout
 ```
 
 Summary with failures:
 ```
 ================================================================================
-ScrapeEdhrecCommandersJob: COMPLETED
+ScrapeEdhrecCommandersJob: DISCOVERY PHASE COMPLETED
 ================================================================================
-Finished at:              2026-02-07 15:35:42 UTC
-Execution time:           355.2s
+Finished at:              2026-02-07 08:02:30 UTC
+Execution time:           150.3s
 --------------------------------------------------------------------------------
 Total commanders:         20
-Successfully scraped:     19 (95.0%)
+Successfully scheduled:   19 (95.0%)
 Failed:                   1 (5.0%)
 --------------------------------------------------------------------------------
 Failed commanders:
   • Failing Commander
 --------------------------------------------------------------------------------
-Total cards processed:    1883
-Average cards/commander:  99.1
+Decklist jobs scheduled over next 19 hours
 ================================================================================
 ```
 
 **Log Levels:**
-- **INFO**: Normal progress updates, start/completion banners
-- **DEBUG**: Detailed step-by-step processing (commander save, decklist fetch, etc.)
-- **WARN**: Retry attempts for transient errors
-- **ERROR**: Failed commanders after max retries or unexpected errors
+- **INFO**: Normal progress updates, start/completion banners, job scheduling
+- **DEBUG**: Detailed step-by-step processing (commander save, job scheduling details)
+- **ERROR**: Failed commanders or scheduling errors
 
 **Adjusting Log Verbosity:**
 
@@ -156,13 +159,118 @@ docker compose exec backend rails runner "ScrapeEdhrecCommandersJob.perform_now"
 docker compose exec backend rails runner "ScrapeEdhrecCommandersJob.perform_later"
 ```
 
-**Note:** The rake task automatically broadcasts log output to your console, so you'll see commander names and progress as they're scraped. Using Rails runner directly will only log to the log file.
+**Note:** The rake task automatically broadcasts log output to your console, so you'll see commander names and job scheduling as they're processed. Using Rails runner directly will only log to the log file.
 
-**Duration:** Typically 2-5 minutes depending on network speed
+**Duration:** Typically 1-3 minutes (discovery only, no decklist scraping)
 
 ---
 
-### 2. Update Card Prices
+### 2. Commander Decklist Scraping (Distributed)
+
+**Job:** `ScrapeCommanderDecklistJob`
+**Schedule:** Dynamically scheduled by `ScrapeEdhrecCommandersJob` with 1-hour spacing
+- First job: 1 hour after discovery completes
+- Subsequent jobs: 1 hour apart
+- Total duration: ~20 hours to process all commanders
+
+**Purpose:** **Decklist Phase** - Scrapes an individual commander's complete decklist from EDHREC, including card names, quantities, and Scryfall IDs. Runs independently for each commander to isolate failures and distribute load.
+
+**What it does:**
+1. Fetches the commander record
+2. Scrapes the complete decklist from EDHREC
+3. Processes all cards with Scryfall lookups
+4. Stores cards in JSONB format
+5. Updates commander record with success/failure status
+
+**Rate Limiting:**
+- EDHREC requests: minimum 2 second delay between requests
+- Scryfall API requests: minimum 100ms delay between requests
+- Automatic retry with exponential backoff for 429 responses
+
+**Progress Logging:**
+- Job start with commander name
+- Step-by-step processing (fetch, parse, store)
+- Individual card processing (DEBUG level)
+- Success/failure summary
+
+**Example Log Output:**
+
+Job start:
+```
+================================================================================
+ScrapeCommanderDecklistJob: STARTING
+Commander: Atraxa, Praetors' Voice (ID: 123)
+Started at: 2026-02-07 09:00:00 UTC
+================================================================================
+```
+
+Processing:
+```
+ScrapeCommanderDecklistJob: Fetching decklist from EDHREC...
+ScrapeCommanderDecklistJob: Retrieved 100 cards from decklist
+ScrapeCommanderDecklistJob: Processing cards with Scryfall lookups...
+ScrapeCommanderDecklistJob: [1/100] Sol Ring - Found on Scryfall
+ScrapeCommanderDecklistJob: [2/100] Command Tower - Found on Scryfall
+... (DEBUG level shows all cards) ...
+ScrapeCommanderDecklistJob: Decklist saved with 100 cards
+```
+
+Job completion:
+```
+================================================================================
+ScrapeCommanderDecklistJob: COMPLETED
+================================================================================
+Commander:       Atraxa, Praetors' Voice
+Finished at:     2026-02-07 09:03:42 UTC
+Execution time:  222.5s
+--------------------------------------------------------------------------------
+Cards processed: 100
+Success:         ✓
+================================================================================
+```
+
+Example with errors:
+```
+================================================================================
+ScrapeCommanderDecklistJob: STARTING
+Commander: Example Commander (ID: 456)
+Started at: 2026-02-07 15:00:00 UTC
+================================================================================
+ScrapeCommanderDecklistJob: Fetching decklist from EDHREC...
+ScrapeCommanderDecklistJob: ERROR - Retry 1/3: Network timeout
+ScrapeCommanderDecklistJob: Retry 2/3: Network timeout
+ScrapeCommanderDecklistJob: Retry 3/3: Network timeout
+ScrapeCommanderDecklistJob: Max retries exceeded
+================================================================================
+ScrapeCommanderDecklistJob: FAILED
+================================================================================
+Commander:       Example Commander
+Finished at:     2026-02-07 15:02:15 UTC
+Error:           Network timeout after 3 retries
+================================================================================
+```
+
+**Manual trigger:**
+```bash
+# Scrape a specific commander's decklist
+docker compose exec backend rails jobs:scrape_commander_decklist[COMMANDER_ID]
+
+# Using Rails console
+docker compose exec backend rails runner "ScrapeCommanderDecklistJob.perform_now(Commander.find(COMMANDER_ID))"
+
+# Or enqueue for async execution
+docker compose exec backend rails runner "ScrapeCommanderDecklistJob.perform_later(Commander.find(COMMANDER_ID))"
+```
+
+**Duration:** Typically 2-4 minutes per commander depending on:
+- Decklist size (usually 99-100 cards)
+- Network speed
+- Scryfall API response times
+- Rate limiting delays (2s EDHREC + 100ms per Scryfall lookup)
+
+---
+
+### 3. Update Card Prices
 
 **Job:** `UpdateCardPricesJob`
 **Schedule:**
@@ -196,7 +304,7 @@ docker compose exec backend rails runner "UpdateCardPricesJob.perform_now"
 
 ---
 
-### 3. Clear Finished Jobs
+### 4. Clear Finished Jobs
 
 **Job:** `SolidQueue::Job.clear_finished_in_batches`
 **Schedule:**
@@ -221,7 +329,7 @@ docker compose exec backend rails runner "SolidQueue::Job.clear_finished_in_batc
 
 ---
 
-### 4. Cache Card Image (On-Demand)
+### 5. Cache Card Image (On-Demand)
 
 **Job:** `CacheCardImageJob`
 **Schedule:** Not scheduled—triggered automatically when cards are added to inventory
@@ -310,9 +418,11 @@ docker compose exec backend rails jobs:all
 ```
 
 This runs:
-1. Scrape commanders
+1. Scrape commanders (discovery phase - schedules decklist jobs)
 2. Update prices
 3. Clear finished jobs
+
+**Note:** This does NOT trigger individual commander decklist scraping - those jobs are scheduled automatically by the discovery job with 1-hour spacing.
 
 ---
 
@@ -442,13 +552,26 @@ If a job is stuck in "running" state, you may need to restart the jobs container
 
 ## Performance Notes
 
-- **Scraping:**
-  - Average time per commander: ~15-20 seconds
-  - Total time for 20 commanders: ~5-7 minutes
-  - Network dependent (EDHREC response times vary)
-  - Automatic retries for transient errors (up to 3 attempts)
+- **Commander Discovery (ScrapeEdhrecCommandersJob):**
+  - Discovery phase only: ~1-3 minutes for 20 commanders
+  - Fetches commander list without decklists
+  - Schedules individual decklist jobs with 1-hour spacing
+  - Minimal EDHREC load (single rankings page request)
 
-- **Scraping:** Rate-limited by EDHREC response times
+- **Commander Decklist Scraping (ScrapeCommanderDecklistJob):**
+  - Per commander: ~2-4 minutes depending on decklist size
+  - Distributed: 1 hour apart to respect rate limits
+  - Total time to process all 20 commanders: ~20 hours
+  - Rate-limited (EDHREC: 2s, Scryfall: 100ms per card)
+  - Automatic retries for transient errors (up to 3 attempts)
+  - Isolated failures don't affect other commanders
+
+- **Rate Limiting (RateLimiter service):**
+  - EDHREC: minimum 2 second delay between requests
+  - Scryfall: minimum 100ms delay between requests
+  - 429 handling: exponential backoff with retries
+  - Thread-safe for concurrent job execution
+
 - **Price updates:** Rate-limited to 50 cards per batch with 100ms delays
 - **Image caching:** Automatic retry with exponential backoff on failures
 - **Job cleanup:** Batched deletes with sleep to avoid database locks

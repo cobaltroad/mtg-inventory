@@ -112,9 +112,24 @@ Jobs are configured in `backend/config/recurring.yml` and run automatically:
 
 | Job | Schedule | Description |
 |-----|----------|-------------|
-| **ScrapeEdhrecCommandersJob** | Every Saturday 8am (dev)<br>Every Sunday 8am (prod) | Scrapes top 20 EDH commanders and their decklists from EDHREC |
+| **ScrapeEdhrecCommandersJob** | Every Saturday 8am (dev)<br>Every Sunday 8am (prod) | **Discovery Phase**: Fetches top 20 EDH commanders from EDHREC (list only, no decklists). Schedules individual `ScrapeCommanderDecklistJob` jobs 1 hour apart. |
+| **ScrapeCommanderDecklistJob** | Dynamically scheduled<br>(1 hour apart per commander) | **Decklist Phase**: Scrapes an individual commander's decklist from EDHREC and imports cards. Scheduled automatically by the discovery job to distribute load over ~20 hours. |
 | **UpdateCardPricesJob** | Every day at 7am (prod) | Updates market prices for all cards in collections from Scryfall |
 | **clear_solid_queue_finished_jobs** | Every hour at :12 (prod) | Cleans up completed job records older than 1 day |
+
+### Distributed Scraping Architecture
+
+The commander scraping system uses a **two-phase distributed approach** to respect EDHREC's rate limits:
+
+1. **Weekly Discovery** (Sunday 8am) - `ScrapeEdhrecCommandersJob` fetches the top 20 commanders list and creates/updates commander records **without** scraping decklists
+2. **Distributed Decklist Scraping** - Individual `ScrapeCommanderDecklistJob` jobs are scheduled **1 hour apart**, spreading the load over ~20 hours throughout the week
+
+**Rate Limiting** (enforced by `RateLimiter` service):
+- EDHREC requests: minimum 2 second delay between requests
+- Scryfall API requests: minimum 100ms delay between requests
+- 429 responses: exponential backoff with retries
+
+This architecture reduces peak request rate from ~20 commanders/minute to 1 commander/hour while maintaining reliability through isolated job execution.
 
 ### Manual Job Triggers
 
@@ -122,7 +137,8 @@ Run jobs manually using rake tasks (useful for testing/maintenance):
 
 ```bash
 # Using Docker with rake tasks (recommended - shows real-time progress)
-docker compose exec backend rails jobs:scrape_commanders
+docker compose exec backend rails jobs:scrape_commanders        # Discovery only
+docker compose exec backend rails jobs:scrape_commander_decklist[COMMANDER_ID]  # Single commander
 docker compose exec backend rails jobs:update_prices
 docker compose exec backend rails jobs:clear_finished
 
@@ -137,9 +153,9 @@ docker compose exec backend rails jobs:stats
 
 # Using Rails console for more control (logs to file only)
 docker compose exec backend rails console
-> ScrapeEdhrecCommandersJob.perform_now    # Run synchronously
-> ScrapeEdhrecCommandersJob.perform_later  # Enqueue for async execution
-> SolidQueue::Job.last(5)                   # Check recent jobs
+> ScrapeEdhrecCommandersJob.perform_now         # Discovery phase (schedules decklist jobs)
+> ScrapeCommanderDecklistJob.perform_now(cmd)   # Scrape single commander decklist
+> SolidQueue::Job.last(5)                        # Check recent jobs
 ```
 
 **Note:** Rake tasks broadcast progress to your console, showing commander names and status in real-time. Using Rails console/runner directly only logs to the log file.
@@ -150,7 +166,7 @@ docker compose exec backend rails console
 # Watch job logs in real-time
 docker compose logs -f jobs
 
-# Check job status
+# Check job status and queue
 docker compose exec backend rails jobs:stats
 
 # Access Solid Queue mission control (if enabled)
