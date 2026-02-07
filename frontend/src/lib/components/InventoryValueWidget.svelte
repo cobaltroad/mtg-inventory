@@ -6,19 +6,115 @@
 	import AxisX from '$lib/components/charts/AxisX.svelte';
 	import AxisY from '$lib/components/charts/AxisY.svelte';
 
-	// Component state
+	// ============================================================================
+	// Type Definitions
+	// ============================================================================
+
+	/**
+	 * Represents a single point in the inventory value timeline.
+	 */
+	interface TimelinePoint {
+		date: string;
+		value_cents: number;
+	}
+
+	/**
+	 * Summary statistics for the inventory value timeline.
+	 */
+	interface Summary {
+		start_value_cents: number;
+		end_value_cents: number;
+		change_cents: number;
+		change_percentage: number;
+	}
+
+	/**
+	 * Complete timeline data response from the API.
+	 */
+	interface TimelineData {
+		time_period: string;
+		timeline: TimelinePoint[];
+		summary: Summary;
+	}
+
+	/**
+	 * Transformed data point for chart rendering.
+	 */
+	interface ChartDataPoint {
+		date: Date;
+		value: number;
+	}
+
+	// ============================================================================
+	// Component State
+	// ============================================================================
+
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 	let timePeriod = $state<number>(30);
-	let timelineData = $state<any>(null);
+	let timelineData = $state<TimelineData | null>(null);
 
-	// Format currency
+	// ============================================================================
+	// Utility Functions
+	// ============================================================================
+
+	/**
+	 * Formats a value in cents as a currency string.
+	 * @param cents - The value in cents to format
+	 * @returns Formatted currency string (e.g., "$123.45")
+	 */
 	function formatCurrency(cents: number): string {
 		return `$${(cents / 100).toFixed(2)}`;
 	}
 
-	// Fetch inventory value timeline data
-	async function fetchTimeline() {
+	/**
+	 * Type guard to validate a timeline data point.
+	 * @param point - The object to validate
+	 * @returns True if the point has all required properties
+	 */
+	function isValidTimelinePoint(point: any): point is TimelinePoint {
+		return (
+			point &&
+			typeof point === 'object' &&
+			typeof point.date === 'string' &&
+			typeof point.value_cents === 'number'
+		);
+	}
+
+	/**
+	 * Type guard to validate summary data.
+	 * @param summary - The object to validate
+	 * @returns True if the summary has all required properties
+	 */
+	function isValidSummary(summary: any): summary is Summary {
+		return (
+			summary &&
+			typeof summary === 'object' &&
+			typeof summary.start_value_cents === 'number' &&
+			typeof summary.end_value_cents === 'number' &&
+			typeof summary.change_cents === 'number' &&
+			typeof summary.change_percentage === 'number'
+		);
+	}
+
+	/**
+	 * Gets the appropriate sign prefix for a value change.
+	 * @param changeCents - The change value in cents
+	 * @returns "+" for positive or zero, "" for negative (minus sign is in the number)
+	 */
+	function getChangeSign(changeCents: number): string {
+		return changeCents >= 0 ? '+' : '';
+	}
+
+	// ============================================================================
+	// Data Fetching
+	// ============================================================================
+
+	/**
+	 * Fetches inventory value timeline data from the API.
+	 * Updates component state based on success or failure.
+	 */
+	async function fetchTimeline(): Promise<void> {
 		loading = true;
 		error = null;
 
@@ -41,35 +137,101 @@
 			timelineData = data;
 		} catch (err) {
 			console.error('Error fetching inventory value timeline:', err);
-			error = err instanceof Error ? err.message : 'Failed to load inventory value timeline. Please try again.';
+			error =
+				err instanceof Error
+					? err.message
+					: 'Failed to load inventory value timeline. Please try again.';
 			timelineData = null;
 		} finally {
 			loading = false;
 		}
 	}
 
-	// Change time period
-	function changeTimePeriod(days: number) {
+	/**
+	 * Changes the time period and refetches timeline data.
+	 * @param days - Number of days for the timeline period
+	 */
+	function changeTimePeriod(days: number): void {
 		timePeriod = days;
 		fetchTimeline();
 	}
 
-	// Prepare data for chart
-	let chartData = $derived.by(() => {
-		if (!timelineData?.timeline) return [];
-		return timelineData.timeline.map((point: any) => ({
-			date: new Date(point.date),
-			value: point.value_cents / 100
-		}));
+	// ============================================================================
+	// Derived State
+	// ============================================================================
+
+	/**
+	 * Checks if we have valid timeline data to display.
+	 * Returns false if timeline is missing, not an array, or empty.
+	 */
+	let hasValidTimeline = $derived.by(() => {
+		if (!timelineData?.timeline || !Array.isArray(timelineData.timeline)) {
+			return false;
+		}
+		return timelineData.timeline.length > 0;
 	});
+
+	/**
+	 * Checks if we have valid summary data to display.
+	 * Uses type guard to ensure all required properties exist.
+	 */
+	let hasValidSummary = $derived.by(() => {
+		return timelineData?.summary && isValidSummary(timelineData.summary);
+	});
+
+	/**
+	 * Transforms timeline data into chart-ready format.
+	 * Filters out invalid points and converts cents to dollars.
+	 */
+	let chartData = $derived.by((): ChartDataPoint[] => {
+		if (!hasValidTimeline) return [];
+
+		// Filter and validate timeline points before mapping
+		return timelineData!.timeline
+			.filter(isValidTimelinePoint)
+			.map((point) => ({
+				date: new Date(point.date),
+				value: point.value_cents / 100
+			}));
+	});
+
+	/**
+	 * Checks if we have valid data for chart rendering.
+	 * Ensures we have at least one data point with valid values.
+	 */
+	let hasValidChartData = $derived.by(() => {
+		return chartData.length > 0 && chartData.every((point) => !isNaN(point.value));
+	});
+
+	// ============================================================================
+	// Lifecycle
+	// ============================================================================
 
 	onMount(() => {
 		fetchTimeline();
 	});
 </script>
 
-{#if !loading && timelineData?.summary?.end_value_cents > 0}
-	<div class="inventory-value-widget card variant-ghost-surface p-4">
+<div class="inventory-value-widget card variant-ghost-surface p-4">
+	{#if loading}
+		<div class="placeholder animate-pulse space-y-3">
+			<div class="h-6 w-48 bg-surface-300-600-token rounded"></div>
+			<div class="h-48 bg-surface-300-600-token rounded"></div>
+		</div>
+	{:else if error}
+		<h2 class="h3 mb-4">Inventory Value Over Time</h2>
+		<div class="alert variant-ghost-error p-4">
+			<p>{error}</p>
+			<button onclick={() => fetchTimeline()} class="btn variant-filled-error mt-2">
+				Retry
+			</button>
+		</div>
+	{:else if !hasValidTimeline}
+		<h2 class="h3 mb-4">Inventory Value Over Time</h2>
+		<div class="text-center p-8 text-surface-600-300-token">
+			<p>No value timeline data available.</p>
+		</div>
+	{:else}
 		<h2 class="h3 mb-4">Inventory Value Over Time</h2>
 
 		<!-- Time Period Selector -->
@@ -94,22 +256,7 @@
 			</button>
 		</div>
 
-		{#if loading}
-			<div class="flex items-center justify-center p-8">
-				<div class="animate-pulse">Loading value timeline...</div>
-			</div>
-		{:else if error}
-			<div class="alert variant-ghost-error p-4">
-				<p>{error}</p>
-				<button onclick={() => fetchTimeline()} class="btn variant-filled-error mt-2">
-					Retry
-				</button>
-			</div>
-		{:else if !timelineData?.timeline || timelineData.timeline.length === 0}
-			<div class="text-center p-8 text-surface-600-300-token">
-				<p>No value timeline data available.</p>
-			</div>
-		{:else}
+		{#if hasValidSummary}
 			<!-- Value Summary -->
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
 				<div class="card variant-ghost p-4">
@@ -125,16 +272,18 @@
 						class:text-success-500={timelineData.summary.change_cents >= 0}
 						class:text-error-500={timelineData.summary.change_cents < 0}
 					>
-						{timelineData.summary.change_cents >= 0 ? '+' : ''}
+						{getChangeSign(timelineData.summary.change_cents)}
 						{formatCurrency(timelineData.summary.change_cents)}
-						({timelineData.summary.change_cents >= 0 ? '+' : ''}{timelineData.summary.change_percentage.toFixed(
+						({getChangeSign(timelineData.summary.change_cents)}{timelineData.summary.change_percentage.toFixed(
 							2
 						)}%)
 					</div>
 				</div>
 			</div>
+		{/if}
 
-			<!-- Chart -->
+		<!-- Chart -->
+		{#if hasValidChartData}
 			<div class="chart-container" style="height: 300px;">
 				<LayerCake
 					padding={{ top: 20, right: 20, bottom: 40, left: 60 }}
@@ -152,15 +301,8 @@
 				</LayerCake>
 			</div>
 		{/if}
-	</div>
-{:else if loading}
-	<div class="card variant-ghost-surface p-4">
-		<div class="placeholder animate-pulse space-y-3">
-			<div class="h-6 w-48 bg-surface-300-600-token rounded"></div>
-			<div class="h-48 bg-surface-300-600-token rounded"></div>
-		</div>
-	</div>
-{/if}
+	{/if}
+</div>
 
 <style>
 	.inventory-value-widget {
