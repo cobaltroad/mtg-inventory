@@ -11,15 +11,18 @@ class ScryfallCardResolverTest < ActiveSupport::TestCase
   # Basic Functionality Tests
   # ---------------------------------------------------------------------------
 
-  test "resolve_cards returns mapping of card_name to scryfall_id" do
-    stub_scryfall_card("Sol Ring", "sol-ring-id")
-    stub_scryfall_card("Lightning Bolt", "lightning-bolt-id")
+  test "resolve_cards returns mapping of card_name to scryfall data" do
+    stub_scryfall_card("Sol Ring", "sol-ring-id", "https://scryfall.com/card/cmr/335/sol-ring")
+    stub_scryfall_card("Lightning Bolt", "lightning-bolt-id", "https://scryfall.com/card/lea/161/lightning-bolt")
 
     result = ScryfallCardResolver.resolve_cards(["Sol Ring", "Lightning Bolt"])
 
     assert_kind_of Hash, result
-    assert_equal "sol-ring-id", result["Sol Ring"]
-    assert_equal "lightning-bolt-id", result["Lightning Bolt"]
+    assert_kind_of Hash, result["Sol Ring"]
+    assert_equal "sol-ring-id", result["Sol Ring"][:id]
+    assert_equal "https://scryfall.com/card/cmr/335/sol-ring", result["Sol Ring"][:uri]
+    assert_equal "lightning-bolt-id", result["Lightning Bolt"][:id]
+    assert_equal "https://scryfall.com/card/lea/161/lightning-bolt", result["Lightning Bolt"][:uri]
   end
 
   test "resolve_cards returns nil for cards that cannot be resolved" do
@@ -32,19 +35,19 @@ class ScryfallCardResolverTest < ActiveSupport::TestCase
   end
 
   test "resolve_cards handles mix of successful and failed resolutions" do
-    stub_scryfall_card("Sol Ring", "sol-ring-id")
+    stub_scryfall_card("Sol Ring", "sol-ring-id", "https://scryfall.com/card/cmr/335/sol-ring")
     stub_scryfall_card_not_found("Invalid Card")
-    stub_scryfall_card("Lightning Bolt", "lightning-bolt-id")
+    stub_scryfall_card("Lightning Bolt", "lightning-bolt-id", "https://scryfall.com/card/lea/161/lightning-bolt")
 
     result = ScryfallCardResolver.resolve_cards(["Sol Ring", "Invalid Card", "Lightning Bolt"])
 
-    assert_equal "sol-ring-id", result["Sol Ring"]
+    assert_equal "sol-ring-id", result["Sol Ring"][:id]
     assert_nil result["Invalid Card"]
-    assert_equal "lightning-bolt-id", result["Lightning Bolt"]
+    assert_equal "lightning-bolt-id", result["Lightning Bolt"][:id]
   end
 
   test "resolve_cards caches successful lookups to avoid duplicate requests" do
-    stub = stub_scryfall_card("Sol Ring", "sol-ring-id")
+    stub = stub_scryfall_card("Sol Ring", "sol-ring-id", "https://scryfall.com/card/cmr/335/sol-ring")
 
     # Call twice with same card name
     ScryfallCardResolver.resolve_cards(["Sol Ring"])
@@ -59,7 +62,7 @@ class ScryfallCardResolverTest < ActiveSupport::TestCase
       .with(query: { "fuzzy" => "Sol Ring" })
       .to_return(
         status: 200,
-        body: { id: "sol-ring-id", name: "Sol Ring" }.to_json,
+        body: { id: "sol-ring-id", name: "Sol Ring", scryfall_uri: "https://scryfall.com/card/cmr/335/sol-ring" }.to_json,
         headers: { "Content-Type" => "application/json" }
       )
 
@@ -69,8 +72,8 @@ class ScryfallCardResolverTest < ActiveSupport::TestCase
   end
 
   test "resolve_cards enforces 100ms rate limit between requests" do
-    stub_scryfall_card("Card 1", "id-1")
-    stub_scryfall_card("Card 2", "id-2")
+    stub_scryfall_card("Card 1", "id-1", "https://scryfall.com/card/set/1/card-1")
+    stub_scryfall_card("Card 2", "id-2", "https://scryfall.com/card/set/2/card-2")
 
     start_time = Time.now
     ScryfallCardResolver.resolve_cards(["Card 1", "Card 2"])
@@ -108,13 +111,13 @@ class ScryfallCardResolverTest < ActiveSupport::TestCase
       .then
       .to_return(
         status: 200,
-        body: { id: "rate-limited-id", name: "Rate Limited Card" }.to_json,
+        body: { id: "rate-limited-id", name: "Rate Limited Card", scryfall_uri: "https://scryfall.com/card/set/1/rate-limited-card" }.to_json,
         headers: { "Content-Type" => "application/json" }
       )
 
     result = ScryfallCardResolver.resolve_cards(["Rate Limited Card"])
 
-    assert_equal "rate-limited-id", result["Rate Limited Card"]
+    assert_equal "rate-limited-id", result["Rate Limited Card"][:id]
   end
 
   test "resolve_cards gives up after max retries on persistent 429" do
@@ -134,13 +137,13 @@ class ScryfallCardResolverTest < ActiveSupport::TestCase
       .with(query: { "fuzzy" => "Atraxa, Praetors' Voice" })
       .to_return(
         status: 200,
-        body: { id: "atraxa-id", name: "Atraxa, Praetors' Voice" }.to_json,
+        body: { id: "atraxa-id", name: "Atraxa, Praetors' Voice", scryfall_uri: "https://scryfall.com/card/cmr/1/atraxa-praetors-voice" }.to_json,
         headers: { "Content-Type" => "application/json" }
       )
 
     result = ScryfallCardResolver.resolve_cards(["Atraxa, Praetors' Voice"])
 
-    assert_equal "atraxa-id", result["Atraxa, Praetors' Voice"]
+    assert_equal "atraxa-id", result["Atraxa, Praetors' Voice"][:id]
   end
 
   test "resolve_cards logs warnings for unresolved cards" do
@@ -160,7 +163,7 @@ class ScryfallCardResolverTest < ActiveSupport::TestCase
       .then
       .to_return(
         status: 200,
-        body: { id: "id", name: "Rate Limited" }.to_json,
+        body: { id: "id", name: "Rate Limited", scryfall_uri: "https://scryfall.com/card/set/1/rate-limited" }.to_json,
         headers: { "Content-Type" => "application/json" }
       )
 
@@ -173,12 +176,12 @@ class ScryfallCardResolverTest < ActiveSupport::TestCase
 
   private
 
-  def stub_scryfall_card(card_name, scryfall_id)
+  def stub_scryfall_card(card_name, scryfall_id, scryfall_uri)
     stub_request(:get, "https://api.scryfall.com/cards/named")
       .with(query: { "fuzzy" => card_name })
       .to_return(
         status: 200,
-        body: { id: scryfall_id, name: card_name }.to_json,
+        body: { id: scryfall_id, name: card_name, scryfall_uri: scryfall_uri }.to_json,
         headers: { "Content-Type" => "application/json" }
       )
   end

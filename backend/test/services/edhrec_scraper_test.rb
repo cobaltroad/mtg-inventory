@@ -149,6 +149,70 @@ class EdhrecScraperTest < ActiveSupport::TestCase
     assert_requested stub
   end
 
+  # ---------------------------------------------------------------------------
+  # Rate Limiting Tests
+  # ---------------------------------------------------------------------------
+
+  test "retries when receiving 429 rate limit and eventually succeeds" do
+    # First 2 requests return 429, third succeeds
+    call_count = 0
+    stub_request(:get, "https://edhrec.com/average-decks/atraxa-praetors-voice")
+      .to_return do |request|
+        call_count += 1
+        if call_count <= 2
+          { status: 429, body: "Too Many Requests" }
+        else
+          # Return success on third attempt
+          next_data = {
+            "props" => {
+              "__N_SSP" => true,
+              "pageProps" => {
+                "data" => {
+                  "container" => {
+                    "json_dict" => {
+                      "cardlists" => [
+                        { "tag" => "creatures", "cardviews" => Array.new(90) { |i| { "name" => "Card #{i}" } } }
+                      ],
+                      "card" => { "name" => "Atraxa, Praetors' Voice" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          html = "<html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">#{next_data.to_json}</script></body></html>"
+          { status: 200, body: html }
+        end
+      end
+
+    # Stub Scryfall to avoid actual API calls
+    stub_request(:get, %r{https://api\.scryfall\.com/cards/named})
+      .to_return(status: 200, body: { id: "test-id", name: "Test", scryfall_uri: "https://scryfall.com/card/set/1/test" }.to_json)
+
+    # Stub sleep to make test faster (we're not testing sleep duration, just retry logic)
+    Object.stub(:sleep, ->(_) {}) do
+      result = EdhrecScraper.fetch_commander_decklist("https://edhrec.com/commanders/atraxa-praetors-voice")
+
+      assert_kind_of Array, result
+      assert_equal 3, call_count, "Should have made 3 attempts (2 failures + 1 success)"
+    end
+  end
+
+  test "raises RateLimitError after max retries on 429" do
+    # All requests return 429
+    stub_request(:get, %r{https://edhrec\.com/average-decks/.*})
+      .to_return(status: 429, body: "Too Many Requests")
+
+    # Stub sleep to make test faster
+    Object.stub(:sleep, ->(_) {}) do
+      error = assert_raises(EdhrecScraper::RateLimitError) do
+        EdhrecScraper.fetch_commander_decklist("https://edhrec.com/commanders/atraxa-praetors-voice")
+      end
+
+      assert_match(/rate limit/i, error.message)
+    end
+  end
+
   private
 
   # Build a minimal valid EDHREC JSON response
@@ -205,13 +269,14 @@ class EdhrecScraperTest < ActiveSupport::TestCase
   # Commander Decklist Tests
   # ---------------------------------------------------------------------------
 
-  test "fetch_commander_decklist returns array of exactly 100 cards" do
+  test "fetch_commander_decklist returns array of 50-100 cards" do
     stub_commander_decklist_json("https://edhrec.com/commanders/atraxa-praetors-voice")
 
     result = EdhrecScraper.fetch_commander_decklist("https://edhrec.com/commanders/atraxa-praetors-voice")
 
     assert_kind_of Array, result
-    assert_equal 100, result.length
+    assert_operator result.length, :>=, 50, "Expected at least 50 cards"
+    assert_operator result.length, :<=, 100, "Expected at most 100 cards"
   end
 
   test "fetch_commander_decklist identifies which card is the commander" do
@@ -233,7 +298,8 @@ class EdhrecScraperTest < ActiveSupport::TestCase
     assert_equal 2, commanders.length
     assert_includes commanders.map { |c| c[:name] }, "Thrasios, Triton Hero"
     assert_includes commanders.map { |c| c[:name] }, "Tymna the Weaver"
-    assert_equal 100, result.length
+    assert_operator result.length, :>=, 50, "Expected at least 50 cards"
+    assert_operator result.length, :<=, 100, "Expected at most 100 cards"
   end
 
   test "fetch_commander_decklist extracts card names and categories" do
@@ -254,13 +320,18 @@ class EdhrecScraperTest < ActiveSupport::TestCase
   test "fetch_commander_decklist resolves cards with Scryfall IDs" do
     stub_commander_decklist_json("https://edhrec.com/commanders/atraxa-praetors-voice")
 
-    # Stub all Scryfall API calls to return valid IDs
+    # Stub all Scryfall API calls to return valid IDs and URIs
     stub_request(:get, %r{https://api\.scryfall\.com/cards/named})
       .to_return do |request|
         card_name = CGI.parse(URI(request.uri).query)["fuzzy"].first
+        card_slug = card_name.downcase.gsub(/[^a-z0-9]+/, '-')
         {
           status: 200,
-          body: { id: "#{card_name.downcase.gsub(/[^a-z]/, '-')}-id", name: card_name }.to_json,
+          body: {
+            id: "#{card_slug}-id",
+            name: card_name,
+            scryfall_uri: "https://scryfall.com/card/set/1/#{card_slug}"
+          }.to_json,
           headers: { "Content-Type" => "application/json" }
         }
       end
@@ -284,7 +355,11 @@ class EdhrecScraperTest < ActiveSupport::TestCase
         if card_name == "Sol Ring"
           {
             status: 200,
-            body: { id: "sol-ring-id", name: card_name }.to_json,
+            body: {
+              id: "sol-ring-id",
+              name: card_name,
+              scryfall_uri: "https://scryfall.com/card/cmr/335/sol-ring"
+            }.to_json,
             headers: { "Content-Type" => "application/json" }
           }
         else
@@ -298,8 +373,8 @@ class EdhrecScraperTest < ActiveSupport::TestCase
 
     result = EdhrecScraper.fetch_commander_decklist("https://edhrec.com/commanders/atraxa-praetors-voice")
 
-    # All 100 cards should still be in the list
-    assert_equal 100, result.length
+    # All cards should still be in the list (50-100 cards typical for average decks)
+    assert_operator result.length, :>=, 50
 
     # Cards with failed resolution should have nil scryfall_id
     failed_cards = result.select { |c| c[:scryfall_id].nil? }
@@ -311,7 +386,7 @@ class EdhrecScraperTest < ActiveSupport::TestCase
   end
 
   test "fetch_commander_decklist raises FetchError on network failure" do
-    stub_request(:get, %r{https://json\.edhrec\.com/pages/commanders/.*})
+    stub_request(:get, %r{https://edhrec\.com/average-decks/.*})
       .to_timeout
 
     error = assert_raises(EdhrecScraper::FetchError) do
@@ -321,9 +396,9 @@ class EdhrecScraperTest < ActiveSupport::TestCase
     assert_match(/network error/i, error.message)
   end
 
-  test "fetch_commander_decklist raises ParseError when JSON structure is invalid" do
-    stub_request(:get, %r{https://json\.edhrec\.com/pages/commanders/.*})
-      .to_return(status: 200, body: '{"invalid": "structure"}')
+  test "fetch_commander_decklist raises ParseError when HTML doesn't contain embedded JSON" do
+    stub_request(:get, %r{https://edhrec\.com/average-decks/.*})
+      .to_return(status: 200, body: '<html><body>No JSON here</body></html>')
 
     error = assert_raises(EdhrecScraper::ParseError) do
       EdhrecScraper.fetch_commander_decklist("https://edhrec.com/commanders/atraxa-praetors-voice")
@@ -380,16 +455,34 @@ class EdhrecScraperTest < ActiveSupport::TestCase
     artifacts_list = cardlists.find { |cl| cl["tag"] == "Artifacts" }
     artifacts_list["cardviews"][0]["name"] = "Sol Ring" if artifacts_list && artifacts_list["cardviews"]&.any?
 
-    json = {
-      "container" => {
-        "json_dict" => {
-          "cardlists" => cardlists
+    # Build Next.js page props structure (matches EDHREC's __NEXT_DATA__)
+    next_data = {
+      "props" => {
+        "__N_SSP" => true,
+        "pageProps" => {
+          "data" => {
+            "container" => {
+              "json_dict" => {
+                "cardlists" => cardlists
+              }
+            }
+          }
         }
       }
     }
 
-    stub_request(:get, "https://json.edhrec.com/pages/commanders/#{slug}")
-      .to_return(status: 200, body: json.to_json, headers: { "Content-Type" => "application/json" })
+    # Wrap JSON in HTML with Next.js data script tag (as EDHREC does)
+    html = <<~HTML
+      <html>
+      <head><title>EDHREC Average Deck</title></head>
+      <body>
+        <script id="__NEXT_DATA__" type="application/json">#{next_data.to_json}</script>
+      </body>
+      </html>
+    HTML
+
+    stub_request(:get, "https://edhrec.com/average-decks/#{slug}")
+      .to_return(status: 200, body: html, headers: { "Content-Type" => "text/html" })
   end
 
   def stub_partner_commander_decklist_json(commander_url)
@@ -439,15 +532,33 @@ class EdhrecScraperTest < ActiveSupport::TestCase
       }
     end
 
-    json = {
-      "container" => {
-        "json_dict" => {
-          "cardlists" => cardlists
+    # Build Next.js page props structure
+    next_data = {
+      "props" => {
+        "__N_SSP" => true,
+        "pageProps" => {
+          "data" => {
+            "container" => {
+              "json_dict" => {
+                "cardlists" => cardlists
+              }
+            }
+          }
         }
       }
     }
 
-    stub_request(:get, "https://json.edhrec.com/pages/commanders/#{slug}")
-      .to_return(status: 200, body: json.to_json, headers: { "Content-Type" => "application/json" })
+    # Wrap JSON in HTML with Next.js data script tag
+    html = <<~HTML
+      <html>
+      <head><title>EDHREC Average Deck</title></head>
+      <body>
+        <script id="__NEXT_DATA__" type="application/json">#{next_data.to_json}</script>
+      </body>
+      </html>
+    HTML
+
+    stub_request(:get, "https://edhrec.com/average-decks/#{slug}")
+      .to_return(status: 200, body: html, headers: { "Content-Type" => "text/html" })
   end
 end

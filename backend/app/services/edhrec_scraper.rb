@@ -1,6 +1,7 @@
 require "net/http"
 require "uri"
 require "json"
+require "nokogiri"
 
 class EdhrecScraper
   BASE_URL = "https://edhrec.com"
@@ -9,9 +10,15 @@ class EdhrecScraper
   REQUEST_TIMEOUT = 10 # seconds
   EXPECTED_COMMANDER_COUNT = 20
 
+  # Rate limiting configuration
+  REQUEST_DELAY = 2.0 # seconds between requests to avoid 429 errors
+  MAX_RETRIES = 3
+  RETRY_BACKOFF_BASE = 5 # seconds (exponential backoff: 5s, 10s, 20s)
+
   # Custom exception classes for error handling
   class FetchError < StandardError; end
   class ParseError < StandardError; end
+  class RateLimitError < StandardError; end
 
   # ---------------------------------------------------------------------------
   # Fetches and parses the EDHREC weekly top commanders via JSON API
@@ -166,8 +173,9 @@ class EdhrecScraper
   #   - ParseError: JSON structure doesn't match expected format
   # ---------------------------------------------------------------------------
   def self.fetch_commander_decklist(commander_url)
-    json_url = build_commander_json_url(commander_url)
-    json_data = fetch_json(json_url)
+    average_deck_url = build_average_deck_url(commander_url)
+    html_content = fetch_html(average_deck_url)
+    json_data = extract_json_from_html(html_content)
     cards = parse_decklist_from_json(json_data)
     enrich_cards_with_scryfall_ids(cards)
 
@@ -184,22 +192,144 @@ class EdhrecScraper
   end
 
   # ---------------------------------------------------------------------------
-  # Builds JSON API URL from commander page URL
+  # Builds average deck URL from commander page URL
   # ---------------------------------------------------------------------------
-  private_class_method def self.build_commander_json_url(commander_url)
+  private_class_method def self.build_average_deck_url(commander_url)
     slug = commander_url.split("/").last
-    "https://json.edhrec.com/pages/commanders/#{slug}"
+    "https://edhrec.com/average-decks/#{slug}"
   end
 
   # ---------------------------------------------------------------------------
-  # Enriches card data with Scryfall IDs
+  # Fetches HTML content from the given URL with rate limiting and retry logic
+  #
+  # Arguments:
+  #   url (String) - The URL to fetch
+  #   retry_count (Integer) - Current retry attempt (used internally)
+  #
+  # Returns:
+  #   String - HTML content
+  #
+  # Raises:
+  #   FetchError: If the HTTP request fails
+  #   RateLimitError: If rate limit is exceeded after retries
+  # ---------------------------------------------------------------------------
+  private_class_method def self.fetch_html(url, retry_count = 0)
+    # Apply rate limiting delay before making request
+    sleep(REQUEST_DELAY) if retry_count == 0
+
+    uri = URI(url)
+    request = Net::HTTP::Get.new(uri)
+    request["User-Agent"] = USER_AGENT
+
+    response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true, read_timeout: REQUEST_TIMEOUT) do |http|
+      http.request(request)
+    end
+
+    # Handle 429 Too Many Requests with exponential backoff
+    if response.code == "429"
+      if retry_count < MAX_RETRIES
+        wait_time = RETRY_BACKOFF_BASE * (2 ** retry_count)
+        Rails.logger.warn("EdhrecScraper: Rate limit hit (429) for #{url}, retrying in #{wait_time}s (attempt #{retry_count + 1}/#{MAX_RETRIES})")
+        sleep(wait_time)
+        return fetch_html(url, retry_count + 1)
+      else
+        Rails.logger.error("EdhrecScraper: Rate limit exceeded after #{MAX_RETRIES} retries for #{url}")
+        raise RateLimitError, "EDHREC rate limit exceeded. Please try again later."
+      end
+    end
+
+    unless response.is_a?(Net::HTTPSuccess)
+      Rails.logger.error("EdhrecScraper: HTTP error #{response.code} for #{url}")
+      raise FetchError, "HTTP error #{response.code}: #{response.message}"
+    end
+
+    response.body
+  end
+
+  # ---------------------------------------------------------------------------
+  # Extracts embedded JSON data from EDHREC HTML page
+  #
+  # Arguments:
+  #   html (String) - HTML content from EDHREC average deck page
+  #
+  # Returns:
+  #   Hash - Parsed JSON data with cardlists
+  #
+  # Raises:
+  #   ParseError: If JSON cannot be extracted or parsed
+  # ---------------------------------------------------------------------------
+  private_class_method def self.extract_json_from_html(html)
+    doc = Nokogiri::HTML(html)
+
+    # Find Next.js data script tag (id="__NEXT_DATA__")
+    script_tag = doc.at_css('script#__NEXT_DATA__')
+
+    unless script_tag
+      Rails.logger.error("EdhrecScraper: Could not find __NEXT_DATA__ script tag in HTML")
+      raise ParseError, "Could not find embedded deck data in page"
+    end
+
+    # Parse the JSON content
+    next_data = JSON.parse(script_tag.content)
+
+    # Extract the data container from Next.js page props
+    # Structure: props.pageProps.data.container (matches old JSON API structure)
+    data_container = next_data.dig("props", "pageProps", "data", "container")
+
+    unless data_container
+      Rails.logger.error("EdhrecScraper: Could not find container in Next.js data")
+      raise ParseError, "Could not find deck data container in page"
+    end
+
+    # Extract cardlists and commander card
+    json_dict = data_container["json_dict"] || {}
+    cardlists = json_dict["cardlists"]
+    commander_card = json_dict["card"]
+
+    unless cardlists
+      Rails.logger.error("EdhrecScraper: Could not find cardlists in data container")
+      raise ParseError, "Could not find cardlists in page data"
+    end
+
+    # Add commander as a separate cardlist (to match old API structure)
+    # The commander is stored separately in the 'card' field
+    if commander_card
+      commander_cardlist = {
+        "tag" => "Commanders",
+        "cardviews" => [commander_card]
+      }
+      cardlists = [commander_cardlist] + cardlists
+    end
+
+    # Return in the same format expected by parse_decklist_from_json
+    {
+      "container" => {
+        "json_dict" => {
+          "cardlists" => cardlists
+        }
+      }
+    }
+  rescue Nokogiri::SyntaxError => e
+    Rails.logger.error("EdhrecScraper: HTML parsing error - #{e.message}")
+    raise ParseError, "Failed to parse HTML: #{e.message}"
+  end
+
+  # ---------------------------------------------------------------------------
+  # Enriches card data with Scryfall IDs and URIs
   # ---------------------------------------------------------------------------
   private_class_method def self.enrich_cards_with_scryfall_ids(cards)
     card_names = cards.map { |c| c[:name] }
-    scryfall_ids = ScryfallCardResolver.resolve_cards(card_names)
+    scryfall_data = ScryfallCardResolver.resolve_cards(card_names)
 
     cards.each do |card|
-      card[:scryfall_id] = scryfall_ids[card[:name]]
+      card_info = scryfall_data[card[:name]]
+      if card_info
+        card[:scryfall_id] = card_info[:id]
+        card[:scryfall_uri] = card_info[:uri]
+      else
+        card[:scryfall_id] = nil
+        card[:scryfall_uri] = nil
+      end
     end
   end
 
@@ -259,19 +389,19 @@ class EdhrecScraper
   end
 
   # ---------------------------------------------------------------------------
-  # Validates that the decklist contains exactly 100 cards
+  # Validates that the decklist contains a reasonable number of cards
+  # Note: EDHREC average decks typically have 50-100 cards (not always exactly 100)
   # ---------------------------------------------------------------------------
   private_class_method def self.validate_decklist_size(cards)
-    return if cards.length == 100
+    card_count = cards.length
 
-    Rails.logger.warn(
-      "EdhrecScraper: Decklist contains #{cards.length} cards (expected 100)"
-    )
-
-    if cards.length < 100
-      raise ParseError, "Decklist incomplete - only #{cards.length} cards found (expected 100)"
-    elsif cards.length > 100
-      raise ParseError, "Decklist has too many cards - #{cards.length} found (expected 100)"
+    # Average decks from EDHREC typically have 50-100 cards
+    if card_count < 50
+      raise ParseError, "Decklist incomplete - only #{card_count} cards found (expected at least 50)"
+    elsif card_count > 100
+      raise ParseError, "Decklist has too many cards - #{card_count} found (expected at most 100)"
     end
+
+    # No logging needed for valid card counts (50-100 is normal for average decks)
   end
 end

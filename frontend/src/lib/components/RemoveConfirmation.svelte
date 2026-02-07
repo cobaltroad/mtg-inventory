@@ -68,15 +68,14 @@
 				<h2 id="modal-title" class="modal-title">Remove Card from Inventory</h2>
 				<p class="modal-message">
 					Are you sure you want to remove <strong>{cardName}</strong>
-					<span class="card-details">({setCode.toUpperCase()} #{collectorNumber})</span> from your
-					inventory?
+					<span class="card-details">({setCode.toUpperCase()} #{collectorNumber})</span> from your inventory?
 				</p>
 				<p class="warning-text">This action cannot be undone.</p>
 			</div>
 
 			<div class="modal-footer">
 				<button
-					class="btn btn-cancel"
+					class="btn-cancel btn"
 					onclick={onCancel}
 					disabled={isRemoving}
 					data-testid="cancel-btn"
@@ -84,7 +83,7 @@
 					Cancel
 				</button>
 				<button
-					class="btn btn-remove"
+					class="btn-remove btn"
 					onclick={handleConfirm}
 					disabled={isRemoving}
 					data-testid="confirm-btn"

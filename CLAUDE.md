@@ -102,6 +102,63 @@ npm run test:watch        # Run tests in watch mode
   }
   ```
 
+## Background Jobs & Scheduled Tasks
+
+The application uses **Solid Queue** for background job processing. Jobs run in a separate Docker container (`mtg_jobs`).
+
+### Scheduled Jobs
+
+Jobs are configured in `backend/config/recurring.yml` and run automatically:
+
+| Job | Schedule | Description |
+|-----|----------|-------------|
+| **ScrapeEdhrecCommandersJob** | Every Saturday 8am (dev)<br>Every Sunday 8am (prod) | Scrapes top 20 EDH commanders and their decklists from EDHREC |
+| **UpdateCardPricesJob** | Every day at 7am (prod) | Updates market prices for all cards in collections from Scryfall |
+| **clear_solid_queue_finished_jobs** | Every hour at :12 (prod) | Cleans up completed job records older than 1 day |
+
+### Manual Job Triggers
+
+Run jobs manually using rake tasks (useful for testing/maintenance):
+
+```bash
+# Using Docker with rake tasks (recommended - shows real-time progress)
+docker compose exec backend rails jobs:scrape_commanders
+docker compose exec backend rails jobs:update_prices
+docker compose exec backend rails jobs:clear_finished
+
+# Run all scheduled jobs
+docker compose exec backend rails jobs:all
+
+# Update a single card's price
+docker compose exec backend rails jobs:prices:update_card[SCRYFALL_CARD_ID]
+
+# View job queue statistics
+docker compose exec backend rails jobs:stats
+
+# Using Rails console for more control (logs to file only)
+docker compose exec backend rails console
+> ScrapeEdhrecCommandersJob.perform_now    # Run synchronously
+> ScrapeEdhrecCommandersJob.perform_later  # Enqueue for async execution
+> SolidQueue::Job.last(5)                   # Check recent jobs
+```
+
+**Note:** Rake tasks broadcast progress to your console, showing commander names and status in real-time. Using Rails console/runner directly only logs to the log file.
+
+### Monitoring Jobs
+
+```bash
+# Watch job logs in real-time
+docker compose logs -f jobs
+
+# Check job status
+docker compose exec backend rails jobs:stats
+
+# Access Solid Queue mission control (if enabled)
+# Visit: http://localhost:3000/solid_queue
+```
+
+**Note:** The `CacheCardImageJob` is not scheduled—it's triggered automatically when cards are added to inventory to pre-cache images for faster page loads.
+
 ## Architecture
 
 ```

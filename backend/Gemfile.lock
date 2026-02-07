@@ -365,7 +365,7 @@ DEPENDENCIES
   debug
   image_processing (~> 1.2)
   kamal
-  nokogiri (~> 1.16)
+  nokogiri
   pg (~> 1.1)
   puma (>= 5.0)
   rails (~> 8.1.2)

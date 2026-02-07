@@ -260,9 +260,7 @@ describe('InventoryValueWidget - Error Handling', () => {
 		render(InventoryValueWidget);
 
 		await waitFor(() => {
-			expect(
-				screen.getByText(/failed to load inventory value timeline/i)
-			).toBeInTheDocument();
+			expect(screen.getByText(/failed to load inventory value timeline/i)).toBeInTheDocument();
 		});
 	});
 

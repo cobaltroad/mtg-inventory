@@ -158,9 +158,7 @@ describe('PriceHistoryChart Component', () => {
 		render(PriceHistoryChart, { props: { cardId: mockCardId } });
 
 		await waitFor(() => {
-			expect(global.fetch).toHaveBeenCalledWith(
-				expect.stringContaining('time_period=30')
-			);
+			expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('time_period=30'));
 		});
 	});
 
@@ -187,9 +185,7 @@ describe('PriceHistoryChart Component', () => {
 
 		await waitFor(() => {
 			expect(global.fetch).toHaveBeenCalledTimes(2);
-			expect(global.fetch).toHaveBeenLastCalledWith(
-				expect.stringContaining('time_period=7')
-			);
+			expect(global.fetch).toHaveBeenLastCalledWith(expect.stringContaining('time_period=7'));
 		});
 	});
 
@@ -293,9 +289,7 @@ describe('PriceHistoryChart Component', () => {
 
 		await waitFor(() => {
 			const percentageElements = document.querySelectorAll('.percentage-change');
-			const hasUpArrow = Array.from(percentageElements).some((el) =>
-				el.textContent?.includes('↑')
-			);
+			const hasUpArrow = Array.from(percentageElements).some((el) => el.textContent?.includes('↑'));
 			expect(hasUpArrow).toBe(true);
 		});
 	});

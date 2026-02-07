@@ -187,12 +187,10 @@
 		if (!hasValidTimeline) return [];
 
 		// Filter and validate timeline points before mapping
-		return timelineData!.timeline
-			.filter(isValidTimelinePoint)
-			.map((point) => ({
-				date: new Date(point.date),
-				value: point.value_cents / 100
-			}));
+		return timelineData!.timeline.filter(isValidTimelinePoint).map((point) => ({
+			date: new Date(point.date),
+			value: point.value_cents / 100
+		}));
 	});
 
 	/**
@@ -212,30 +210,28 @@
 	});
 </script>
 
-<div class="inventory-value-widget card variant-ghost-surface p-4">
+<div class="inventory-value-widget variant-ghost-surface card p-4">
 	{#if loading}
 		<div class="placeholder animate-pulse space-y-3">
-			<div class="h-6 w-48 bg-surface-300-600-token rounded"></div>
-			<div class="h-48 bg-surface-300-600-token rounded"></div>
+			<div class="bg-surface-300-600-token h-6 w-48 rounded"></div>
+			<div class="bg-surface-300-600-token h-48 rounded"></div>
 		</div>
 	{:else if error}
-		<h2 class="h3 mb-4">Inventory Value Over Time</h2>
+		<h2 class="mb-4 h3">Inventory Value Over Time</h2>
 		<div class="alert variant-ghost-error p-4">
 			<p>{error}</p>
-			<button onclick={() => fetchTimeline()} class="btn variant-filled-error mt-2">
-				Retry
-			</button>
+			<button onclick={() => fetchTimeline()} class="variant-filled-error mt-2 btn"> Retry </button>
 		</div>
 	{:else if !hasValidTimeline}
-		<h2 class="h3 mb-4">Inventory Value Over Time</h2>
-		<div class="text-center p-8 text-surface-600-300-token">
+		<h2 class="mb-4 h3">Inventory Value Over Time</h2>
+		<div class="text-surface-600-300-token p-8 text-center">
 			<p>No value timeline data available.</p>
 		</div>
 	{:else}
-		<h2 class="h3 mb-4">Inventory Value Over Time</h2>
+		<h2 class="mb-4 h3">Inventory Value Over Time</h2>
 
 		<!-- Time Period Selector -->
-		<div class="btn-group variant-ghost mb-4">
+		<div class="variant-ghost mb-4 btn-group">
 			<button
 				class="btn {timePeriod === 7 ? 'variant-filled-primary' : 'variant-ghost-surface'}"
 				onclick={() => changeTimePeriod(7)}
@@ -258,15 +254,15 @@
 
 		{#if hasValidSummary}
 			<!-- Value Summary -->
-			<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-				<div class="card variant-ghost p-4">
-					<div class="text-sm text-surface-600-300-token">Current Value</div>
+			<div class="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+				<div class="variant-ghost card p-4">
+					<div class="text-surface-600-300-token text-sm">Current Value</div>
 					<div class="text-2xl font-bold">
 						{formatCurrency(timelineData.summary.end_value_cents)}
 					</div>
 				</div>
-				<div class="card variant-ghost p-4">
-					<div class="text-sm text-surface-600-300-token">Change ({timePeriod}d)</div>
+				<div class="variant-ghost card p-4">
+					<div class="text-surface-600-300-token text-sm">Change ({timePeriod}d)</div>
 					<div
 						class="text-2xl font-bold"
 						class:text-success-500={timelineData.summary.change_cents >= 0}
@@ -274,9 +270,9 @@
 					>
 						{getChangeSign(timelineData.summary.change_cents)}
 						{formatCurrency(timelineData.summary.change_cents)}
-						({getChangeSign(timelineData.summary.change_cents)}{timelineData.summary.change_percentage.toFixed(
-							2
-						)}%)
+						({getChangeSign(
+							timelineData.summary.change_cents
+						)}{timelineData.summary.change_percentage.toFixed(2)}%)
 					</div>
 				</div>
 			</div>

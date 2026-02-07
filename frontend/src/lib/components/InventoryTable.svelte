@@ -76,7 +76,9 @@
 			toast = { message: 'Quantity updated', type: 'success' };
 		} catch (err) {
 			// Rollback on failure
-			localItems = localItems.map((i) => (i.id === item.id ? { ...i, quantity: originalQuantity } : i));
+			localItems = localItems.map((i) =>
+				i.id === item.id ? { ...i, quantity: originalQuantity } : i
+			);
 
 			toast = { message: 'Failed to update quantity', type: 'error' };
 		}
