@@ -2,6 +2,10 @@ ENV["RAILS_ENV"] ||= "test"
 require_relative "../config/environment"
 require "rails/test_help"
 
+# Load VCR setup if present
+vcr_setup = File.expand_path("support/vcr_setup.rb", __dir__)
+require vcr_setup if File.exist?(vcr_setup)
+
 # ---------------------------------------------------------------------------
 # Minitest 6 removed Object#stub (it was extracted to a separate gem that
 # treats any value responding to :call as a factory, which breaks stubs on

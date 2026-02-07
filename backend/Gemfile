@@ -50,4 +50,7 @@ group :development, :test do
 
   # HTTP request stubbing for tests
   gem "webmock", require: false
+
+  # Record and replay HTTP interactions for tests
+  gem "vcr", require: false
 end
