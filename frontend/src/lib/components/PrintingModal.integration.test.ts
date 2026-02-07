@@ -645,9 +645,9 @@ describe('PrintingModal - Integration', () => {
 				expect(toast).toBeInTheDocument();
 			});
 
-			// Preview area should disappear after selection is cleared
+			// Preview area should still be visible with first printing auto-selected
 			const previewArea = document.querySelector('.image-preview-area');
-			expect(previewArea).not.toBeInTheDocument();
+			expect(previewArea).toBeInTheDocument();
 		});
 
 		it('allows selecting and adding another printing after clearing selection', async () => {
@@ -1348,24 +1348,21 @@ describe('PrintingModal - Integration', () => {
 				expect(toast).toBeInTheDocument();
 			});
 
-			// Immediately after success, selection should be cleared
+			// After success, first printing should be auto-selected again
 			let previewArea = document.querySelector('.image-preview-area');
-			expect(previewArea).not.toBeInTheDocument();
+			expect(previewArea).toBeInTheDocument();
 
-			// Select another printing and verify defaults are restored
-			await fireEvent.mouseEnter(printingItems[1]);
+			// Verify defaults are restored with the auto-selected first printing
 
-			await waitFor(() => {
-				const acquiredDateInputAfter = screen.getByLabelText(/acquired date/i) as HTMLInputElement;
-				const priceInputAfter = screen.getByLabelText(/price/i) as HTMLInputElement;
-				const treatmentSelectAfter = screen.getByLabelText(/treatment/i) as HTMLSelectElement;
-				const languageSelectAfter = screen.getByLabelText(/language/i) as HTMLSelectElement;
+			const acquiredDateInputAfter = screen.getByLabelText(/acquired date/i) as HTMLInputElement;
+			const priceInputAfter = screen.getByLabelText(/price/i) as HTMLInputElement;
+			const treatmentSelectAfter = screen.getByLabelText(/treatment/i) as HTMLSelectElement;
+			const languageSelectAfter = screen.getByLabelText(/language/i) as HTMLSelectElement;
 
-				expect(acquiredDateInputAfter.value).toMatch(/\d{4}-\d{2}-\d{2}/); // Today's date
-				expect(priceInputAfter).toHaveValue(0);
-				expect(treatmentSelectAfter).toHaveValue('Normal');
-				expect(languageSelectAfter).toHaveValue('English');
-			});
+			expect(acquiredDateInputAfter.value).toMatch(/\d{4}-\d{2}-\d{2}/); // Today's date
+			expect(priceInputAfter).toHaveValue(0);
+			expect(treatmentSelectAfter).toHaveValue('Normal');
+			expect(languageSelectAfter).toHaveValue('English');
 		});
 
 		// Additional test: Price is parsed as float

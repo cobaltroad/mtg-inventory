@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { base } from '$app/paths';
+	import { Dialog, Portal } from '@skeletonlabs/skeleton-svelte';
+	import { X } from 'lucide-svelte';
 	import Toast from './Toast.svelte';
 
 	const API_BASE = base;
@@ -75,7 +77,6 @@
 	let loading = $state(false);
 	let error = $state(false);
 	let selectedPrinting: Printing | null = $state(null);
-	let dialogElement = $state<HTMLDialogElement>();
 	let inventoryState: InventoryState = $state('idle');
 	let inventoryQuantity = $state(0);
 	let inventoryError = $state('');
@@ -118,20 +119,9 @@
 
 	function handleClose() {
 		open = false;
+		selectedPrinting = null; // Reset selection for next open
 		if (onclose) {
 			onclose();
-		}
-	}
-
-	function handleBackdropClick(e: MouseEvent) {
-		if (e.target === dialogElement) {
-			handleClose();
-		}
-	}
-
-	function handleKeyDown(e: KeyboardEvent) {
-		if (e.key === 'Escape') {
-			handleClose();
 		}
 	}
 
@@ -233,34 +223,56 @@
 	}
 
 	$effect(() => {
-		if (open && dialogElement) {
-			dialogElement.showModal();
+		if (open) {
 			fetchPrintings();
-			// Reset inventory state when opening modal
+			// Reset inventory state when opening drawer
 			inventoryState = 'idle';
 			inventoryError = '';
 			inventoryQuantity = 0;
-		} else if (dialogElement) {
-			dialogElement.close();
+		}
+	});
+
+	// Auto-select the first printing when printings are loaded
+	$effect(() => {
+		if (printings.length > 0 && !selectedPrinting) {
+			selectedPrinting = printings[0];
 		}
 	});
 </script>
 
-<svelte:window on:keydown={handleKeyDown} />
-
-{#if open}
-	<!-- svelte-ignore a11y_click_events_have_key_events -->
-	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-	<dialog
-		bind:this={dialogElement}
-		aria-labelledby="modal-title"
-		onclick={handleBackdropClick}
-		data-testid="modal-backdrop"
-	>
-		<div class="modal-content" onclick={(e) => e.stopPropagation()} role="document">
-			<div class="modal-header">
-				<h2 id="modal-title">{card.name} - Printings</h2>
-				<button class="close-button" onclick={handleClose} aria-label="Close">✕</button>
+<Dialog
+	{open}
+	onOpenChange={(details) => {
+		open = details.open;
+		if (!details.open) {
+			handleClose();
+		}
+	}}
+	closeOnEscape={true}
+	trapFocus={false}
+	closeOnInteractOutside={true}
+>
+	<Portal>
+		<Dialog.Backdrop
+			class="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50 transition-opacity"
+		/>
+		<Dialog.Positioner class="fixed inset-0 z-50 flex justify-end">
+			<Dialog.Content
+				class="drawer-container data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right flex h-screen w-full flex-col bg-white shadow-xl transition-transform md:w-[600px] dark:bg-gray-800"
+				data-testid="modal-backdrop"
+				role="dialog"
+				aria-label="Card printings"
+			>
+			<div class="drawer-header">
+				<Dialog.Title class="text-xl font-bold text-gray-900 dark:text-gray-100"
+					>{card.name} - Printings</Dialog.Title
+				>
+				<Dialog.CloseTrigger
+					class="rounded-md p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100"
+					aria-label="Close card printings drawer"
+				>
+					<X class="h-5 w-5" />
+				</Dialog.CloseTrigger>
 			</div>
 
 			{#if loading}
@@ -354,9 +366,10 @@
 					{/if}
 				</div>
 			{/if}
-		</div>
-	</dialog>
-{/if}
+			</Dialog.Content>
+		</Dialog.Positioner>
+	</Portal>
+</Dialog>
 
 {#if showToast}
 	<Toast
@@ -379,64 +392,12 @@
 {/if}
 
 <style>
-	dialog {
-		border: none;
-		border-radius: 12px;
-		padding: 0;
-		max-width: 90vw;
-		width: 800px;
-		max-height: 90vh;
-		box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-		background: white;
-	}
-
-	dialog::backdrop {
-		background: rgba(0, 0, 0, 0.5);
-	}
-
-	.modal-content {
+	.drawer-header {
 		display: flex;
-		flex-direction: column;
-		height: 100%;
-		max-height: 90vh;
-	}
-
-	.modal-header {
-		display: flex;
-		justify-content: space-between;
 		align-items: center;
-		padding: 1.5rem;
+		justify-content: space-between;
+		padding: 1rem;
 		border-bottom: 1px solid #e5e7eb;
-		position: sticky;
-		top: 0;
-		background: white;
-		z-index: 10;
-	}
-
-	.modal-header h2 {
-		margin: 0;
-		font-size: 1.5rem;
-		font-weight: 600;
-		color: #111827;
-	}
-
-	.close-button {
-		background: none;
-		border: none;
-		font-size: 1.5rem;
-		cursor: pointer;
-		color: #6b7280;
-		padding: 0.25rem 0.5rem;
-		line-height: 1;
-		border-radius: 4px;
-		transition:
-			background 0.2s,
-			color 0.2s;
-	}
-
-	.close-button:hover {
-		background: #f3f4f6;
-		color: #111827;
 	}
 
 	.loading-container,
@@ -485,7 +446,7 @@
 		flex: 1;
 		overflow-y: auto;
 		padding: 0.5rem;
-		max-height: calc(90vh - 120px);
+		min-height: 0; /* Allow flex child to shrink */
 	}
 
 	.printing-item {
@@ -529,10 +490,9 @@
 	}
 
 	.image-preview-area {
-		position: sticky;
-		top: 0;
+		flex: 1;
 		width: 300px;
-		max-height: calc(90vh - 120px);
+		min-height: 0; /* Allow flex child to shrink */
 		overflow-y: auto;
 		display: flex;
 		flex-direction: column;
@@ -623,17 +583,8 @@
 		cursor: pointer;
 	}
 
-	:global(.dark) dialog {
-		background: #1f2937;
-	}
-
-	:global(.dark) .modal-header {
-		background: #1f2937;
+	:global(.dark) .drawer-header {
 		border-bottom-color: #374151;
-	}
-
-	:global(.dark) .modal-header h2 {
-		color: #f9fafb;
 	}
 
 	:global(.dark) .image-preview-area {
@@ -652,11 +603,6 @@
 	}
 
 	@media (max-width: 768px) {
-		dialog {
-			width: 95vw;
-			max-width: 95vw;
-		}
-
 		.modal-body {
 			flex-direction: column;
 		}

@@ -154,7 +154,7 @@ describe('PrintingModal - Rendering', () => {
 			});
 
 			// Header should always be visible
-			const title = screen.getByRole('heading', { name: /Lightning Bolt/i });
+			const title = screen.getByText(/Lightning Bolt - Printings/i);
 			expect(title).toBeInTheDocument();
 		});
 	});
