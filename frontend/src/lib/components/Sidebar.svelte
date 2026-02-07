@@ -3,7 +3,7 @@
 	import {
 		House,
 		Search,
-		FolderOpen,
+		Medal,
 		Layers,
 		FileText,
 		LayoutGrid,
@@ -12,6 +12,7 @@
 		PanelLeftClose
 	} from 'lucide-svelte';
 	import { base } from '$app/paths';
+	import { page } from '$app/stores';
 	import type { ComponentType } from 'svelte';
 
 	/**
@@ -51,7 +52,7 @@
 	const navItems: NavItem[] = [
 		{ href: `${base}/`, label: 'Home', icon: House },
 		{ label: 'Search', icon: Search, isButton: true },
-		{ href: `${base}/collections`, label: 'Collections', icon: FolderOpen },
+		{ href: `${base}/metagame`, label: 'Metagame', icon: Medal },
 		{ href: `${base}/decks`, label: 'Decks', icon: Layers },
 		{ href: `${base}/reports`, label: 'Reports', icon: FileText },
 		{ href: `${base}/inventory`, label: 'Inventory', icon: LayoutGrid }
@@ -59,9 +60,9 @@
 
 	/**
 	 * Current page path for determining active navigation state
+	 * Derived from the SvelteKit page store to reactively track route changes
 	 */
-	const currentPath: string =
-		typeof window !== 'undefined' ? window.location.pathname.replace(base, '') || '/' : '/';
+	const currentPath = $derived($page.url.pathname.replace(base, '') || '/');
 
 	/**
 	 * Toggles sidebar visibility on mobile devices

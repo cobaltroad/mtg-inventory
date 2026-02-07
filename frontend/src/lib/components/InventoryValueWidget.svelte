@@ -32,10 +32,17 @@
 			}
 
 			const data = await response.json();
+
+			// Validate the response structure
+			if (!data || typeof data !== 'object') {
+				throw new Error('Invalid response format');
+			}
+
 			timelineData = data;
 		} catch (err) {
 			console.error('Error fetching inventory value timeline:', err);
-			error = 'Failed to load inventory value timeline. Please try again.';
+			error = err instanceof Error ? err.message : 'Failed to load inventory value timeline. Please try again.';
+			timelineData = null;
 		} finally {
 			loading = false;
 		}
@@ -49,7 +56,7 @@
 
 	// Prepare data for chart
 	let chartData = $derived.by(() => {
-		if (!timelineData) return [];
+		if (!timelineData?.timeline) return [];
 		return timelineData.timeline.map((point: any) => ({
 			date: new Date(point.date),
 			value: point.value_cents / 100
@@ -61,7 +68,7 @@
 	});
 </script>
 
-{#if !loading && timelineData && timelineData.summary.end_value_cents > 0}
+{#if !loading && timelineData?.summary?.end_value_cents > 0}
 	<div class="inventory-value-widget card variant-ghost-surface p-4">
 		<h2 class="h3 mb-4">Inventory Value Over Time</h2>
 
@@ -98,7 +105,7 @@
 					Retry
 				</button>
 			</div>
-		{:else if timelineData.timeline.length === 0}
+		{:else if !timelineData?.timeline || timelineData.timeline.length === 0}
 			<div class="text-center p-8 text-surface-600-300-token">
 				<p>No value timeline data available.</p>
 			</div>
@@ -135,10 +142,7 @@
 					y="value"
 					xScale="time"
 					yScale="linear"
-					data={timelineData.timeline.map((point: any) => ({
-						date: new Date(point.date),
-						value: point.value_cents / 100
-					}))}
+					data={chartData}
 				>
 					<Svg>
 						<AxisX />
