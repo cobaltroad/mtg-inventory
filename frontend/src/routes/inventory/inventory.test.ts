@@ -74,6 +74,9 @@ function mockFailedFetch(errorMessage = 'Server error') {
 	});
 }
 
+// Mock context for search drawer
+const mockContext = new Map([['openSearchDrawer', vi.fn()]]);
+
 beforeEach(() => {
 	vi.clearAllMocks();
 });
@@ -92,7 +95,8 @@ describe('Inventory Page - Loading State', () => {
 				data: {
 					items: []
 				}
-			}
+			},
+			context: mockContext
 		});
 
 		// Set loading state programmatically by accessing component internals
@@ -102,7 +106,8 @@ describe('Inventory Page - Loading State', () => {
 				data: {
 					items: []
 				}
-			}
+			},
+			context: mockContext
 		});
 
 		// For now, we'll just check that the page renders without error
@@ -120,7 +125,8 @@ describe('Inventory Page - Empty State', () => {
 				data: {
 					items: []
 				}
-			}
+			},
+			context: mockContext
 		});
 
 		await waitFor(() => {
@@ -135,18 +141,20 @@ describe('Inventory Page - Empty State', () => {
 		expect(screen.getByText('Search for Cards')).toBeInTheDocument();
 	});
 
-	it('empty state has a link to search page', async () => {
+	it('empty state has a button to open search drawer', async () => {
 		render(InventoryPage, {
 			props: {
 				data: {
 					items: []
 				}
-			}
+			},
+			context: mockContext
 		});
 
 		await waitFor(() => {
-			const link = screen.getByText('Search for Cards');
-			expect(link.closest('a')).toHaveAttribute('href', '/search');
+			const button = screen.getByText('Search for Cards');
+			expect(button).toBeInTheDocument();
+			expect(button.tagName).toBe('BUTTON');
 		});
 	});
 });
@@ -161,7 +169,8 @@ describe('Inventory Page - Data Display', () => {
 				data: {
 					items: MOCK_INVENTORY_ITEMS
 				}
-			}
+			},
+			context: mockContext
 		});
 
 		await waitFor(() => {
@@ -176,7 +185,8 @@ describe('Inventory Page - Data Display', () => {
 				data: {
 					items: MOCK_INVENTORY_ITEMS
 				}
-			}
+			},
+			context: mockContext
 		});
 
 		await waitFor(() => {
@@ -190,7 +200,8 @@ describe('Inventory Page - Data Display', () => {
 				data: {
 					items: [MOCK_INVENTORY_ITEMS[0]]
 				}
-			}
+			},
+			context: mockContext
 		});
 
 		await waitFor(() => {
@@ -204,7 +215,8 @@ describe('Inventory Page - Data Display', () => {
 				data: {
 					items: MOCK_INVENTORY_ITEMS
 				}
-			}
+			},
+			context: mockContext
 		});
 
 		await waitFor(() => {
@@ -220,7 +232,8 @@ describe('Inventory Page - Data Display', () => {
 				data: {
 					items: MOCK_INVENTORY_ITEMS
 				}
-			}
+			},
+			context: mockContext
 		});
 
 		await waitFor(() => {
@@ -236,7 +249,8 @@ describe('Inventory Page - Data Display', () => {
 				data: {
 					items: MOCK_INVENTORY_ITEMS
 				}
-			}
+			},
+			context: mockContext
 		});
 
 		await waitFor(() => {
@@ -252,7 +266,8 @@ describe('Inventory Page - Data Display', () => {
 				data: {
 					items: [MOCK_INVENTORY_ITEMS[1]]
 				}
-			}
+			},
+			context: mockContext
 		});
 
 		await waitFor(() => {
@@ -274,7 +289,8 @@ describe('Inventory Page - Error Handling', () => {
 					items: [],
 					error: 'Failed to fetch inventory: Internal Server Error'
 				}
-			}
+			},
+			context: mockContext
 		});
 
 		await waitFor(() => {
@@ -291,7 +307,8 @@ describe('Inventory Page - Error Handling', () => {
 					items: [],
 					error: 'Server error'
 				}
-			}
+			},
+			context: mockContext
 		});
 
 		await waitFor(() => {
@@ -307,7 +324,8 @@ describe('Inventory Page - Error Handling', () => {
 				data: {
 					items: MOCK_INVENTORY_ITEMS
 				}
-			}
+			},
+			context: mockContext
 		});
 
 		expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -324,7 +342,8 @@ describe('Inventory Page - Image Lazy Loading', () => {
 				data: {
 					items: MOCK_INVENTORY_ITEMS
 				}
-			}
+			},
+			context: mockContext
 		});
 
 		await waitFor(() => {
@@ -343,7 +362,8 @@ describe('Inventory Page - Image Lazy Loading', () => {
 				data: {
 					items: MOCK_INVENTORY_ITEMS
 				}
-			}
+			},
+			context: mockContext
 		});
 
 		await waitFor(() => {
@@ -362,7 +382,8 @@ describe('Inventory Page - Data Handling', () => {
 				data: {
 					items: MOCK_INVENTORY_ITEMS
 				}
-			}
+			},
+			context: mockContext
 		});
 
 		await waitFor(() => {
@@ -377,7 +398,8 @@ describe('Inventory Page - Data Handling', () => {
 				data: {
 					items: []
 				}
-			}
+			},
+			context: mockContext
 		});
 
 		await waitFor(() => {
