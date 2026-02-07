@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatPrice, formatDate, pluralize, formatCurrency } from './format';
+import { formatPrice, formatDate, pluralize, formatCurrency, formatRelativeTime } from './format';
 
 describe('formatPrice', () => {
 	it('should format price in cents to USD string', () => {
@@ -82,5 +82,58 @@ describe('formatCurrency', () => {
 
 	it('should handle large quantities', () => {
 		expect(formatCurrency(100, 10000, 100)).toBe('Unit: $1.00 | Total: $100.00');
+	});
+});
+
+describe('formatRelativeTime', () => {
+	it('should return empty string for null or undefined', () => {
+		expect(formatRelativeTime(null)).toBe('');
+		expect(formatRelativeTime(undefined)).toBe('');
+	});
+
+	it('should return "just now" for very recent times', () => {
+		const now = new Date();
+		const nowIso = now.toISOString();
+		expect(formatRelativeTime(nowIso)).toBe('just now');
+	});
+
+	it('should format minutes ago', () => {
+		const date = new Date();
+		date.setMinutes(date.getMinutes() - 5);
+		const result = formatRelativeTime(date.toISOString());
+		expect(result).toBe('5 minutes ago');
+	});
+
+	it('should format hours ago', () => {
+		const date = new Date();
+		date.setHours(date.getHours() - 3);
+		const result = formatRelativeTime(date.toISOString());
+		expect(result).toBe('3 hours ago');
+	});
+
+	it('should format days ago', () => {
+		const date = new Date();
+		date.setDate(date.getDate() - 2);
+		const result = formatRelativeTime(date.toISOString());
+		expect(result).toBe('2 days ago');
+	});
+
+	it('should handle singular units correctly', () => {
+		const date1 = new Date();
+		date1.setMinutes(date1.getMinutes() - 1);
+		expect(formatRelativeTime(date1.toISOString())).toBe('1 minute ago');
+
+		const date2 = new Date();
+		date2.setHours(date2.getHours() - 1);
+		expect(formatRelativeTime(date2.toISOString())).toBe('1 hour ago');
+
+		const date3 = new Date();
+		date3.setDate(date3.getDate() - 1);
+		expect(formatRelativeTime(date3.toISOString())).toBe('1 day ago');
+	});
+
+	it('should handle invalid date strings gracefully', () => {
+		const invalidDate = 'not-a-date';
+		expect(formatRelativeTime(invalidDate)).toBe(invalidDate);
 	});
 });

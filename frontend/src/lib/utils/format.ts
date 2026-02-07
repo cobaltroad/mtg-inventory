@@ -30,6 +30,41 @@ export function formatDate(dateString: string | null | undefined, locale = 'en-U
 }
 
 /**
+ * Formats a date string as relative time (e.g., "2 days ago")
+ * @param dateString - ISO date string
+ * @returns Relative time string (e.g., "2 hours ago", "3 days ago")
+ */
+export function formatRelativeTime(dateString: string | null | undefined): string {
+	if (!dateString) return '';
+
+	try {
+		const date = new Date(dateString);
+		if (isNaN(date.getTime())) {
+			return dateString;
+		}
+
+		const now = new Date();
+		const diffMs = now.getTime() - date.getTime();
+		const diffSecs = Math.floor(diffMs / 1000);
+		const diffMins = Math.floor(diffSecs / 60);
+		const diffHours = Math.floor(diffMins / 60);
+		const diffDays = Math.floor(diffHours / 24);
+
+		if (diffDays > 0) {
+			return `${diffDays} ${pluralize(diffDays, 'day')} ago`;
+		} else if (diffHours > 0) {
+			return `${diffHours} ${pluralize(diffHours, 'hour')} ago`;
+		} else if (diffMins > 0) {
+			return `${diffMins} ${pluralize(diffMins, 'minute')} ago`;
+		} else {
+			return 'just now';
+		}
+	} catch {
+		return dateString;
+	}
+}
+
+/**
  * Pluralizes a word based on count
  * @param count - Number to check
  * @param singular - Singular form of word
