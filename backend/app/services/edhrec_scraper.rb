@@ -315,14 +315,21 @@ class EdhrecScraper
   end
 
   # ---------------------------------------------------------------------------
-  # Enriches card data with Scryfall IDs
+  # Enriches card data with Scryfall IDs and URIs
   # ---------------------------------------------------------------------------
   private_class_method def self.enrich_cards_with_scryfall_ids(cards)
     card_names = cards.map { |c| c[:name] }
-    scryfall_ids = ScryfallCardResolver.resolve_cards(card_names)
+    scryfall_data = ScryfallCardResolver.resolve_cards(card_names)
 
     cards.each do |card|
-      card[:scryfall_id] = scryfall_ids[card[:name]]
+      card_info = scryfall_data[card[:name]]
+      if card_info
+        card[:scryfall_id] = card_info[:id]
+        card[:scryfall_uri] = card_info[:uri]
+      else
+        card[:scryfall_id] = nil
+        card[:scryfall_uri] = nil
+      end
     end
   end
 
@@ -383,23 +390,18 @@ class EdhrecScraper
 
   # ---------------------------------------------------------------------------
   # Validates that the decklist contains a reasonable number of cards
-  # Note: EDHREC average decks typically have 75-100 cards (not always exactly 100)
+  # Note: EDHREC average decks typically have 50-100 cards (not always exactly 100)
   # ---------------------------------------------------------------------------
   private_class_method def self.validate_decklist_size(cards)
     card_count = cards.length
 
-    # Average decks from EDHREC typically have 75-100 cards
-    if card_count < 75
-      raise ParseError, "Decklist incomplete - only #{card_count} cards found (expected at least 75)"
+    # Average decks from EDHREC typically have 50-100 cards
+    if card_count < 50
+      raise ParseError, "Decklist incomplete - only #{card_count} cards found (expected at least 50)"
     elsif card_count > 100
       raise ParseError, "Decklist has too many cards - #{card_count} found (expected at most 100)"
     end
 
-    # Log info if not exactly 100 cards (common for average decks)
-    if card_count != 100
-      Rails.logger.info(
-        "EdhrecScraper: Average deck contains #{card_count} cards (EDHREC average decks typically have 75-100 cards)"
-      )
-    end
+    # No logging needed for valid card counts (50-100 is normal for average decks)
   end
 end

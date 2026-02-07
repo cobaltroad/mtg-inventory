@@ -96,9 +96,9 @@
 											{card.quantity}x
 										</span>
 									{/if}
-									{#if card.card_id}
+									{#if card.card_url}
 										<a
-											href="https://scryfall.com/search?q=id:{card.card_id}"
+											href={card.card_url}
 											target="_blank"
 											rel="noopener noreferrer"
 											class="flex min-w-0 flex-1 items-center gap-1 text-primary-500 hover:underline"

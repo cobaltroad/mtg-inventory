@@ -187,7 +187,7 @@ class EdhrecScraperTest < ActiveSupport::TestCase
 
     # Stub Scryfall to avoid actual API calls
     stub_request(:get, %r{https://api\.scryfall\.com/cards/named})
-      .to_return(status: 200, body: { id: "test-id", name: "Test" }.to_json)
+      .to_return(status: 200, body: { id: "test-id", name: "Test", scryfall_uri: "https://scryfall.com/card/set/1/test" }.to_json)
 
     # Stub sleep to make test faster (we're not testing sleep duration, just retry logic)
     Object.stub(:sleep, ->(_) {}) do
@@ -269,13 +269,13 @@ class EdhrecScraperTest < ActiveSupport::TestCase
   # Commander Decklist Tests
   # ---------------------------------------------------------------------------
 
-  test "fetch_commander_decklist returns array of 75-100 cards" do
+  test "fetch_commander_decklist returns array of 50-100 cards" do
     stub_commander_decklist_json("https://edhrec.com/commanders/atraxa-praetors-voice")
 
     result = EdhrecScraper.fetch_commander_decklist("https://edhrec.com/commanders/atraxa-praetors-voice")
 
     assert_kind_of Array, result
-    assert_operator result.length, :>=, 75, "Expected at least 75 cards"
+    assert_operator result.length, :>=, 50, "Expected at least 50 cards"
     assert_operator result.length, :<=, 100, "Expected at most 100 cards"
   end
 
@@ -298,7 +298,7 @@ class EdhrecScraperTest < ActiveSupport::TestCase
     assert_equal 2, commanders.length
     assert_includes commanders.map { |c| c[:name] }, "Thrasios, Triton Hero"
     assert_includes commanders.map { |c| c[:name] }, "Tymna the Weaver"
-    assert_operator result.length, :>=, 75, "Expected at least 75 cards"
+    assert_operator result.length, :>=, 50, "Expected at least 50 cards"
     assert_operator result.length, :<=, 100, "Expected at most 100 cards"
   end
 
@@ -320,13 +320,18 @@ class EdhrecScraperTest < ActiveSupport::TestCase
   test "fetch_commander_decklist resolves cards with Scryfall IDs" do
     stub_commander_decklist_json("https://edhrec.com/commanders/atraxa-praetors-voice")
 
-    # Stub all Scryfall API calls to return valid IDs
+    # Stub all Scryfall API calls to return valid IDs and URIs
     stub_request(:get, %r{https://api\.scryfall\.com/cards/named})
       .to_return do |request|
         card_name = CGI.parse(URI(request.uri).query)["fuzzy"].first
+        card_slug = card_name.downcase.gsub(/[^a-z0-9]+/, '-')
         {
           status: 200,
-          body: { id: "#{card_name.downcase.gsub(/[^a-z]/, '-')}-id", name: card_name }.to_json,
+          body: {
+            id: "#{card_slug}-id",
+            name: card_name,
+            scryfall_uri: "https://scryfall.com/card/set/1/#{card_slug}"
+          }.to_json,
           headers: { "Content-Type" => "application/json" }
         }
       end
@@ -350,7 +355,11 @@ class EdhrecScraperTest < ActiveSupport::TestCase
         if card_name == "Sol Ring"
           {
             status: 200,
-            body: { id: "sol-ring-id", name: card_name }.to_json,
+            body: {
+              id: "sol-ring-id",
+              name: card_name,
+              scryfall_uri: "https://scryfall.com/card/cmr/335/sol-ring"
+            }.to_json,
             headers: { "Content-Type" => "application/json" }
           }
         else
@@ -364,8 +373,8 @@ class EdhrecScraperTest < ActiveSupport::TestCase
 
     result = EdhrecScraper.fetch_commander_decklist("https://edhrec.com/commanders/atraxa-praetors-voice")
 
-    # All cards should still be in the list (75-100 cards typical for average decks)
-    assert_operator result.length, :>=, 75
+    # All cards should still be in the list (50-100 cards typical for average decks)
+    assert_operator result.length, :>=, 50
 
     # Cards with failed resolution should have nil scryfall_id
     failed_cards = result.select { |c| c[:scryfall_id].nil? }

@@ -120,6 +120,7 @@ class ScrapeEdhrecCommandersJob < ApplicationJob
       {
         card_id: card[:scryfall_id],
         card_name: card[:name],
+        card_url: card[:scryfall_uri],
         quantity: 1,
         is_commander: card[:is_commander]
       }

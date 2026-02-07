@@ -22,17 +22,20 @@ class ScryfallCardResolver
   end
 
   # ---------------------------------------------------------------------------
-  # Resolves an array of card names to Scryfall IDs
+  # Resolves an array of card names to Scryfall IDs and URIs
   #
   # Arguments:
   #   card_names (Array<String>) - Array of card names to resolve
   #
   # Returns:
-  #   Hash - Mapping of card_name => scryfall_id (or nil if not found)
+  #   Hash - Mapping of card_name => { id: scryfall_id, uri: scryfall_uri } (or nil if not found)
   #
   # Example:
   #   resolve_cards(["Sol Ring", "Lightning Bolt"])
-  #   => {"Sol Ring" => "abc123", "Lightning Bolt" => "def456"}
+  #   => {
+  #     "Sol Ring" => { id: "abc123", uri: "https://scryfall.com/card/..." },
+  #     "Lightning Bolt" => { id: "def456", uri: "https://scryfall.com/card/..." }
+  #   }
   # ---------------------------------------------------------------------------
   def self.resolve_cards(card_names)
     result = {}
@@ -48,9 +51,9 @@ class ScryfallCardResolver
       enforce_rate_limit
 
       # Resolve card and cache result
-      scryfall_id = resolve_single_card(card_name)
-      cache[card_name] = scryfall_id
-      result[card_name] = scryfall_id
+      card_data = resolve_single_card(card_name)
+      cache[card_name] = card_data
+      result[card_name] = card_data
     end
 
     result
@@ -65,13 +68,13 @@ class ScryfallCardResolver
   end
 
   # ---------------------------------------------------------------------------
-  # Resolves a single card name to its Scryfall ID using fuzzy search
+  # Resolves a single card name to its Scryfall data using fuzzy search
   #
   # Arguments:
   #   card_name (String) - The card name to resolve
   #
   # Returns:
-  #   String or nil - Scryfall ID if found, nil otherwise
+  #   Hash or nil - { id: scryfall_id, uri: scryfall_uri } if found, nil otherwise
   # ---------------------------------------------------------------------------
   private_class_method def self.resolve_single_card(card_name)
     (MAX_RETRIES + 1).times do |attempt|
@@ -117,11 +120,14 @@ class ScryfallCardResolver
   end
 
   # ---------------------------------------------------------------------------
-  # Extracts Scryfall ID from successful response
+  # Extracts Scryfall data from successful response
   # ---------------------------------------------------------------------------
   private_class_method def self.extract_scryfall_id(response)
     data = JSON.parse(response.body)
-    data["id"]
+    {
+      id: data["id"],
+      uri: data["scryfall_uri"]
+    }
   end
 
   # ---------------------------------------------------------------------------
