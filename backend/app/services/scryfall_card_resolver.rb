@@ -7,6 +7,8 @@ class ScryfallCardResolver
   RATE_LIMIT_MS = 100
   MAX_RETRIES = 3
   INITIAL_BACKOFF_MS = 500
+  USER_AGENT = "MTG-Inventory-Bot/1.0 (https://github.com/cobaltroad/mtg-inventory)"
+  REQUEST_TIMEOUT = 10 # seconds
 
   # Custom exception class for resolution errors
   class ResolutionError < StandardError; end
@@ -75,33 +77,20 @@ class ScryfallCardResolver
     (MAX_RETRIES + 1).times do |attempt|
       begin
         response = fetch_card_from_scryfall(card_name)
+        result = handle_response(response, card_name, attempt)
 
-        if response.is_a?(Net::HTTPSuccess)
-          data = JSON.parse(response.body)
-          return data["id"]
-        elsif response.is_a?(Net::HTTPNotFound)
-          Rails.logger.warn("ScryfallCardResolver: Could not resolve card '#{card_name}' - not found on Scryfall")
-          return nil
-        elsif response.is_a?(Net::HTTPTooManyRequests)
-          if attempt < MAX_RETRIES
-            handle_rate_limit(card_name, attempt)
-            next # Try again
-          else
-            Rails.logger.error("ScryfallCardResolver: Max retries exceeded for '#{card_name}'")
-            return nil
-          end
-        else
-          Rails.logger.error("ScryfallCardResolver: HTTP error #{response.code} for '#{card_name}'")
-          return nil
-        end
+        # If result is :retry symbol, continue to next iteration
+        next if result == :retry
+
+        return result
       rescue Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNREFUSED, SocketError => e
-        Rails.logger.error("ScryfallCardResolver: Network error for '#{card_name}' - #{e.class}: #{e.message}")
+        log_network_error(card_name, e)
         return nil
       rescue JSON::ParserError => e
-        Rails.logger.error("ScryfallCardResolver: JSON parse error for '#{card_name}' - #{e.message}")
+        log_json_error(card_name, e)
         return nil
       rescue StandardError => e
-        Rails.logger.error("ScryfallCardResolver: Unexpected error for '#{card_name}' - #{e.class}: #{e.message}")
+        log_unexpected_error(card_name, e)
         return nil
       end
     end
@@ -110,24 +99,78 @@ class ScryfallCardResolver
   end
 
   # ---------------------------------------------------------------------------
+  # Handles HTTP response and extracts Scryfall ID or handles errors
+  # ---------------------------------------------------------------------------
+  private_class_method def self.handle_response(response, card_name, attempt)
+    case response
+    when Net::HTTPSuccess
+      extract_scryfall_id(response)
+    when Net::HTTPNotFound
+      log_card_not_found(card_name)
+      nil
+    when Net::HTTPTooManyRequests
+      handle_too_many_requests(card_name, attempt)
+    else
+      log_http_error(card_name, response.code)
+      nil
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Extracts Scryfall ID from successful response
+  # ---------------------------------------------------------------------------
+  private_class_method def self.extract_scryfall_id(response)
+    data = JSON.parse(response.body)
+    data["id"]
+  end
+
+  # ---------------------------------------------------------------------------
+  # Handles 429 rate limit response with retry logic
+  # ---------------------------------------------------------------------------
+  private_class_method def self.handle_too_many_requests(card_name, attempt)
+    if attempt < MAX_RETRIES
+      apply_exponential_backoff(card_name, attempt)
+      :retry # Signal to retry
+    else
+      log_max_retries_exceeded(card_name)
+      nil
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # Fetches card data from Scryfall's fuzzy search endpoint
   # ---------------------------------------------------------------------------
   private_class_method def self.fetch_card_from_scryfall(card_name)
-    uri = URI("#{SCRYFALL_API_BASE}/cards/named")
-    uri.query = URI.encode_www_form({ fuzzy: card_name })
+    uri = build_fuzzy_search_uri(card_name)
+    request = build_http_request(uri)
 
-    request = Net::HTTP::Get.new(uri)
-    request["User-Agent"] = "MTG-Inventory-Bot/1.0 (https://github.com/cobaltroad/mtg-inventory)"
-
-    Net::HTTP.start(uri.hostname, uri.port, use_ssl: true, read_timeout: 10) do |http|
+    Net::HTTP.start(uri.hostname, uri.port, use_ssl: true, read_timeout: REQUEST_TIMEOUT) do |http|
       http.request(request)
     end
   end
 
   # ---------------------------------------------------------------------------
-  # Handles rate limiting with exponential backoff
+  # Builds URI for Scryfall fuzzy search endpoint
   # ---------------------------------------------------------------------------
-  private_class_method def self.handle_rate_limit(card_name, retry_count)
+  private_class_method def self.build_fuzzy_search_uri(card_name)
+    uri = URI("#{SCRYFALL_API_BASE}/cards/named")
+    uri.query = URI.encode_www_form({ fuzzy: card_name })
+    uri
+  end
+
+  # ---------------------------------------------------------------------------
+  # Builds HTTP request with appropriate headers
+  # ---------------------------------------------------------------------------
+  private_class_method def self.build_http_request(uri)
+    request = Net::HTTP::Get.new(uri)
+    request["User-Agent"] = USER_AGENT
+    request
+  end
+
+  # ---------------------------------------------------------------------------
+  # Applies exponential backoff for rate limiting
+  # ---------------------------------------------------------------------------
+  private_class_method def self.apply_exponential_backoff(card_name, retry_count)
     backoff_ms = INITIAL_BACKOFF_MS * (2**retry_count)
     Rails.logger.warn("ScryfallCardResolver: Rate limit (429) hit for '#{card_name}' - backing off #{backoff_ms}ms")
     sleep(backoff_ms / 1000.0)
@@ -144,5 +187,32 @@ class ScryfallCardResolver
     end
 
     self.last_request_time = Time.now
+  end
+
+  # ---------------------------------------------------------------------------
+  # Logging helper methods
+  # ---------------------------------------------------------------------------
+  private_class_method def self.log_card_not_found(card_name)
+    Rails.logger.warn("ScryfallCardResolver: Could not resolve card '#{card_name}' - not found on Scryfall")
+  end
+
+  private_class_method def self.log_max_retries_exceeded(card_name)
+    Rails.logger.error("ScryfallCardResolver: Max retries exceeded for '#{card_name}'")
+  end
+
+  private_class_method def self.log_http_error(card_name, status_code)
+    Rails.logger.error("ScryfallCardResolver: HTTP error #{status_code} for '#{card_name}'")
+  end
+
+  private_class_method def self.log_network_error(card_name, error)
+    Rails.logger.error("ScryfallCardResolver: Network error for '#{card_name}' - #{error.class}: #{error.message}")
+  end
+
+  private_class_method def self.log_json_error(card_name, error)
+    Rails.logger.error("ScryfallCardResolver: JSON parse error for '#{card_name}' - #{error.message}")
+  end
+
+  private_class_method def self.log_unexpected_error(card_name, error)
+    Rails.logger.error("ScryfallCardResolver: Unexpected error for '#{card_name}' - #{error.class}: #{error.message}")
   end
 end

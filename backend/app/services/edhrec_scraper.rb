@@ -166,21 +166,10 @@ class EdhrecScraper
   #   - ParseError: JSON structure doesn't match expected format
   # ---------------------------------------------------------------------------
   def self.fetch_commander_decklist(commander_url)
-    # Extract slug from URL and construct JSON API URL
-    slug = commander_url.split("/").last
-    json_url = "https://json.edhrec.com/pages/commanders/#{slug}"
-
+    json_url = build_commander_json_url(commander_url)
     json_data = fetch_json(json_url)
     cards = parse_decklist_from_json(json_data)
-
-    # Resolve all card names to Scryfall IDs
-    card_names = cards.map { |c| c[:name] }
-    scryfall_ids = ScryfallCardResolver.resolve_cards(card_names)
-
-    # Merge Scryfall IDs back into cards
-    cards.each do |card|
-      card[:scryfall_id] = scryfall_ids[card[:name]]
-    end
+    enrich_cards_with_scryfall_ids(cards)
 
     cards
   rescue Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNREFUSED, SocketError => e
@@ -192,6 +181,26 @@ class EdhrecScraper
   rescue StandardError => e
     Rails.logger.error("EdhrecScraper: Unexpected error - #{e.class}: #{e.message}")
     raise
+  end
+
+  # ---------------------------------------------------------------------------
+  # Builds JSON API URL from commander page URL
+  # ---------------------------------------------------------------------------
+  private_class_method def self.build_commander_json_url(commander_url)
+    slug = commander_url.split("/").last
+    "https://json.edhrec.com/pages/commanders/#{slug}"
+  end
+
+  # ---------------------------------------------------------------------------
+  # Enriches card data with Scryfall IDs
+  # ---------------------------------------------------------------------------
+  private_class_method def self.enrich_cards_with_scryfall_ids(cards)
+    card_names = cards.map { |c| c[:name] }
+    scryfall_ids = ScryfallCardResolver.resolve_cards(card_names)
+
+    cards.each do |card|
+      card[:scryfall_id] = scryfall_ids[card[:name]]
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -207,24 +216,27 @@ class EdhrecScraper
     cardlists = extract_cardlists_from_json(data)
     validate_cardlists(cardlists)
 
-    cards = []
-
-    cardlists.each do |cardlist|
-      category = cardlist["tag"] || "Unknown"
-      is_commander_category = category.downcase == "commanders"
-
-      cardviews = cardlist["cardviews"] || []
-      cardviews.each do |cardview|
-        cards << {
-          name: cardview["name"],
-          category: category,
-          is_commander: is_commander_category
-        }
-      end
-    end
+    cards = cardlists.flat_map { |cardlist| build_cards_from_cardlist(cardlist) }
 
     validate_decklist_size(cards)
     cards
+  end
+
+  # ---------------------------------------------------------------------------
+  # Builds card hashes from a single cardlist category
+  # ---------------------------------------------------------------------------
+  private_class_method def self.build_cards_from_cardlist(cardlist)
+    category = cardlist["tag"] || "Unknown"
+    is_commander_category = (category.downcase == "commanders")
+    cardviews = cardlist["cardviews"] || []
+
+    cardviews.map do |cardview|
+      {
+        name: cardview["name"],
+        category: category,
+        is_commander: is_commander_category
+      }
+    end
   end
 
   # ---------------------------------------------------------------------------
