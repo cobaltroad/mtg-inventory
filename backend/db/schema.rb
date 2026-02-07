@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_06_224740) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_07_040101) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -67,6 +67,29 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_06_224740) do
     t.bigint "user_id", null: false
     t.index ["user_id", "card_id", "collection_type"], name: "idx_on_user_id_card_id_collection_type_4c84eddf15", unique: true
     t.index ["user_id"], name: "index_collection_items_on_user_id"
+  end
+
+  create_table "commanders", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "edhrec_url", null: false
+    t.datetime "last_scraped_at"
+    t.string "name", null: false
+    t.integer "rank", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_commanders_on_name", unique: true
+    t.index ["rank"], name: "index_commanders_on_rank"
+  end
+
+  create_table "decklists", force: :cascade do |t|
+    t.bigint "commander_id", null: false
+    t.jsonb "contents", default: [], null: false
+    t.datetime "created_at", null: false
+    t.bigint "partner_id"
+    t.datetime "updated_at", null: false
+    t.tsvector "vector", null: false
+    t.index ["commander_id", "partner_id"], name: "index_decklists_on_commander_id_and_partner_id", unique: true
+    t.index ["commander_id"], name: "index_decklists_on_commander_id"
+    t.index ["partner_id"], name: "index_decklists_on_partner_id"
   end
 
   create_table "price_alerts", force: :cascade do |t|
@@ -218,6 +241,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_06_224740) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "collection_items", "users"
+  add_foreign_key "decklists", "commanders"
+  add_foreign_key "decklists", "commanders", column: "partner_id"
   add_foreign_key "price_alerts", "users"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
