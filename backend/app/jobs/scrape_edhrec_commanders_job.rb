@@ -9,11 +9,21 @@ class ScrapeEdhrecCommandersJob < ApplicationJob
   ].freeze
 
   def perform
+    log_job_start
     start_time = Time.current
-    commanders_data = EdhrecScraper.fetch_top_commanders
 
-    results = commanders_data.map do |commander_data|
-      process_commander_with_retry(commander_data)
+    # Fetch commanders list
+    Rails.logger.info("ScrapeEdhrecCommandersJob: Fetching top commanders from EDHREC...")
+    commanders_data = EdhrecScraper.fetch_top_commanders
+    total_commanders = commanders_data.length
+    Rails.logger.info("ScrapeEdhrecCommandersJob: Found #{total_commanders} commanders to process")
+
+    # Process each commander with progress tracking
+    results = commanders_data.each_with_index.map do |commander_data, index|
+      log_commander_start(commander_data, index + 1, total_commanders)
+      result = process_commander_with_retry(commander_data)
+      log_commander_result(result, index + 1, total_commanders)
+      result
     end
 
     log_summary(results, start_time)
@@ -73,10 +83,15 @@ class ScrapeEdhrecCommandersJob < ApplicationJob
         last_scraped_at: Time.current
       )
       commander.save!
+      Rails.logger.debug("  └─ Commander record saved")
 
       # Fetch and save decklist from EDHREC
+      Rails.logger.debug("  └─ Fetching decklist from EDHREC...")
       deck_cards = EdhrecScraper.fetch_commander_decklist(commander_data[:url])
+      Rails.logger.debug("  └─ Retrieved #{deck_cards.length} cards from decklist")
+
       cards_count = save_decklist_for_commander(commander, deck_cards)
+      Rails.logger.debug("  └─ Decklist saved with #{cards_count} cards")
     end
 
     cards_count
@@ -118,15 +133,64 @@ class ScrapeEdhrecCommandersJob < ApplicationJob
   end
 
   # ---------------------------------------------------------------------------
+  # Log job start banner
+  # ---------------------------------------------------------------------------
+  def log_job_start
+    Rails.logger.info("=" * 80)
+    Rails.logger.info("ScrapeEdhrecCommandersJob: STARTING")
+    Rails.logger.info("Started at: #{Time.current.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+    Rails.logger.info("=" * 80)
+  end
+
+  # ---------------------------------------------------------------------------
+  # Log commander processing start
+  # ---------------------------------------------------------------------------
+  def log_commander_start(commander_data, current, total)
+    progress_pct = ((current.to_f / total) * 100).round(1)
+    Rails.logger.info("┌─ [#{current}/#{total}] (#{progress_pct}%) Processing: #{commander_data[:name]} (Rank ##{commander_data[:rank]})")
+  end
+
+  # ---------------------------------------------------------------------------
+  # Log commander processing result
+  # ---------------------------------------------------------------------------
+  def log_commander_result(result, current, total)
+    if result[:success]
+      Rails.logger.info("└─ ✓ SUCCESS: #{result[:name]} - #{result[:cards_count]} cards saved")
+    else
+      Rails.logger.error("└─ ✗ FAILED: #{result[:name]} - #{result[:error]}")
+    end
+    Rails.logger.info("") # Blank line for readability
+  end
+
+  # ---------------------------------------------------------------------------
   # Log comprehensive summary of job execution
   # ---------------------------------------------------------------------------
   def log_summary(results, start_time)
     execution_time = (Time.current - start_time).round(2)
-
     summary_data = build_summary_data(results, execution_time)
-    log_message = format_summary_message(summary_data)
 
-    Rails.logger.info(log_message)
+    Rails.logger.info("=" * 80)
+    Rails.logger.info("ScrapeEdhrecCommandersJob: COMPLETED")
+    Rails.logger.info("=" * 80)
+    Rails.logger.info("Finished at:              #{Time.current.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+    Rails.logger.info("Execution time:           #{summary_data[:execution_time]}s")
+    Rails.logger.info("-" * 80)
+    Rails.logger.info("Total commanders:         #{summary_data[:total_attempted]}")
+    Rails.logger.info("Successfully scraped:     #{summary_data[:successful_count]} (#{percentage(summary_data[:successful_count], summary_data[:total_attempted])}%)")
+    Rails.logger.info("Failed:                   #{summary_data[:failed_count]} (#{percentage(summary_data[:failed_count], summary_data[:total_attempted])}%)")
+
+    if summary_data[:failed_count] > 0
+      Rails.logger.info("-" * 80)
+      Rails.logger.info("Failed commanders:")
+      summary_data[:failed_names].each do |name|
+        Rails.logger.info("  • #{name}")
+      end
+    end
+
+    Rails.logger.info("-" * 80)
+    Rails.logger.info("Total cards processed:    #{summary_data[:total_cards]}")
+    Rails.logger.info("Average cards/commander:  #{average_cards(summary_data)}")
+    Rails.logger.info("=" * 80)
   end
 
   # ---------------------------------------------------------------------------
@@ -147,19 +211,18 @@ class ScrapeEdhrecCommandersJob < ApplicationJob
   end
 
   # ---------------------------------------------------------------------------
-  # Format summary data into log message
+  # Calculate percentage for display
   # ---------------------------------------------------------------------------
-  def format_summary_message(data)
-    parts = [
-      "ScrapeEdhrecCommandersJob completed",
-      "Total commanders attempted: #{data[:total_attempted]}",
-      "Successfully scraped: #{data[:successful_count]}",
-      "Failed: #{data[:failed_count]}",
-      ("Failed commanders: #{data[:failed_names].join(', ')}" if data[:failed_count] > 0),
-      "Execution time: #{data[:execution_time]}s",
-      "Total cards inserted/updated: #{data[:total_cards]}"
-    ]
+  def percentage(part, total)
+    return 0 if total.zero?
+    ((part.to_f / total) * 100).round(1)
+  end
 
-    parts.compact.join(" | ")
+  # ---------------------------------------------------------------------------
+  # Calculate average cards per commander
+  # ---------------------------------------------------------------------------
+  def average_cards(data)
+    return 0 if data[:successful_count].zero?
+    (data[:total_cards].to_f / data[:successful_count]).round(1)
   end
 end
