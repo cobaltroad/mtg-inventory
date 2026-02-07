@@ -107,7 +107,7 @@ describe('Commanders List Page', () => {
 
 			await fireEvent.click(commanderButton!);
 
-			expect(goto).toHaveBeenCalledWith('/commanders/1');
+			expect(goto).toHaveBeenCalledWith('/metagame/edh/1');
 		});
 	});
 

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
+	import { base } from '$app/paths';
 	import { fetchCommander, type CommanderWithDecklist } from '$lib/services/commanderService';
 	import { ExternalLink } from 'lucide-svelte';
 
@@ -43,11 +44,11 @@
 	{:else if error}
 		<div class="variant-ghost-error card p-6">
 			<p class="mb-4">{error}</p>
-			<a href="/commanders" class="variant-filled-primary btn"> Back to Commanders </a>
+			<a href="{base}/metagame/edh" class="variant-filled-primary btn"> Back to Commanders </a>
 		</div>
 	{:else if commander}
 		<div class="mb-6">
-			<a href="/commanders" class="mb-4 inline-block text-sm text-primary-500 hover:underline">
+			<a href="{base}/metagame/edh" class="mb-4 inline-block text-sm text-primary-500 hover:underline">
 				&larr; Back to Commanders
 			</a>
 		</div>

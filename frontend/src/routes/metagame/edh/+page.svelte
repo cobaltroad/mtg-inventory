@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { fetchCommanders, type Commander } from '$lib/services/commanderService';
 	import { formatRelativeTime } from '$lib/utils/format';
 
@@ -27,7 +28,7 @@
 	});
 
 	function handleCommanderClick(id: number) {
-		goto(`/commanders/${id}`);
+		goto(`${base}/metagame/edh/${id}`);
 	}
 </script>
 
