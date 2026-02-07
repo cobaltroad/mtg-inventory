@@ -10,11 +10,11 @@
 #     schedule: at 5am every day
 
 development:
-  # Run commander scrape daily at 8am in development for testing
+  # Run commander scrape weekly on Saturday at 8am in development
   weekly_commander_scrape:
     class: ScrapeEdhrecCommandersJob
     queue: default
-    schedule: every day at 8am
+    schedule: every saturday at 8am
     args: []
 
 production:

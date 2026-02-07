@@ -16,7 +16,8 @@ namespace :commanders do
     new_count = Commander.count
     puts "\nScrape complete!"
     puts "Commanders in database: #{new_count} (#{new_count - commander_count} new)"
-    puts "\nThis job runs automatically every Sunday at 8am UTC in production."
-    puts "In development, it runs daily at 8am for testing."
+    puts "\nThis job runs automatically:"
+    puts "  - Production: Every Sunday at 8am UTC"
+    puts "  - Development: Every Saturday at 8am"
   end
 end
