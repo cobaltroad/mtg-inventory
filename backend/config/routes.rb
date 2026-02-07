@@ -35,6 +35,9 @@ Rails.application.routes.draw do
         patch :dismiss
       end
     end
+
+    # Commanders
+    resources :commanders, only: [ :index, :show ]
   end
 
   # Test/development-only probe route to verify current_user resolution.
