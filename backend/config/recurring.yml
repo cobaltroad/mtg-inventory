@@ -9,6 +9,14 @@
 #     priority: 2
 #     schedule: at 5am every day
 
+development:
+  # Run commander scrape daily at 8am in development for testing
+  weekly_commander_scrape:
+    class: ScrapeEdhrecCommandersJob
+    queue: default
+    schedule: every day at 8am
+    args: []
+
 production:
   clear_solid_queue_finished_jobs:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
@@ -18,4 +26,10 @@ production:
     class: UpdateCardPricesJob
     queue: default
     schedule: every day at 7am
+    args: []
+
+  weekly_commander_scrape:
+    class: ScrapeEdhrecCommandersJob
+    queue: default
+    schedule: every sunday at 8am
     args: []
