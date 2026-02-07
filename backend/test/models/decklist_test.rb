@@ -111,11 +111,12 @@ class DecklistTest < ActiveSupport::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # Uniqueness constraint on commander_id
+  # Uniqueness constraint on [commander_id, partner_id] combination
   # ---------------------------------------------------------------------------
-  test "is invalid when commander already has a decklist" do
+  test "is invalid when solo commander already has a decklist without partner" do
     Decklist.create!(
       commander: @commander,
+      partner: nil,
       contents: [
         { card_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890", card_name: "Sol Ring", quantity: 1 }
       ]
@@ -123,12 +124,82 @@ class DecklistTest < ActiveSupport::TestCase
 
     duplicate = Decklist.new(
       commander: @commander,
+      partner: nil,
       contents: [
         { card_id: "b2c3d4e5-f6a7-8901-bcde-f12345678901", card_name: "Command Tower", quantity: 1 }
       ]
     )
     assert duplicate.invalid?
     assert_includes duplicate.errors[:commander_id], "has already been taken"
+  end
+
+  test "allows same commander with different partners" do
+    # Create first decklist: Commander + Partner A
+    Decklist.create!(
+      commander: @commander,
+      partner: @partner,
+      contents: [
+        { card_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890", card_name: "Sol Ring", quantity: 1 }
+      ]
+    )
+
+    # Create another partner
+    other_partner = Commander.create!(
+      name: "Other Partner",
+      rank: 4,
+      edhrec_url: "https://edhrec.com/commanders/other-partner"
+    )
+
+    # Should allow same commander with different partner
+    second_decklist = Decklist.new(
+      commander: @commander,
+      partner: other_partner,
+      contents: [
+        { card_id: "b2c3d4e5-f6a7-8901-bcde-f12345678901", card_name: "Command Tower", quantity: 1 }
+      ]
+    )
+    assert second_decklist.valid?, second_decklist.errors.full_messages.inspect
+  end
+
+  test "is invalid when same commander and partner combination already exists" do
+    Decklist.create!(
+      commander: @commander,
+      partner: @partner,
+      contents: [
+        { card_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890", card_name: "Sol Ring", quantity: 1 }
+      ]
+    )
+
+    duplicate = Decklist.new(
+      commander: @commander,
+      partner: @partner,
+      contents: [
+        { card_id: "b2c3d4e5-f6a7-8901-bcde-f12345678901", card_name: "Command Tower", quantity: 1 }
+      ]
+    )
+    assert duplicate.invalid?
+    assert_includes duplicate.errors[:commander_id], "has already been taken"
+  end
+
+  test "allows solo decklist and partner decklist for same commander" do
+    # Create solo decklist (no partner)
+    Decklist.create!(
+      commander: @commander,
+      partner: nil,
+      contents: [
+        { card_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890", card_name: "Sol Ring", quantity: 1 }
+      ]
+    )
+
+    # Should allow same commander with a partner
+    partner_decklist = Decklist.new(
+      commander: @commander,
+      partner: @partner,
+      contents: [
+        { card_id: "b2c3d4e5-f6a7-8901-bcde-f12345678901", card_name: "Command Tower", quantity: 1 }
+      ]
+    )
+    assert partner_decklist.valid?, partner_decklist.errors.full_messages.inspect
   end
 
   test "allows different commanders to have their own decklists" do

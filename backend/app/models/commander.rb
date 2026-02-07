@@ -1,5 +1,5 @@
 class Commander < ApplicationRecord
-  has_one :decklist, dependent: :destroy, inverse_of: :commander
+  has_many :decklists, dependent: :destroy, inverse_of: :commander
 
   validates :name, presence: true, uniqueness: true
   validates :rank, presence: true

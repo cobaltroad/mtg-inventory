@@ -1,10 +1,10 @@
 class Decklist < ApplicationRecord
-  belongs_to :commander, inverse_of: :decklist
+  belongs_to :commander, inverse_of: :decklists
   belongs_to :partner, class_name: "Commander", optional: true
 
   validates :commander, presence: true
   validates :contents, presence: true
-  validates :commander_id, uniqueness: true
+  validates :commander_id, uniqueness: { scope: :partner_id }
   validate :contents_cannot_be_empty
 
   before_validation :generate_vector
