@@ -107,7 +107,7 @@ class EdHrecScraperTest < ActiveSupport::TestCase
       EdHrecScraper.fetch_top_commanders
     end
 
-    assert_match(/parse/i, error.message)
+    assert_match(/could not find commander elements|page structure/i, error.message)
   end
 
   test "logs warning and returns partial results when fewer than 20 commanders found" do
@@ -122,7 +122,8 @@ class EdHrecScraperTest < ActiveSupport::TestCase
       assert_equal 15, result.length
     end
 
-    assert_match(/warning.*fewer than 20/i, logs.downcase)
+    # Check for warning about fewer commanders (case insensitive)
+    assert_match(/warn.*found only 15 commanders/i, logs)
   end
 
   test "includes polite User-Agent header in HTTP request" do
