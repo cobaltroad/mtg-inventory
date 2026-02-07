@@ -1,9 +1,11 @@
 require "test_helper"
 require "webmock/minitest"
+require "cgi"
 
 class EdhrecScraperTest < ActiveSupport::TestCase
   setup do
     WebMock.reset!
+    ScryfallCardResolver.clear_cache
   end
 
   # ---------------------------------------------------------------------------
@@ -252,40 +254,60 @@ class EdhrecScraperTest < ActiveSupport::TestCase
   test "fetch_commander_decklist resolves cards with Scryfall IDs" do
     stub_commander_decklist_json("https://edhrec.com/commanders/atraxa-praetors-voice")
 
-    # Mock ScryfallCardResolver to return test IDs
-    ScryfallCardResolver.stub :resolve_cards, ->(card_names) {
-      card_names.to_h { |name| [name, "#{name.downcase.gsub(/[^a-z]/, '-')}-id"] }
-    } do
-      result = EdhrecScraper.fetch_commander_decklist("https://edhrec.com/commanders/atraxa-praetors-voice")
-
-      # Check that cards have scryfall_id
-      result.each do |card|
-        assert_includes card.keys, :scryfall_id
-        assert_not_nil card[:scryfall_id]
+    # Stub all Scryfall API calls to return valid IDs
+    stub_request(:get, %r{https://api\.scryfall\.com/cards/named})
+      .to_return do |request|
+        card_name = CGI.parse(URI(request.uri).query)["fuzzy"].first
+        {
+          status: 200,
+          body: { id: "#{card_name.downcase.gsub(/[^a-z]/, '-')}-id", name: card_name }.to_json,
+          headers: { "Content-Type" => "application/json" }
+        }
       end
+
+    result = EdhrecScraper.fetch_commander_decklist("https://edhrec.com/commanders/atraxa-praetors-voice")
+
+    # Check that cards have scryfall_id
+    result.each do |card|
+      assert_includes card.keys, :scryfall_id
+      assert_not_nil card[:scryfall_id]
     end
   end
 
   test "fetch_commander_decklist keeps cards with nil scryfall_id when fuzzy search fails" do
     stub_commander_decklist_json("https://edhrec.com/commanders/atraxa-praetors-voice")
 
-    # Mock ScryfallCardResolver to return nil for some cards
-    ScryfallCardResolver.stub :resolve_cards, ->(card_names) {
-      card_names.to_h { |name| [name, name == "Sol Ring" ? "sol-ring-id" : nil] }
-    } do
-      result = EdhrecScraper.fetch_commander_decklist("https://edhrec.com/commanders/atraxa-praetors-voice")
+    # Stub Scryfall API to return 404 for most cards, but succeed for Sol Ring
+    stub_request(:get, %r{https://api\.scryfall\.com/cards/named})
+      .to_return do |request|
+        card_name = CGI.parse(URI(request.uri).query)["fuzzy"].first
+        if card_name == "Sol Ring"
+          {
+            status: 200,
+            body: { id: "sol-ring-id", name: card_name }.to_json,
+            headers: { "Content-Type" => "application/json" }
+          }
+        else
+          {
+            status: 404,
+            body: { object: "error", code: "not_found" }.to_json,
+            headers: { "Content-Type" => "application/json" }
+          }
+        end
+      end
 
-      # All 100 cards should still be in the list
-      assert_equal 100, result.length
+    result = EdhrecScraper.fetch_commander_decklist("https://edhrec.com/commanders/atraxa-praetors-voice")
 
-      # Cards with failed resolution should have nil scryfall_id
-      failed_cards = result.select { |c| c[:scryfall_id].nil? }
-      assert failed_cards.length > 0, "Expected some cards to have nil scryfall_id"
+    # All 100 cards should still be in the list
+    assert_equal 100, result.length
 
-      # Sol Ring should have its ID
-      sol_ring = result.find { |c| c[:name] == "Sol Ring" }
-      assert_equal "sol-ring-id", sol_ring[:scryfall_id] if sol_ring
-    end
+    # Cards with failed resolution should have nil scryfall_id
+    failed_cards = result.select { |c| c[:scryfall_id].nil? }
+    assert failed_cards.length > 0, "Expected some cards to have nil scryfall_id"
+
+    # Sol Ring should have its ID
+    sol_ring = result.find { |c| c[:name] == "Sol Ring" }
+    assert_equal "sol-ring-id", sol_ring[:scryfall_id] if sol_ring
   end
 
   test "fetch_commander_decklist raises FetchError on network failure" do
@@ -341,15 +363,15 @@ class EdhrecScraperTest < ActiveSupport::TestCase
     ]
 
     categories.each do |category|
-      cardviews = (1..category[:count]).map do |i|
+      cardviews = (1..category["count"]).map do |i|
         {
-          "name" => "#{category[:tag][0...-1]} #{i}",
-          "sanitized" => "#{category[:tag].downcase}-#{i}",
+          "name" => "#{category["tag"][0...-1]} #{i}",
+          "sanitized" => "#{category["tag"].downcase}-#{i}",
           "inclusion" => 90 - i
         }
       end
       cardlists << {
-        "tag" => category[:tag],
+        "tag" => category["tag"],
         "cardviews" => cardviews
       }
     end
@@ -404,15 +426,15 @@ class EdhrecScraperTest < ActiveSupport::TestCase
     ]
 
     categories.each do |category|
-      cardviews = (1..category[:count]).map do |i|
+      cardviews = (1..category["count"]).map do |i|
         {
-          "name" => "#{category[:tag][0...-1]} #{i}",
-          "sanitized" => "#{category[:tag].downcase}-#{i}",
+          "name" => "#{category["tag"][0...-1]} #{i}",
+          "sanitized" => "#{category["tag"].downcase}-#{i}",
           "inclusion" => 90 - i
         }
       end
       cardlists << {
-        "tag" => category[:tag],
+        "tag" => category["tag"],
         "cardviews" => cardviews
       }
     end
