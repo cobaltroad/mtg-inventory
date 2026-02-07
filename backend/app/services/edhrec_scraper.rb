@@ -147,4 +147,131 @@ class EdhrecScraper
 
     raise ParseError, "No commanders could be parsed from JSON"
   end
+
+  # ---------------------------------------------------------------------------
+  # Fetches and parses a commander's average decklist from EDHREC
+  #
+  # Arguments:
+  #   commander_url (String) - The EDHREC URL for the commander
+  #
+  # Returns:
+  #   Array of hashes, each containing:
+  #   - :name (String) - Card name
+  #   - :category (String) - Card category (e.g., "Creatures", "Lands")
+  #   - :is_commander (Boolean) - Whether this card is a commander
+  #   - :scryfall_id (String or nil) - Scryfall ID if resolved, nil otherwise
+  #
+  # Raises:
+  #   - FetchError: Network errors or HTTP failures
+  #   - ParseError: JSON structure doesn't match expected format
+  # ---------------------------------------------------------------------------
+  def self.fetch_commander_decklist(commander_url)
+    json_url = build_commander_json_url(commander_url)
+    json_data = fetch_json(json_url)
+    cards = parse_decklist_from_json(json_data)
+    enrich_cards_with_scryfall_ids(cards)
+
+    cards
+  rescue Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNREFUSED, SocketError => e
+    Rails.logger.error("EdhrecScraper: Network error - #{e.class}: #{e.message}")
+    raise FetchError, "Network error while fetching decklist: #{e.message}"
+  rescue JSON::ParserError => e
+    Rails.logger.error("EdhrecScraper: JSON parsing error - #{e.message}")
+    raise ParseError, "Failed to parse JSON response: #{e.message}"
+  rescue StandardError => e
+    Rails.logger.error("EdhrecScraper: Unexpected error - #{e.class}: #{e.message}")
+    raise
+  end
+
+  # ---------------------------------------------------------------------------
+  # Builds JSON API URL from commander page URL
+  # ---------------------------------------------------------------------------
+  private_class_method def self.build_commander_json_url(commander_url)
+    slug = commander_url.split("/").last
+    "https://json.edhrec.com/pages/commanders/#{slug}"
+  end
+
+  # ---------------------------------------------------------------------------
+  # Enriches card data with Scryfall IDs
+  # ---------------------------------------------------------------------------
+  private_class_method def self.enrich_cards_with_scryfall_ids(cards)
+    card_names = cards.map { |c| c[:name] }
+    scryfall_ids = ScryfallCardResolver.resolve_cards(card_names)
+
+    cards.each do |card|
+      card[:scryfall_id] = scryfall_ids[card[:name]]
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Parses decklist JSON data to extract all cards
+  #
+  # Arguments:
+  #   data (Hash) - Parsed JSON data from EDHREC commander page
+  #
+  # Returns:
+  #   Array of card hashes with :name, :category, and :is_commander
+  # ---------------------------------------------------------------------------
+  private_class_method def self.parse_decklist_from_json(data)
+    cardlists = extract_cardlists_from_json(data)
+    validate_cardlists(cardlists)
+
+    cards = cardlists.flat_map { |cardlist| build_cards_from_cardlist(cardlist) }
+
+    validate_decklist_size(cards)
+    cards
+  end
+
+  # ---------------------------------------------------------------------------
+  # Builds card hashes from a single cardlist category
+  # ---------------------------------------------------------------------------
+  private_class_method def self.build_cards_from_cardlist(cardlist)
+    category = cardlist["tag"] || "Unknown"
+    is_commander_category = (category.downcase == "commanders")
+    cardviews = cardlist["cardviews"] || []
+
+    cardviews.map do |cardview|
+      {
+        name: cardview["name"],
+        category: category,
+        is_commander: is_commander_category
+      }
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Extracts cardlists array from nested JSON structure
+  # ---------------------------------------------------------------------------
+  private_class_method def self.extract_cardlists_from_json(data)
+    container = data["container"] || {}
+    json_dict = container["json_dict"] || {}
+    json_dict["cardlists"] || []
+  end
+
+  # ---------------------------------------------------------------------------
+  # Validates that cardlists were found in the JSON
+  # ---------------------------------------------------------------------------
+  private_class_method def self.validate_cardlists(cardlists)
+    return unless cardlists.empty?
+
+    Rails.logger.error("EdhrecScraper: No cardlists found in JSON")
+    raise ParseError, "Could not find decklist data in JSON - API structure may have changed"
+  end
+
+  # ---------------------------------------------------------------------------
+  # Validates that the decklist contains exactly 100 cards
+  # ---------------------------------------------------------------------------
+  private_class_method def self.validate_decklist_size(cards)
+    return if cards.length == 100
+
+    Rails.logger.warn(
+      "EdhrecScraper: Decklist contains #{cards.length} cards (expected 100)"
+    )
+
+    if cards.length < 100
+      raise ParseError, "Decklist incomplete - only #{cards.length} cards found (expected 100)"
+    elsif cards.length > 100
+      raise ParseError, "Decklist has too many cards - #{cards.length} found (expected 100)"
+    end
+  end
 end
