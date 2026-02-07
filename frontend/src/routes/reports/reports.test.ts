@@ -199,9 +199,7 @@ describe('Reports Page', () => {
 	});
 
 	it('displays error message when API call fails', async () => {
-		(global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-			new Error('Network error')
-		);
+		(global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Network error'));
 
 		render(ReportsPage);
 
@@ -224,9 +222,7 @@ describe('Reports Page', () => {
 	});
 
 	it('displays retry button when error occurs', async () => {
-		(global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-			new Error('Network error')
-		);
+		(global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Network error'));
 
 		const { container } = render(ReportsPage);
 

@@ -107,11 +107,7 @@
 				{/if}
 			</div>
 			{#if allItems.length > 0}
-				<button
-					class="refresh-prices-btn"
-					onclick={refreshPrices}
-					disabled={refreshingPrices}
-				>
+				<button class="refresh-prices-btn" onclick={refreshPrices} disabled={refreshingPrices}>
 					{#if refreshingPrices}
 						<span class="spinner"></span>
 						Refreshing...

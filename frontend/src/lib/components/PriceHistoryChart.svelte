@@ -251,7 +251,7 @@
 	$effect(() => {
 		if (priceData && canvasElement) {
 			// Dependencies: showNormal, showFoil, showEtched
-			showNormal, showFoil, showEtched;
+			(showNormal, showFoil, showEtched);
 			createChart();
 		}
 	});
@@ -349,9 +349,9 @@
 								>{treatment.charAt(0).toUpperCase() + treatment.slice(1)}</span
 							>
 							<span class="percentage-change {getDirectionColor(s.direction)}">
-								{getDirectionIndicator(s.direction)}{s.percentage_change > 0 ? '+' : ''}{s.percentage_change.toFixed(
-									1
-								)}%
+								{getDirectionIndicator(s.direction)}{s.percentage_change > 0
+									? '+'
+									: ''}{s.percentage_change.toFixed(1)}%
 							</span>
 						</div>
 						<div class="price-change">

@@ -80,18 +80,18 @@
 </script>
 
 {#if !loading && alerts.length > 0}
-	<div class="price-alert-widget card variant-ghost-surface p-4">
-		<h2 class="h3 mb-4">Price Alerts</h2>
+	<div class="price-alert-widget variant-ghost-surface card p-4">
+		<h2 class="mb-4 h3">Price Alerts</h2>
 
 		<div class="space-y-3">
 			{#each alerts as alert (alert.id)}
 				<div
-					class="alert-item card variant-soft p-3 flex items-start gap-3"
+					class="alert-item variant-soft flex items-start gap-3 card p-3"
 					class:variant-soft-success={alert.alert_type === 'price_increase'}
 					class:variant-soft-error={alert.alert_type === 'price_decrease'}
 				>
 					<!-- Icon -->
-					<div class="flex-shrink-0 mt-0.5">
+					<div class="mt-0.5 flex-shrink-0">
 						{#if alert.alert_type === 'price_increase'}
 							<TrendingUp class="text-success-500" size={20} />
 						{:else}
@@ -100,10 +100,10 @@
 					</div>
 
 					<!-- Content -->
-					<div class="flex-grow min-w-0">
+					<div class="min-w-0 flex-grow">
 						<div class="flex items-start justify-between gap-2">
 							<div class="flex-grow">
-								<p class="font-medium text-sm">
+								<p class="text-sm font-medium">
 									{#if alert.alert_type === 'price_increase'}
 										Price Increase
 									{:else}
@@ -113,7 +113,7 @@
 										<span class="text-surface-600-300-token">({alert.treatment})</span>
 									{/if}
 								</p>
-								<p class="text-xs text-surface-600-300-token mt-1">
+								<p class="text-surface-600-300-token mt-1 text-xs">
 									{formatPrice(alert.old_price_cents)} → {formatPrice(alert.new_price_cents)}
 									<span
 										class="font-semibold"
@@ -123,13 +123,15 @@
 										({parseFloat(alert.percentage_change) > 0 ? '+' : ''}{alert.percentage_change}%)
 									</span>
 								</p>
-								<p class="text-xs text-surface-500-400-token mt-1">{formatDate(alert.created_at)}</p>
+								<p class="text-surface-500-400-token mt-1 text-xs">
+									{formatDate(alert.created_at)}
+								</p>
 							</div>
 
 							<!-- Dismiss button -->
 							<button
 								type="button"
-								class="btn-icon btn-icon-sm variant-ghost-surface"
+								class="variant-ghost-surface btn-icon btn-icon-sm"
 								onclick={() => dismissAlert(alert.id)}
 								aria-label="Dismiss alert"
 							>
@@ -142,22 +144,22 @@
 		</div>
 
 		{#if alerts.length === 10}
-			<p class="text-xs text-surface-500-400-token mt-3 text-center">
+			<p class="text-surface-500-400-token mt-3 text-center text-xs">
 				Showing top 10 most recent alerts
 			</p>
 		{/if}
 	</div>
 {:else if loading}
-	<div class="price-alert-widget card variant-ghost-surface p-4">
+	<div class="price-alert-widget variant-ghost-surface card p-4">
 		<div class="placeholder animate-pulse space-y-3">
-			<div class="h-6 w-32 bg-surface-300-600-token rounded"></div>
-			<div class="h-16 bg-surface-300-600-token rounded"></div>
-			<div class="h-16 bg-surface-300-600-token rounded"></div>
+			<div class="bg-surface-300-600-token h-6 w-32 rounded"></div>
+			<div class="bg-surface-300-600-token h-16 rounded"></div>
+			<div class="bg-surface-300-600-token h-16 rounded"></div>
 		</div>
 	</div>
 {:else if error}
-	<div class="price-alert-widget card variant-ghost-error p-4">
-		<p class="text-error-500 text-sm">{error}</p>
+	<div class="price-alert-widget variant-ghost-error card p-4">
+		<p class="text-sm text-error-500">{error}</p>
 	</div>
 {/if}
 
