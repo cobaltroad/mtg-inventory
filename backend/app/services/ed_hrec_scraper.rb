@@ -1,21 +1,20 @@
 require "net/http"
 require "uri"
-require "nokogiri"
+require "json"
 
 class EdHrecScraper
   BASE_URL = "https://edhrec.com"
-  COMMANDERS_WEEK_URL = "#{BASE_URL}/commanders/week"
+  JSON_API_URL = "https://json.edhrec.com/pages/commanders/week.json"
   USER_AGENT = "MTG-Inventory-Bot/1.0 (https://github.com/cobaltroad/mtg-inventory)"
   REQUEST_TIMEOUT = 10 # seconds
   EXPECTED_COMMANDER_COUNT = 20
-  COMMANDER_CSS_SELECTOR = ".card a[href*='/commanders/']"
 
   # Custom exception classes for error handling
   class FetchError < StandardError; end
   class ParseError < StandardError; end
 
   # ---------------------------------------------------------------------------
-  # Fetches and parses the EDHREC weekly top commanders page
+  # Fetches and parses the EDHREC weekly top commanders via JSON API
   #
   # Returns:
   #   Array of hashes, each containing:
@@ -25,32 +24,35 @@ class EdHrecScraper
   #
   # Raises:
   #   - FetchError: Network errors or HTTP failures
-  #   - ParseError: HTML structure doesn't match expected format
+  #   - ParseError: JSON structure doesn't match expected format
   # ---------------------------------------------------------------------------
   def self.fetch_top_commanders
-    html = fetch_page(COMMANDERS_WEEK_URL)
-    parse_commanders(html)
+    json_data = fetch_json(JSON_API_URL)
+    parse_commanders_from_json(json_data)
   rescue Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNREFUSED, SocketError => e
     Rails.logger.error("EdHrecScraper: Network error - #{e.class}: #{e.message}")
     raise FetchError, "Network error while fetching commanders: #{e.message}"
+  rescue JSON::ParserError => e
+    Rails.logger.error("EdHrecScraper: JSON parsing error - #{e.message}")
+    raise ParseError, "Failed to parse JSON response: #{e.message}"
   rescue StandardError => e
     Rails.logger.error("EdHrecScraper: Unexpected error - #{e.class}: #{e.message}")
     raise
   end
 
   # ---------------------------------------------------------------------------
-  # Fetches HTML content from the given URL
+  # Fetches JSON content from the given URL
   #
   # Arguments:
   #   url (String) - The URL to fetch
   #
   # Returns:
-  #   String - HTML content of the page
+  #   Hash - Parsed JSON data
   #
   # Raises:
   #   FetchError: If the HTTP request fails
   # ---------------------------------------------------------------------------
-  private_class_method def self.fetch_page(url)
+  private_class_method def self.fetch_json(url)
     uri = URI(url)
     request = Net::HTTP::Get.new(uri)
     request["User-Agent"] = USER_AGENT
@@ -64,68 +66,66 @@ class EdHrecScraper
       raise FetchError, "HTTP error #{response.code}: #{response.message}"
     end
 
-    response.body
+    JSON.parse(response.body)
   end
 
   # ---------------------------------------------------------------------------
-  # Parses HTML content to extract commander information
+  # Parses JSON data to extract commander information
   #
   # Arguments:
-  #   html (String) - HTML content from EDHREC page
+  #   data (Hash) - Parsed JSON data from EDHREC API
   #
   # Returns:
   #   Array of commander hashes with :name, :rank, and :url
   #
   # Raises:
-  #   ParseError: If HTML structure is invalid or commanders cannot be extracted
+  #   ParseError: If JSON structure is invalid or commanders cannot be extracted
   # ---------------------------------------------------------------------------
-  private_class_method def self.parse_commanders(html)
-    doc = Nokogiri::HTML(html)
-    commander_elements = doc.css(COMMANDER_CSS_SELECTOR)
+  private_class_method def self.parse_commanders_from_json(data)
+    cardviews = extract_cardviews_from_json(data)
+    validate_cardviews(cardviews)
 
-    validate_commander_elements(commander_elements)
-
-    commanders = extract_commanders_from_elements(commander_elements)
+    commanders = build_commanders_from_cardviews(cardviews)
     log_commander_count_warning(commanders.length)
     validate_parsed_commanders(commanders)
 
     commanders
-  rescue Nokogiri::XML::SyntaxError => e
-    Rails.logger.error("EdHrecScraper: HTML parsing error - #{e.message}")
-    raise ParseError, "Failed to parse HTML: #{e.message}"
   end
 
   # ---------------------------------------------------------------------------
-  # Validates that commander elements were found in the HTML
+  # Extracts cardviews array from nested JSON structure
   # ---------------------------------------------------------------------------
-  private_class_method def self.validate_commander_elements(elements)
-    return unless elements.empty?
+  private_class_method def self.extract_cardviews_from_json(data)
+    container = data["container"] || {}
+    json_dict = container["json_dict"] || {}
+    cardlists = json_dict["cardlists"] || []
 
-    Rails.logger.error("EdHrecScraper: No commander elements found in HTML")
-    raise ParseError, "Could not find commander elements in HTML - page structure may have changed"
+    return [] if cardlists.empty?
+
+    cardlists.first["cardviews"] || []
   end
 
   # ---------------------------------------------------------------------------
-  # Extracts commander data from Nokogiri element collection
+  # Validates that cardviews were found in the JSON
   # ---------------------------------------------------------------------------
-  private_class_method def self.extract_commanders_from_elements(elements)
-    elements.first(EXPECTED_COMMANDER_COUNT).map.with_index(1) do |element, rank|
-      href = element["href"]
-      next unless href
+  private_class_method def self.validate_cardviews(cardviews)
+    return unless cardviews.empty?
 
+    Rails.logger.error("EdHrecScraper: No cardviews found in JSON")
+    raise ParseError, "Could not find commander data in JSON - API structure may have changed"
+  end
+
+  # ---------------------------------------------------------------------------
+  # Builds commander data from cardviews
+  # ---------------------------------------------------------------------------
+  private_class_method def self.build_commanders_from_cardviews(cardviews)
+    cardviews.first(EXPECTED_COMMANDER_COUNT).map do |cardview|
       {
-        name: extract_commander_name(element),
-        rank: rank,
-        url: build_absolute_url(href)
+        name: cardview["name"],
+        rank: cardview["rank"],
+        url: "#{BASE_URL}#{cardview["url"]}"
       }
-    end.compact
-  end
-
-  # ---------------------------------------------------------------------------
-  # Builds absolute URL from relative or absolute href
-  # ---------------------------------------------------------------------------
-  private_class_method def self.build_absolute_url(href)
-    href.start_with?("http") ? href : "#{BASE_URL}#{href}"
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -145,21 +145,6 @@ class EdHrecScraper
   private_class_method def self.validate_parsed_commanders(commanders)
     return unless commanders.empty?
 
-    raise ParseError, "No commanders could be parsed from HTML"
-  end
-
-  # ---------------------------------------------------------------------------
-  # Extracts commander name from element using multiple fallback strategies
-  # ---------------------------------------------------------------------------
-  private_class_method def self.extract_commander_name(element)
-    # Try multiple strategies to extract the name
-    name = element.css(".name").first&.text&.strip ||
-           element.css(".card-header .name").first&.text&.strip ||
-           element.text.strip
-
-    # Clean up the name - remove rank numbers if present
-    name = name.gsub(/^\d+\s*/, "").strip
-
-    name.presence || "Unknown Commander"
+    raise ParseError, "No commanders could be parsed from JSON"
   end
 end
