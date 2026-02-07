@@ -2,7 +2,7 @@ require "net/http"
 require "uri"
 require "json"
 
-class EdHrecScraper
+class EdhrecScraper
   BASE_URL = "https://edhrec.com"
   JSON_API_URL = "https://json.edhrec.com/pages/commanders/week.json"
   USER_AGENT = "MTG-Inventory-Bot/1.0 (https://github.com/cobaltroad/mtg-inventory)"
@@ -30,13 +30,13 @@ class EdHrecScraper
     json_data = fetch_json(JSON_API_URL)
     parse_commanders_from_json(json_data)
   rescue Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNREFUSED, SocketError => e
-    Rails.logger.error("EdHrecScraper: Network error - #{e.class}: #{e.message}")
+    Rails.logger.error("EdhrecScraper: Network error - #{e.class}: #{e.message}")
     raise FetchError, "Network error while fetching commanders: #{e.message}"
   rescue JSON::ParserError => e
-    Rails.logger.error("EdHrecScraper: JSON parsing error - #{e.message}")
+    Rails.logger.error("EdhrecScraper: JSON parsing error - #{e.message}")
     raise ParseError, "Failed to parse JSON response: #{e.message}"
   rescue StandardError => e
-    Rails.logger.error("EdHrecScraper: Unexpected error - #{e.class}: #{e.message}")
+    Rails.logger.error("EdhrecScraper: Unexpected error - #{e.class}: #{e.message}")
     raise
   end
 
@@ -62,7 +62,7 @@ class EdHrecScraper
     end
 
     unless response.is_a?(Net::HTTPSuccess)
-      Rails.logger.error("EdHrecScraper: HTTP error #{response.code} for #{url}")
+      Rails.logger.error("EdhrecScraper: HTTP error #{response.code} for #{url}")
       raise FetchError, "HTTP error #{response.code}: #{response.message}"
     end
 
@@ -111,7 +111,7 @@ class EdHrecScraper
   private_class_method def self.validate_cardviews(cardviews)
     return unless cardviews.empty?
 
-    Rails.logger.error("EdHrecScraper: No cardviews found in JSON")
+    Rails.logger.error("EdhrecScraper: No cardviews found in JSON")
     raise ParseError, "Could not find commander data in JSON - API structure may have changed"
   end
 
@@ -135,7 +135,7 @@ class EdHrecScraper
     return unless count < EXPECTED_COMMANDER_COUNT
 
     Rails.logger.warn(
-      "EdHrecScraper: Found only #{count} commanders (expected #{EXPECTED_COMMANDER_COUNT})"
+      "EdhrecScraper: Found only #{count} commanders (expected #{EXPECTED_COMMANDER_COUNT})"
     )
   end
 

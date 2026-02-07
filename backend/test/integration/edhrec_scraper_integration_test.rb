@@ -1,7 +1,7 @@
 require "test_helper"
 require "vcr"
 
-class EdHrecScraperIntegrationTest < ActiveSupport::TestCase
+class EdhrecScraperIntegrationTest < ActiveSupport::TestCase
   # Disable parallelization to avoid VCR conflicts
   parallelize(workers: 1)
 
@@ -10,7 +10,7 @@ class EdHrecScraperIntegrationTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
   test "successfully fetches and parses real EDHREC page" do
     VCR.use_cassette("edhrec_commanders_week") do
-      result = EdHrecScraper.fetch_top_commanders
+      result = EdhrecScraper.fetch_top_commanders
 
       # Basic validation - at least some commanders should be found
       assert_kind_of Array, result
@@ -38,7 +38,7 @@ class EdHrecScraperIntegrationTest < ActiveSupport::TestCase
       assert first_commander[:name].length > 0
 
       # Log results for debugging
-      Rails.logger.info("EdHrecScraper integration test found #{result.length} commanders")
+      Rails.logger.info("EdhrecScraper integration test found #{result.length} commanders")
       Rails.logger.info("First commander: #{first_commander[:name]} (#{first_commander[:url]})")
     end
   end
@@ -49,13 +49,13 @@ class EdHrecScraperIntegrationTest < ActiveSupport::TestCase
   test "replays VCR cassette without network calls" do
     # First request records the cassette
     VCR.use_cassette("edhrec_commanders_week_replay") do
-      result1 = EdHrecScraper.fetch_top_commanders
+      result1 = EdhrecScraper.fetch_top_commanders
       assert_operator result1.length, :>, 0
     end
 
     # Second request should replay from cassette
     VCR.use_cassette("edhrec_commanders_week_replay") do
-      result2 = EdHrecScraper.fetch_top_commanders
+      result2 = EdhrecScraper.fetch_top_commanders
       assert_operator result2.length, :>, 0
     end
   end

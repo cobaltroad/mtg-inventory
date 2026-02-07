@@ -1,7 +1,7 @@
 require "test_helper"
 require "webmock/minitest"
 
-class EdHrecScraperTest < ActiveSupport::TestCase
+class EdhrecScraperTest < ActiveSupport::TestCase
   setup do
     WebMock.reset!
   end
@@ -13,7 +13,7 @@ class EdHrecScraperTest < ActiveSupport::TestCase
   test "fetch_top_commanders returns array of 20 commander hashes" do
     stub_edhrec_json_api
 
-    result = EdHrecScraper.fetch_top_commanders
+    result = EdhrecScraper.fetch_top_commanders
 
     assert_kind_of Array, result
     assert_equal 20, result.length
@@ -22,7 +22,7 @@ class EdHrecScraperTest < ActiveSupport::TestCase
   test "each commander hash has required keys name, rank, and url" do
     stub_edhrec_json_api
 
-    result = EdHrecScraper.fetch_top_commanders
+    result = EdhrecScraper.fetch_top_commanders
 
     result.each do |commander|
       assert_kind_of Hash, commander
@@ -35,7 +35,7 @@ class EdHrecScraperTest < ActiveSupport::TestCase
   test "commander ranks are sequential from 1 to 20" do
     stub_edhrec_json_api
 
-    result = EdHrecScraper.fetch_top_commanders
+    result = EdhrecScraper.fetch_top_commanders
 
     ranks = result.map { |c| c[:rank] }
     assert_equal (1..20).to_a, ranks
@@ -44,7 +44,7 @@ class EdHrecScraperTest < ActiveSupport::TestCase
   test "commander URLs are properly formatted with full domain" do
     stub_edhrec_json_api
 
-    result = EdHrecScraper.fetch_top_commanders
+    result = EdhrecScraper.fetch_top_commanders
 
     result.each do |commander|
       assert_match %r{\Ahttps://edhrec\.com/commanders/}, commander[:url],
@@ -55,7 +55,7 @@ class EdHrecScraperTest < ActiveSupport::TestCase
   test "commander names are extracted correctly" do
     stub_edhrec_json_api
 
-    result = EdHrecScraper.fetch_top_commanders
+    result = EdhrecScraper.fetch_top_commanders
 
     # Verify at least the first commander has a non-empty name
     assert_not_nil result.first[:name]
@@ -70,8 +70,8 @@ class EdHrecScraperTest < ActiveSupport::TestCase
     stub_request(:get, "https://json.edhrec.com/pages/commanders/week.json")
       .to_timeout
 
-    error = assert_raises(EdHrecScraper::FetchError) do
-      EdHrecScraper.fetch_top_commanders
+    error = assert_raises(EdhrecScraper::FetchError) do
+      EdhrecScraper.fetch_top_commanders
     end
 
     assert_match(/network error/i, error.message)
@@ -81,8 +81,8 @@ class EdHrecScraperTest < ActiveSupport::TestCase
     stub_request(:get, "https://json.edhrec.com/pages/commanders/week.json")
       .to_return(status: 404, body: "Not Found")
 
-    error = assert_raises(EdHrecScraper::FetchError) do
-      EdHrecScraper.fetch_top_commanders
+    error = assert_raises(EdhrecScraper::FetchError) do
+      EdhrecScraper.fetch_top_commanders
     end
 
     assert_match(/404/i, error.message)
@@ -92,8 +92,8 @@ class EdHrecScraperTest < ActiveSupport::TestCase
     stub_request(:get, "https://json.edhrec.com/pages/commanders/week.json")
       .to_return(status: 500, body: "Internal Server Error")
 
-    error = assert_raises(EdHrecScraper::FetchError) do
-      EdHrecScraper.fetch_top_commanders
+    error = assert_raises(EdhrecScraper::FetchError) do
+      EdhrecScraper.fetch_top_commanders
     end
 
     assert_match(/500/i, error.message)
@@ -103,8 +103,8 @@ class EdHrecScraperTest < ActiveSupport::TestCase
     stub_request(:get, "https://json.edhrec.com/pages/commanders/week.json")
       .to_return(status: 200, body: '{"invalid": "structure"}')
 
-    error = assert_raises(EdHrecScraper::ParseError) do
-      EdHrecScraper.fetch_top_commanders
+    error = assert_raises(EdhrecScraper::ParseError) do
+      EdhrecScraper.fetch_top_commanders
     end
 
     assert_match(/could not find commander data|api structure/i, error.message)
@@ -114,8 +114,8 @@ class EdHrecScraperTest < ActiveSupport::TestCase
     stub_request(:get, "https://json.edhrec.com/pages/commanders/week.json")
       .to_return(status: 200, body: "invalid json")
 
-    error = assert_raises(EdHrecScraper::ParseError) do
-      EdHrecScraper.fetch_top_commanders
+    error = assert_raises(EdhrecScraper::ParseError) do
+      EdhrecScraper.fetch_top_commanders
     end
 
     assert_match(/failed to parse json/i, error.message)
@@ -129,7 +129,7 @@ class EdHrecScraperTest < ActiveSupport::TestCase
 
     # Capture log output
     logs = capture_log_output do
-      result = EdHrecScraper.fetch_top_commanders
+      result = EdhrecScraper.fetch_top_commanders
       assert_equal 15, result.length
     end
 
@@ -142,7 +142,7 @@ class EdHrecScraperTest < ActiveSupport::TestCase
       .with(headers: { "User-Agent" => "MTG-Inventory-Bot/1.0 (https://github.com/cobaltroad/mtg-inventory)" })
       .to_return(status: 200, body: build_commanders_json(20).to_json)
 
-    EdHrecScraper.fetch_top_commanders
+    EdhrecScraper.fetch_top_commanders
 
     assert_requested stub
   end
