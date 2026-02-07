@@ -5,7 +5,8 @@ class ScrapeEdhrecCommandersJob < ApplicationJob
   FATAL_ERROR_TYPES = [
     ActiveRecord::ConnectionNotEstablished,
     ActiveRecord::StatementInvalid,
-    PG::Error
+    PG::Error,
+    EdhrecScraper::RateLimitError  # Stop job if rate limited - entire job should be retried later
   ].freeze
 
   def perform

@@ -264,16 +264,17 @@ class ScrapeEdhrecCommandersJobTest < ActiveJob::TestCase
       stub_edhrec_scraper(top_commanders: mock_commanders, decklist: mock_decklist) do
         ScrapeEdhrecCommandersJob.perform_now
 
-        # Verify summary log contains required metrics
-        summary_log = log_output.find { |msg| msg.include?("ScrapeEdhrecCommandersJob completed") }
-        assert_not_nil summary_log, "Summary log not found"
+        # Verify summary log contains completion message
+        completion_log = log_output.find { |msg| msg.include?("ScrapeEdhrecCommandersJob: COMPLETED") }
+        assert_not_nil completion_log, "Completion log not found"
 
         # Verify log contains key metrics
-        assert_match(/Total commanders attempted: 20/, summary_log)
-        assert_match(/Successfully scraped: 20/, summary_log)
-        assert_match(/Failed: 0/, summary_log)
-        assert_match(/Execution time:/, summary_log)
-        assert_match(/Total cards inserted\/updated:/, summary_log)
+        full_log = log_output.join("\n")
+        assert_match(/Total commanders:\s+20/, full_log)
+        assert_match(/Successfully scraped:\s+20/, full_log)
+        assert_match(/Failed:\s+0/, full_log)
+        assert_match(/Execution time:/, full_log)
+        assert_match(/Total cards processed:/, full_log)
       end
     ensure
       # Restore original logger
