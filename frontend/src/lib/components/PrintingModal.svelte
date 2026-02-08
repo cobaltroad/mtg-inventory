@@ -295,6 +295,17 @@
 									tabindex="0"
 									onmouseenter={() => (selectedPrinting = printing)}
 									onfocus={() => (selectedPrinting = printing)}
+									onclick={(e) => {
+										e.stopPropagation();
+										selectedPrinting = printing;
+									}}
+									onkeydown={(e) => {
+										if (e.key === 'Enter' || e.key === ' ') {
+											e.preventDefault();
+											e.stopPropagation();
+											selectedPrinting = printing;
+										}
+									}}
 								>
 									<div class="printing-info">
 										<span class="set-name">{printing.set_name}</span>
@@ -320,6 +331,7 @@
 											bind:value={acquiredDate}
 											class="form-input {invalidField === 'acquired-date' ? 'invalid' : ''}"
 											oninput={() => clearValidationError('acquired-date')}
+											onclick={(e) => e.stopPropagation()}
 										/>
 									</div>
 
@@ -333,12 +345,18 @@
 											bind:value={price}
 											class="form-input {invalidField === 'price' ? 'invalid' : ''}"
 											oninput={() => clearValidationError('price')}
+											onclick={(e) => e.stopPropagation()}
 										/>
 									</div>
 
 									<div class="form-field">
 										<label for="treatment">Treatment</label>
-										<select id="treatment" bind:value={treatment} class="form-select">
+										<select
+											id="treatment"
+											bind:value={treatment}
+											class="form-select"
+											onclick={(e) => e.stopPropagation()}
+										>
 											{#each TREATMENT_OPTIONS as option}
 												<option value={option}>{option}</option>
 											{/each}
@@ -347,7 +365,12 @@
 
 									<div class="form-field">
 										<label for="language">Language</label>
-										<select id="language" bind:value={language} class="form-select">
+										<select
+											id="language"
+											bind:value={language}
+											class="form-select"
+											onclick={(e) => e.stopPropagation()}
+										>
 											{#each LANGUAGE_OPTIONS as option}
 												<option value={option}>{option}</option>
 											{/each}
@@ -355,8 +378,12 @@
 									</div>
 
 									<button
+										type="button"
 										class="inventory-button"
-										onclick={addToInventory}
+										onclick={(e) => {
+											e.stopPropagation();
+											addToInventory();
+										}}
 										disabled={inventoryState === 'loading'}
 									>
 										{inventoryState === 'loading' ? 'Adding...' : 'Add to Inventory'}
