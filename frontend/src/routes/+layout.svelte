@@ -101,11 +101,12 @@
 
 	/**
 	 * Handles closing the PrintingModal.
-	 * Clears the selected card.
+	 * Clears the selected card and closes the search drawer.
 	 */
 	function handleModalClose() {
 		modalOpen = false;
 		selectedCard = null;
+		searchDrawerOpen = false;
 	}
 </script>
 

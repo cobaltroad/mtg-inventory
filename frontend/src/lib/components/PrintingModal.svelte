@@ -223,6 +223,9 @@
 			treatment = 'Normal';
 			language = 'English';
 			inventoryState = 'idle';
+
+			// Close the modal after successful add
+			open = false;
 		} catch {
 			inventoryState = 'error';
 			inventoryError = 'Failed to add to inventory. Please check your connection and try again.';
