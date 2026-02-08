@@ -88,7 +88,7 @@ class SearchService
   # Performs inventory search with enrichment
   def perform_inventory_search(user, query)
     # 1. Fetch user inventory items
-    items = user.collection_items.where(collection_type: "inventory").includes(:printing)
+    items = user.collection_items.where(collection_type: "inventory")
 
     # 2. Enrich with Scryfall details
     enriched = enrich_inventory_items(items)
