@@ -38,6 +38,9 @@ Rails.application.routes.draw do
 
     # Commanders
     resources :commanders, only: [ :index, :show ]
+
+    # Search
+    get "search", to: "search#index"
   end
 
   # Test/development-only probe route to verify current_user resolution.
