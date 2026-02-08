@@ -1,30 +1,37 @@
 /**
- * Represents a card found in a commander decklist
+ * Represents a card match within a decklist result
  */
-export interface DecklistCard {
-	id: string;
-	name: string;
-	mana_cost?: string;
-	type_line?: string;
-	oracle_text?: string;
-	image_url?: string;
+export interface CardMatch {
+	card_name: string;
+	quantity: number;
+}
+
+/**
+ * Represents a commander decklist result from search
+ */
+export interface DecklistResult {
 	commander_id: number;
 	commander_name: string;
-	deck_url: string;
+	commander_rank: number;
+	card_matches: CardMatch[];
+	match_count: number;
 }
 
 /**
  * Represents a card found in inventory
  */
-export interface InventoryCard {
-	id: string;
-	name: string;
-	mana_cost?: string;
-	type_line?: string;
-	oracle_text?: string;
-	image_url?: string;
+export interface InventoryResult {
+	id: number;
+	card_id: string;
+	card_name: string;
+	set: string;
+	set_name: string;
+	collector_number: string;
 	quantity: number;
-	foil_quantity?: number;
+	image_url?: string;
+	treatment?: string;
+	unit_price_cents?: number;
+	total_price_cents?: number;
 }
 
 /**
@@ -32,10 +39,11 @@ export interface InventoryCard {
  */
 export interface SearchResults {
 	query: string;
-	decklist_results: DecklistCard[];
-	inventory_results: InventoryCard[];
-	total_decklist_count: number;
-	total_inventory_count: number;
+	total_results: number;
+	results: {
+		decklists: DecklistResult[];
+		inventory: InventoryResult[];
+	};
 }
 
 /**
