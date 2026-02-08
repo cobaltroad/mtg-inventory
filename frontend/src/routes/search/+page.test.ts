@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/svelte';
 import { base } from '$app/paths';
 import SearchPage from './+page.svelte';
 import type { SearchResults } from '$lib/types/search';
@@ -26,6 +26,10 @@ global.fetch = mockFetch;
 describe('Search Page - Structure and Layout', () => {
 	beforeEach(() => {
 		mockFetch.mockClear();
+	});
+
+	afterEach(() => {
+		cleanup();
 	});
 
 	it('should render search input field with placeholder text', () => {
@@ -88,6 +92,10 @@ describe('Search Form - Submission', () => {
 		});
 	});
 
+	afterEach(() => {
+		cleanup();
+	});
+
 	it('should trigger search when Enter key is pressed', async () => {
 		render(SearchPage);
 		const input = screen.getByPlaceholderText(
@@ -145,6 +153,10 @@ describe('Search Form - Submission', () => {
 describe('Search Validation', () => {
 	beforeEach(() => {
 		mockFetch.mockClear();
+	});
+
+	afterEach(() => {
+		cleanup();
 	});
 
 	it('should show validation error for empty search query', async () => {
@@ -217,6 +229,9 @@ describe('Search Validation', () => {
 });
 
 describe('Tab Navigation', () => {
+	afterEach(() => {
+		cleanup();
+	});
 	it('should change active tab when Decklists tab is clicked', async () => {
 		render(SearchPage);
 		const decklistsTab = screen.getByRole('tab', { name: 'Decklists' });
@@ -272,6 +287,10 @@ describe('Tab Navigation', () => {
 describe('Loading States', () => {
 	beforeEach(() => {
 		mockFetch.mockClear();
+	});
+
+	afterEach(() => {
+		cleanup();
 	});
 
 	it('should show loading spinner during API request', async () => {
@@ -393,6 +412,10 @@ describe('Empty States', () => {
 		mockFetch.mockClear();
 	});
 
+	afterEach(() => {
+		cleanup();
+	});
+
 	it('should show empty state message when no results are found', async () => {
 		mockFetch.mockResolvedValue({
 			ok: true,
@@ -455,6 +478,7 @@ describe('Error Handling', () => {
 	});
 
 	afterEach(() => {
+		cleanup();
 		vi.restoreAllMocks();
 	});
 
