@@ -57,30 +57,6 @@ const MOCK_RESULTS_WITH_DECKLISTS: SearchResults = {
 	}
 };
 
-const MOCK_RESULTS_DECKLISTS_ONLY: SearchResults = {
-	query: 'Lightning Bolt',
-	total_results: 2,
-	results: {
-		decklists: [
-			{
-				commander_id: 3,
-				commander_name: 'The Ur-Dragon',
-				commander_rank: 20,
-				card_matches: [{ card_name: 'Lightning Bolt', quantity: 1 }],
-				match_count: 1
-			},
-			{
-				commander_id: 4,
-				commander_name: 'Kaalia of the Vast',
-				commander_rank: 8,
-				card_matches: [{ card_name: 'Lightning Bolt', quantity: 1 }],
-				match_count: 1
-			}
-		],
-		inventory: []
-	}
-};
-
 const MOCK_RESULTS_NO_DECKLISTS: SearchResults = {
 	query: 'Rare Card',
 	total_results: 1,
@@ -255,7 +231,9 @@ describe('Search Page - Tab Filtering for Decklists', () => {
 			expect(screen.getByText("Atraxa, Praetors' Voice")).toBeInTheDocument();
 			expect(screen.getByText('Chulane, Teller of Tales')).toBeInTheDocument();
 			// Inventory section should not be present
-			expect(screen.queryByText('Inventory', { selector: '.section-heading' })).not.toBeInTheDocument();
+			expect(
+				screen.queryByText('Inventory', { selector: '.section-heading' })
+			).not.toBeInTheDocument();
 		});
 	});
 
@@ -283,7 +261,9 @@ describe('Search Page - Tab Filtering for Decklists', () => {
 
 		await waitFor(() => {
 			// Decklist section should NOT be visible
-			expect(screen.queryByText('Decklists', { selector: '.section-heading' })).not.toBeInTheDocument();
+			expect(
+				screen.queryByText('Decklists', { selector: '.section-heading' })
+			).not.toBeInTheDocument();
 			// Decklist results should NOT be visible
 			expect(screen.queryByText("Atraxa, Praetors' Voice")).not.toBeInTheDocument();
 			expect(screen.queryByText('Chulane, Teller of Tales')).not.toBeInTheDocument();

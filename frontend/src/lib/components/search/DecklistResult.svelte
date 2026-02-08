@@ -2,19 +2,26 @@
 	import { base } from '$app/paths';
 	import type { DecklistResult } from '$lib/types/search';
 
+	/**
+	 * Component props interface
+	 */
 	interface Props {
+		/** Decklist search result containing commander and card match information */
 		result: DecklistResult;
 	}
 
 	let { result }: Props = $props();
 
+	// Maximum number of card matches to display before truncating
+	const MAX_DISPLAYED_MATCHES = 4;
+
 	// Compute the URL for the commander detail page
 	const commanderUrl = $derived(`${base}/metagame/edh/${result.commander_id}`);
 
 	// Determine which matches to display
-	const displayedMatches = $derived(result.card_matches.slice(0, 4));
-	const hasMoreMatches = $derived(result.card_matches.length > 4);
-	const moreMatchesCount = $derived(result.card_matches.length - 4);
+	const displayedMatches = $derived(result.card_matches.slice(0, MAX_DISPLAYED_MATCHES));
+	const hasMoreMatches = $derived(result.card_matches.length > MAX_DISPLAYED_MATCHES);
+	const moreMatchesCount = $derived(result.card_matches.length - MAX_DISPLAYED_MATCHES);
 
 	// Determine singular/plural for match count
 	const matchLabel = $derived(result.match_count === 1 ? 'match' : 'matches');
@@ -34,7 +41,7 @@
 	<div class="card-matches">
 		<span class="matches-label">Contains:</span>
 		<ul class="matches-list">
-			{#each displayedMatches as match}
+			{#each displayedMatches as match (match.card_name)}
 				<li class="match-item">
 					{match.card_name} ({match.quantity}x)
 				</li>

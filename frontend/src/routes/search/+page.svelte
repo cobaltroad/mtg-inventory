@@ -217,7 +217,7 @@
 						<section class="results-section">
 							<h2 class="section-heading">Decklists</h2>
 							<div class="decklist-results">
-								{#each results.results.decklists as result}
+								{#each results.results.decklists as result (result.commander_id)}
 									<DecklistResult {result} />
 								{/each}
 							</div>
@@ -228,7 +228,9 @@
 						<section class="results-section">
 							<h2 class="section-heading">Inventory</h2>
 							<div class="inventory-results">
-								<p class="results-placeholder">Inventory results will be displayed here (Story 11.5)</p>
+								<p class="results-placeholder">
+									Inventory results will be displayed here (Story 11.5)
+								</p>
 							</div>
 						</section>
 					{/if}
