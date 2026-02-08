@@ -63,7 +63,7 @@
 						<p class="text-surface-600-300-token">{format.description}</p>
 					</section>
 					<footer class="card-footer">
-						<span class="text-primary-500 text-sm font-semibold">Browse format →</span>
+						<span class="text-sm font-semibold text-primary-500">Browse format →</span>
 					</footer>
 				</a>
 			{:else}

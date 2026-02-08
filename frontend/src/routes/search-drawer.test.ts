@@ -254,7 +254,9 @@ describe('Search Drawer Integration - Sidebar Navigation (Updated for Issue #108
 		expect(searchLink?.tagName).toBe('A');
 
 		// Should NOT have a search button trigger anymore
-		const searchButton = container.querySelector('button[aria-label*="Search - Open search drawer"]');
+		const searchButton = container.querySelector(
+			'button[aria-label*="Search - Open search drawer"]'
+		);
 		expect(searchButton).not.toBeInTheDocument();
 	});
 

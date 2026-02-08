@@ -2,12 +2,15 @@
 	import { onMount } from 'svelte';
 	import { Search as SearchIcon } from 'lucide-svelte';
 	import { performSearch } from '$lib/services/searchService';
-	import type { SearchResults } from '$lib/types/search';
+	import type { SearchResults, SearchTab } from '$lib/types/search';
+
+	// Constants
+	const MIN_QUERY_LENGTH = 2;
 
 	// State using Svelte 5 runes
 	let query = $state('');
 	let isLoading = $state(false);
-	let activeTab = $state<'all' | 'decklists' | 'inventory'>('all');
+	let activeTab = $state<SearchTab>('all');
 	let results = $state<SearchResults | null>(null);
 	let error = $state<string | null>(null);
 	let validationError = $state<string | null>(null);
@@ -27,8 +30,8 @@
 	 */
 	function validateQuery(): boolean {
 		const trimmedQuery = query.trim();
-		if (trimmedQuery.length < 2) {
-			validationError = 'Search query must be at least 2 characters';
+		if (trimmedQuery.length < MIN_QUERY_LENGTH) {
+			validationError = `Search query must be at least ${MIN_QUERY_LENGTH} characters`;
 			return false;
 		}
 		validationError = null;
@@ -79,7 +82,7 @@
 	/**
 	 * Changes the active tab
 	 */
-	function setActiveTab(tab: 'all' | 'decklists' | 'inventory') {
+	function setActiveTab(tab: SearchTab) {
 		activeTab = tab;
 	}
 
@@ -113,12 +116,7 @@
 					aria-label="Search query"
 				/>
 			</div>
-			<button
-				onclick={handleSearch}
-				disabled={isLoading}
-				class="search-button"
-				aria-label="Search"
-			>
+			<button onclick={handleSearch} disabled={isLoading} class="search-button" aria-label="Search">
 				{isLoading ? 'Searching...' : 'Search'}
 			</button>
 		</div>

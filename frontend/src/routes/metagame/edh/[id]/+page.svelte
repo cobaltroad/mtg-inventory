@@ -48,7 +48,10 @@
 		</div>
 	{:else if commander}
 		<div class="mb-6">
-			<a href="{base}/metagame/edh" class="mb-4 inline-block text-sm text-primary-500 hover:underline">
+			<a
+				href="{base}/metagame/edh"
+				class="mb-4 inline-block text-sm text-primary-500 hover:underline"
+			>
 				&larr; Back to Commanders
 			</a>
 		</div>

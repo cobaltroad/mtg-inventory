@@ -56,7 +56,9 @@ describe('Sidebar Component - Navigation Items', () => {
 		expect(searchLink).toHaveTextContent('Search');
 
 		// Should NOT be a button trigger anymore
-		const searchButton = container.querySelector('button[aria-label*="Search - Open search drawer"]');
+		const searchButton = container.querySelector(
+			'button[aria-label*="Search - Open search drawer"]'
+		);
 		expect(searchButton).not.toBeInTheDocument();
 	});
 

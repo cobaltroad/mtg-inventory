@@ -82,13 +82,14 @@ describe('Search Form - Submission', () => {
 		mockFetch.mockClear();
 		mockFetch.mockResolvedValue({
 			ok: true,
-			json: async () => ({
-				query: 'Lightning Bolt',
-				decklist_results: [],
-				inventory_results: [],
-				total_decklist_count: 0,
-				total_inventory_count: 0
-			} as SearchResults)
+			json: async () =>
+				({
+					query: 'Lightning Bolt',
+					decklist_results: [],
+					inventory_results: [],
+					total_decklist_count: 0,
+					total_inventory_count: 0
+				}) as SearchResults
 		});
 	});
 
@@ -124,10 +125,7 @@ describe('Search Form - Submission', () => {
 		await fireEvent.click(button);
 
 		await waitFor(() => {
-			expect(mockFetch).toHaveBeenCalledWith(
-				`${base}/api/search?q=Sol%20Ring`,
-				expect.any(Object)
-			);
+			expect(mockFetch).toHaveBeenCalledWith(`${base}/api/search?q=Sol%20Ring`, expect.any(Object));
 		});
 	});
 
@@ -186,13 +184,14 @@ describe('Search Validation', () => {
 	it('should allow search with 2 or more characters', async () => {
 		mockFetch.mockResolvedValue({
 			ok: true,
-			json: async () => ({
-				query: 'ab',
-				decklist_results: [],
-				inventory_results: [],
-				total_decklist_count: 0,
-				total_inventory_count: 0
-			} as SearchResults)
+			json: async () =>
+				({
+					query: 'ab',
+					decklist_results: [],
+					inventory_results: [],
+					total_decklist_count: 0,
+					total_inventory_count: 0
+				}) as SearchResults
 		});
 
 		render(SearchPage);
@@ -257,13 +256,14 @@ describe('Tab Navigation', () => {
 	it('should persist tab selection after search', async () => {
 		mockFetch.mockResolvedValue({
 			ok: true,
-			json: async () => ({
-				query: 'test',
-				decklist_results: [],
-				inventory_results: [],
-				total_decklist_count: 0,
-				total_inventory_count: 0
-			} as SearchResults)
+			json: async () =>
+				({
+					query: 'test',
+					decklist_results: [],
+					inventory_results: [],
+					total_decklist_count: 0,
+					total_inventory_count: 0
+				}) as SearchResults
 		});
 
 		render(SearchPage);
@@ -294,7 +294,7 @@ describe('Loading States', () => {
 	});
 
 	it('should show loading spinner during API request', async () => {
-		let resolvePromise: (value: any) => void;
+		let resolvePromise: (value: unknown) => void;
 		const promise = new Promise((resolve) => {
 			resolvePromise = resolve;
 		});
@@ -318,13 +318,14 @@ describe('Loading States', () => {
 		// Resolve the promise
 		resolvePromise!({
 			ok: true,
-			json: async () => ({
-				query: 'test',
-				decklist_results: [],
-				inventory_results: [],
-				total_decklist_count: 0,
-				total_inventory_count: 0
-			} as SearchResults)
+			json: async () =>
+				({
+					query: 'test',
+					decklist_results: [],
+					inventory_results: [],
+					total_decklist_count: 0,
+					total_inventory_count: 0
+				}) as SearchResults
 		});
 
 		// Loading spinner should disappear
@@ -334,7 +335,7 @@ describe('Loading States', () => {
 	});
 
 	it('should disable search button during loading', async () => {
-		let resolvePromise: (value: any) => void;
+		let resolvePromise: (value: unknown) => void;
 		const promise = new Promise((resolve) => {
 			resolvePromise = resolve;
 		});
@@ -358,13 +359,14 @@ describe('Loading States', () => {
 		// Resolve the promise
 		resolvePromise!({
 			ok: true,
-			json: async () => ({
-				query: 'test',
-				decklist_results: [],
-				inventory_results: [],
-				total_decklist_count: 0,
-				total_inventory_count: 0
-			} as SearchResults)
+			json: async () =>
+				({
+					query: 'test',
+					decklist_results: [],
+					inventory_results: [],
+					total_decklist_count: 0,
+					total_inventory_count: 0
+				}) as SearchResults
 		});
 
 		// Button should be enabled again
@@ -374,7 +376,7 @@ describe('Loading States', () => {
 	});
 
 	it('should keep search input enabled during loading', async () => {
-		let resolvePromise: (value: any) => void;
+		let resolvePromise: (value: unknown) => void;
 		const promise = new Promise((resolve) => {
 			resolvePromise = resolve;
 		});
@@ -396,13 +398,14 @@ describe('Loading States', () => {
 		// Resolve the promise
 		resolvePromise!({
 			ok: true,
-			json: async () => ({
-				query: 'test',
-				decklist_results: [],
-				inventory_results: [],
-				total_decklist_count: 0,
-				total_inventory_count: 0
-			} as SearchResults)
+			json: async () =>
+				({
+					query: 'test',
+					decklist_results: [],
+					inventory_results: [],
+					total_decklist_count: 0,
+					total_inventory_count: 0
+				}) as SearchResults
 		});
 	});
 });
@@ -419,13 +422,14 @@ describe('Empty States', () => {
 	it('should show empty state message when no results are found', async () => {
 		mockFetch.mockResolvedValue({
 			ok: true,
-			json: async () => ({
-				query: 'NonexistentCard',
-				decklist_results: [],
-				inventory_results: [],
-				total_decklist_count: 0,
-				total_inventory_count: 0
-			} as SearchResults)
+			json: async () =>
+				({
+					query: 'NonexistentCard',
+					decklist_results: [],
+					inventory_results: [],
+					total_decklist_count: 0,
+					total_inventory_count: 0
+				}) as SearchResults
 		});
 
 		render(SearchPage);
@@ -446,13 +450,14 @@ describe('Empty States', () => {
 	it('should show suggestion to try different search terms', async () => {
 		mockFetch.mockResolvedValue({
 			ok: true,
-			json: async () => ({
-				query: 'xyz',
-				decklist_results: [],
-				inventory_results: [],
-				total_decklist_count: 0,
-				total_inventory_count: 0
-			} as SearchResults)
+			json: async () =>
+				({
+					query: 'xyz',
+					decklist_results: [],
+					inventory_results: [],
+					total_decklist_count: 0,
+					total_inventory_count: 0
+				}) as SearchResults
 		});
 
 		render(SearchPage);
@@ -542,13 +547,14 @@ describe('Error Handling', () => {
 		// Second request succeeds
 		mockFetch.mockResolvedValueOnce({
 			ok: true,
-			json: async () => ({
-				query: 'test',
-				decklist_results: [],
-				inventory_results: [],
-				total_decklist_count: 0,
-				total_inventory_count: 0
-			} as SearchResults)
+			json: async () =>
+				({
+					query: 'test',
+					decklist_results: [],
+					inventory_results: [],
+					total_decklist_count: 0,
+					total_inventory_count: 0
+				}) as SearchResults
 		});
 
 		render(SearchPage);

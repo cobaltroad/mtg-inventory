@@ -37,3 +37,8 @@ export interface SearchResults {
 	total_decklist_count: number;
 	total_inventory_count: number;
 }
+
+/**
+ * Tab options for search results filtering
+ */
+export type SearchTab = 'all' | 'decklists' | 'inventory';
