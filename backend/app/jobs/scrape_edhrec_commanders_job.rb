@@ -1,4 +1,6 @@
 class ScrapeEdhrecCommandersJob < ApplicationJob
+  include StructuredLogging
+
   queue_as :default
 
   # Hourly spacing between individual commander decklist scrapes
@@ -21,6 +23,16 @@ class ScrapeEdhrecCommandersJob < ApplicationJob
   # with jobs spaced 1 hour apart to distribute load over ~20 hours.
   # ---------------------------------------------------------------------------
   def perform
+    # Create execution record
+    @execution = ScraperExecution.create!(started_at: Time.current)
+
+    # Log structured start event
+    log_event(
+      level: :info,
+      event: "scrape_started",
+      execution_id: @execution.id
+    )
+
     log_job_start
     start_time = Time.current
 
@@ -36,7 +48,46 @@ class ScrapeEdhrecCommandersJob < ApplicationJob
     # Schedule individual decklist scraping jobs with hourly spacing
     schedule_decklist_scraping_jobs(commanders)
 
+    # Update execution record with success
+    @execution.update!(
+      finished_at: Time.current,
+      status: :success,
+      commanders_attempted: commanders.length,
+      commanders_succeeded: commanders.length,
+      commanders_failed: 0
+    )
+
     log_summary(commanders, start_time)
+
+    # Log structured completion event
+    log_event(
+      level: :info,
+      event: "scrape_completed",
+      execution_id: @execution.id,
+      status: @execution.status,
+      commanders_attempted: @execution.commanders_attempted,
+      commanders_succeeded: @execution.commanders_succeeded,
+      duration_seconds: @execution.execution_time_seconds
+    )
+  rescue EdhrecScraper::RateLimitError => e
+    # Log rate limit warning
+    retry_after = e.respond_to?(:retry_after) ? e.retry_after : nil
+    log_rate_limit(service: "EDHREC", retry_after: retry_after)
+
+    # Update execution with failure
+    update_execution_failure(e)
+
+    # Re-raise for Solid Queue to retry
+    raise
+  rescue StandardError => e
+    # Log error with full context
+    log_error(error: e)
+
+    # Update execution with failure
+    update_execution_failure(e)
+
+    # Re-raise for Solid Queue to retry
+    raise
   end
 
   private
@@ -55,9 +106,33 @@ class ScrapeEdhrecCommandersJob < ApplicationJob
         )
         commander.save!
         Rails.logger.info("  └─ Saved commander: #{commander.name} (Rank ##{commander.rank})")
+
+        # Log structured event for each commander
+        log_event(
+          level: :info,
+          event: "commander_processed",
+          commander_name: commander.name,
+          commander_id: commander.id,
+          rank: commander.rank,
+          edhrec_url: commander.edhrec_url
+        )
+
         commander
       end
     end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Update execution record with failure information
+  # ---------------------------------------------------------------------------
+  def update_execution_failure(error)
+    return unless @execution
+
+    @execution.update!(
+      finished_at: Time.current,
+      status: :failure,
+      error_summary: "#{error.class}: #{error.message}\n#{error.backtrace&.first(3)&.join("\n")}"
+    )
   end
 
   # ---------------------------------------------------------------------------
