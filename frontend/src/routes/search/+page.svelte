@@ -2,8 +2,14 @@
 	import { onMount } from 'svelte';
 	import { Search as SearchIcon } from 'lucide-svelte';
 	import { performSearch } from '$lib/services/searchService';
-	import type { SearchResults, SearchTab } from '$lib/types/search';
+	import type {
+		SearchResults,
+		SearchTab,
+		InventoryResult as InventoryResultType
+	} from '$lib/types/search';
 	import DecklistResult from '$lib/components/search/DecklistResult.svelte';
+	import InventoryResult from '$lib/components/search/InventoryResult.svelte';
+	import PrintingModal from '$lib/components/PrintingModal.svelte';
 
 	// Constants
 	const MIN_QUERY_LENGTH = 2;
@@ -17,6 +23,8 @@
 	let validationError = $state<string | null>(null);
 	let hasSearched = $state(false);
 	let searchInputRef: HTMLInputElement | undefined;
+	let selectedInventoryItem = $state<InventoryResultType | null>(null);
+	let isPrintingModalOpen = $state(false);
 
 	/**
 	 * Focus the search input when the page loads
@@ -115,6 +123,29 @@
 	const showDecklistEmptyState = $derived(
 		activeTab === 'decklists' && results !== null && results.results.decklists.length === 0
 	);
+
+	/**
+	 * Empty state for inventory in the Inventory tab
+	 */
+	const showInventoryEmptyState = $derived(
+		activeTab === 'inventory' && results !== null && results.results.inventory.length === 0
+	);
+
+	/**
+	 * Handles clicking View Details on an inventory item
+	 */
+	function handleViewDetails(item: InventoryResultType) {
+		selectedInventoryItem = item;
+		isPrintingModalOpen = true;
+	}
+
+	/**
+	 * Handles closing the printing modal
+	 */
+	function handleModalClose() {
+		isPrintingModalOpen = false;
+		selectedInventoryItem = null;
+	}
 </script>
 
 <div class="search-page">
@@ -210,6 +241,13 @@
 					<p class="empty-message">No commanders found matching "{results?.query}"</p>
 					<p class="empty-suggestion">Try different search terms or check the Inventory tab</p>
 				</div>
+			{:else if showInventoryEmptyState}
+				<!-- Empty state for Inventory tab -->
+				<div class="empty-state">
+					<SearchIcon size={48} class="empty-icon" />
+					<p class="empty-message">No inventory items found matching "{results?.query}"</p>
+					<p class="empty-suggestion">Try different search terms or check the Decklists tab</p>
+				</div>
 			{:else}
 				<!-- Results Display -->
 				<div class="results-display">
@@ -228,9 +266,9 @@
 						<section class="results-section">
 							<h2 class="section-heading">Inventory</h2>
 							<div class="inventory-results">
-								<p class="results-placeholder">
-									Inventory results will be displayed here (Story 11.5)
-								</p>
+								{#each results.results.inventory as item (item.id)}
+									<InventoryResult result={item} onViewDetails={handleViewDetails} />
+								{/each}
 							</div>
 						</section>
 					{/if}
@@ -239,6 +277,14 @@
 		</div>
 	</div>
 </div>
+
+{#if selectedInventoryItem}
+	<PrintingModal
+		card={{ id: selectedInventoryItem.card_id, name: selectedInventoryItem.card_name }}
+		bind:open={isPrintingModalOpen}
+		onclose={handleModalClose}
+	/>
+{/if}
 
 <style>
 	.search-page {
@@ -487,19 +533,6 @@
 
 	:global(.dark) .error-message {
 		color: rgb(248 113 113);
-	}
-
-	.results-placeholder {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 2rem 0;
-		color: rgb(107 114 128);
-	}
-
-	:global(.dark) .results-placeholder {
-		color: rgb(156 163 175);
 	}
 
 	.results-display {
