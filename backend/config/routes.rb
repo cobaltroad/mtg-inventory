@@ -41,6 +41,15 @@ Rails.application.routes.draw do
 
     # Search
     get "search", to: "search#index"
+
+    # Admin - Scraper executions
+    namespace :admin do
+      resources :scraper_executions, only: [ :index, :show ] do
+        collection do
+          get :stats
+        end
+      end
+    end
   end
 
   # Test/development-only probe route to verify current_user resolution.
