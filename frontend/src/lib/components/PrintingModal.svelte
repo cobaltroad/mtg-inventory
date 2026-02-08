@@ -259,7 +259,7 @@
 	}}
 	closeOnEscape={true}
 	trapFocus={false}
-	closeOnInteractOutside={true}
+	closeOnInteractOutside={false}
 >
 	<Portal>
 		<Dialog.Backdrop
