@@ -85,10 +85,11 @@ describe('Search Form - Submission', () => {
 			json: async () =>
 				({
 					query: 'Lightning Bolt',
-					decklist_results: [],
-					inventory_results: [],
-					total_decklist_count: 0,
-					total_inventory_count: 0
+					total_results: 0,
+					results: {
+						decklists: [],
+						inventory: []
+					}
 				}) as SearchResults
 		});
 	});
@@ -187,10 +188,11 @@ describe('Search Validation', () => {
 			json: async () =>
 				({
 					query: 'ab',
-					decklist_results: [],
-					inventory_results: [],
-					total_decklist_count: 0,
-					total_inventory_count: 0
+					total_results: 0,
+					results: {
+						decklists: [],
+						inventory: []
+					}
 				}) as SearchResults
 		});
 
@@ -259,10 +261,11 @@ describe('Tab Navigation', () => {
 			json: async () =>
 				({
 					query: 'test',
-					decklist_results: [],
-					inventory_results: [],
-					total_decklist_count: 0,
-					total_inventory_count: 0
+					total_results: 0,
+					results: {
+						decklists: [],
+						inventory: []
+					}
 				}) as SearchResults
 		});
 
@@ -321,10 +324,11 @@ describe('Loading States', () => {
 			json: async () =>
 				({
 					query: 'test',
-					decklist_results: [],
-					inventory_results: [],
-					total_decklist_count: 0,
-					total_inventory_count: 0
+					total_results: 0,
+					results: {
+						decklists: [],
+						inventory: []
+					}
 				}) as SearchResults
 		});
 
@@ -362,10 +366,11 @@ describe('Loading States', () => {
 			json: async () =>
 				({
 					query: 'test',
-					decklist_results: [],
-					inventory_results: [],
-					total_decklist_count: 0,
-					total_inventory_count: 0
+					total_results: 0,
+					results: {
+						decklists: [],
+						inventory: []
+					}
 				}) as SearchResults
 		});
 
@@ -401,10 +406,11 @@ describe('Loading States', () => {
 			json: async () =>
 				({
 					query: 'test',
-					decklist_results: [],
-					inventory_results: [],
-					total_decklist_count: 0,
-					total_inventory_count: 0
+					total_results: 0,
+					results: {
+						decklists: [],
+						inventory: []
+					}
 				}) as SearchResults
 		});
 	});
@@ -425,10 +431,11 @@ describe('Empty States', () => {
 			json: async () =>
 				({
 					query: 'NonexistentCard',
-					decklist_results: [],
-					inventory_results: [],
-					total_decklist_count: 0,
-					total_inventory_count: 0
+					total_results: 0,
+					results: {
+						decklists: [],
+						inventory: []
+					}
 				}) as SearchResults
 		});
 
@@ -453,10 +460,11 @@ describe('Empty States', () => {
 			json: async () =>
 				({
 					query: 'xyz',
-					decklist_results: [],
-					inventory_results: [],
-					total_decklist_count: 0,
-					total_inventory_count: 0
+					total_results: 0,
+					results: {
+						decklists: [],
+						inventory: []
+					}
 				}) as SearchResults
 		});
 
@@ -550,10 +558,11 @@ describe('Error Handling', () => {
 			json: async () =>
 				({
 					query: 'test',
-					decklist_results: [],
-					inventory_results: [],
-					total_decklist_count: 0,
-					total_inventory_count: 0
+					total_results: 0,
+					results: {
+						decklists: [],
+						inventory: []
+					}
 				}) as SearchResults
 		});
 
