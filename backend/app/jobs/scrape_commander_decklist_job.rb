@@ -1,4 +1,6 @@
 class ScrapeCommanderDecklistJob < ApplicationJob
+  include StructuredLogging
+
   queue_as :default
 
   # ---------------------------------------------------------------------------
@@ -9,6 +11,7 @@ class ScrapeCommanderDecklistJob < ApplicationJob
   #
   # Arguments:
   #   commander_id (Integer) - The ID of the commander to scrape
+  #   execution_id (Integer, optional) - Parent execution record to update
   #
   # Raises:
   #   ActiveRecord::RecordNotFound - If commander doesn't exist
@@ -16,8 +19,18 @@ class ScrapeCommanderDecklistJob < ApplicationJob
   #   EdhrecScraper::ParseError - Parsing errors (will trigger Solid Queue retry)
   #   EdhrecScraper::RateLimitError - Rate limit errors (will trigger Solid Queue retry)
   # ---------------------------------------------------------------------------
-  def perform(commander_id)
+  def perform(commander_id, execution_id = nil)
     commander = Commander.find(commander_id)
+    @execution = execution_id ? ScraperExecution.find(execution_id) : nil
+
+    # Log structured start event
+    log_event(
+      level: :info,
+      event: "decklist_scrape_started",
+      commander_id: commander.id,
+      commander_name: commander.name,
+      edhrec_url: commander.edhrec_url
+    )
 
     log_job_start(commander)
 
@@ -36,10 +49,32 @@ class ScrapeCommanderDecklistJob < ApplicationJob
       # Save decklist
       cards_count = save_decklist_for_commander(commander, deck_cards)
       Rails.logger.debug("  └─ Decklist saved with #{cards_count} cards")
+
+      # Update execution record if provided
+      if @execution
+        @execution.increment!(:total_cards_processed, cards_count)
+      end
     end
 
     log_job_success(commander, cards_count)
+
+    # Log structured completion event
+    log_event(
+      level: :info,
+      event: "decklist_scrape_completed",
+      commander_id: commander.id,
+      commander_name: commander.name,
+      cards_count: cards_count
+    )
   rescue EdhrecScraper::FetchError, EdhrecScraper::ParseError, EdhrecScraper::RateLimitError => e
+    # Log structured error
+    log_error(
+      error: e,
+      commander_id: commander.id,
+      commander_name: commander.name,
+      edhrec_url: commander.edhrec_url
+    )
+
     # Re-raise scraper errors so Solid Queue can retry the job
     log_job_error(commander, e)
     raise
