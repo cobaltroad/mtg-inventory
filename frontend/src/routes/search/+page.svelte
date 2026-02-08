@@ -3,6 +3,7 @@
 	import { Search as SearchIcon } from 'lucide-svelte';
 	import { performSearch } from '$lib/services/searchService';
 	import type { SearchResults, SearchTab } from '$lib/types/search';
+	import DecklistResult from '$lib/components/search/DecklistResult.svelte';
 
 	// Constants
 	const MIN_QUERY_LENGTH = 2;
@@ -94,6 +95,26 @@
 			results.results.decklists.length === 0 &&
 			results.results.inventory.length === 0
 	);
+
+	/**
+	 * Computed counts for tab labels
+	 */
+	const decklistCount = $derived(results?.results.decklists.length || 0);
+	const inventoryCount = $derived(results?.results.inventory.length || 0);
+	const totalCount = $derived(results?.total_results || 0);
+
+	/**
+	 * Filtered results based on active tab
+	 */
+	const shouldShowDecklists = $derived(activeTab === 'all' || activeTab === 'decklists');
+	const shouldShowInventory = $derived(activeTab === 'all' || activeTab === 'inventory');
+
+	/**
+	 * Empty state for decklists in the Decklists tab
+	 */
+	const showDecklistEmptyState = $derived(
+		activeTab === 'decklists' && results !== null && results.results.decklists.length === 0
+	);
 </script>
 
 <div class="search-page">
@@ -136,7 +157,7 @@
 				onclick={() => setActiveTab('all')}
 				class="tab {activeTab === 'all' ? 'active' : ''}"
 			>
-				All
+				All {hasSearched ? `(${totalCount})` : ''}
 			</button>
 			<button
 				role="tab"
@@ -144,7 +165,7 @@
 				onclick={() => setActiveTab('decklists')}
 				class="tab {activeTab === 'decklists' ? 'active' : ''}"
 			>
-				Decklists
+				Decklists {hasSearched ? `(${decklistCount})` : ''}
 			</button>
 			<button
 				role="tab"
@@ -152,7 +173,7 @@
 				onclick={() => setActiveTab('inventory')}
 				class="tab {activeTab === 'inventory' ? 'active' : ''}"
 			>
-				Inventory
+				Inventory {hasSearched ? `(${inventoryCount})` : ''}
 			</button>
 		</div>
 
@@ -182,14 +203,35 @@
 					<p class="empty-message">No results found for "{results?.query}"</p>
 					<p class="empty-suggestion">Try different search terms</p>
 				</div>
+			{:else if showDecklistEmptyState}
+				<!-- Empty state for Decklists tab -->
+				<div class="empty-state">
+					<SearchIcon size={48} class="empty-icon" />
+					<p class="empty-message">No commanders found matching "{results?.query}"</p>
+					<p class="empty-suggestion">Try different search terms or check the Inventory tab</p>
+				</div>
 			{:else}
-				<!-- Results placeholder - will be implemented in Stories 11.4 and 11.5 -->
-				<div class="results-placeholder">
-					<p>Results will be displayed here (Stories 11.4 & 11.5)</p>
-					<p class="results-summary">
-						Found {results?.results.decklists.length || 0} decklist results and {results?.results.inventory.length ||
-							0} inventory results
-					</p>
+				<!-- Results Display -->
+				<div class="results-display">
+					{#if shouldShowDecklists && results && results.results.decklists.length > 0}
+						<section class="results-section">
+							<h2 class="section-heading">Decklists</h2>
+							<div class="decklist-results">
+								{#each results.results.decklists as result}
+									<DecklistResult {result} />
+								{/each}
+							</div>
+						</section>
+					{/if}
+
+					{#if shouldShowInventory && results && results.results.inventory.length > 0}
+						<section class="results-section">
+							<h2 class="section-heading">Inventory</h2>
+							<div class="inventory-results">
+								<p class="results-placeholder">Inventory results will be displayed here (Story 11.5)</p>
+							</div>
+						</section>
+					{/if}
 				</div>
 			{/if}
 		</div>
@@ -458,12 +500,52 @@
 		color: rgb(156 163 175);
 	}
 
-	.results-summary {
-		font-weight: 600;
-		color: rgb(59 130 246);
+	.results-display {
+		display: flex;
+		flex-direction: column;
+		gap: 2rem;
 	}
 
-	:global(.dark) .results-summary {
-		color: rgb(96 165 250);
+	.results-section {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.section-heading {
+		font-size: 1.25rem;
+		font-weight: 700;
+		color: rgb(17 24 39);
+		margin: 0;
+		padding-bottom: 0.5rem;
+		border-bottom: 2px solid rgb(229 231 235);
+	}
+
+	:global(.dark) .section-heading {
+		color: rgb(229 231 235);
+		border-bottom-color: rgb(55 65 81);
+	}
+
+	.decklist-results {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.inventory-results {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	/* Responsive adjustments */
+	@media (max-width: 768px) {
+		.search-page {
+			padding: 1rem;
+		}
+
+		.section-heading {
+			font-size: 1.125rem;
+		}
 	}
 </style>

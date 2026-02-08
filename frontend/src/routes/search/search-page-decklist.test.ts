@@ -194,7 +194,7 @@ describe('Search Page - Decklist Results Rendering', () => {
 		});
 	});
 
-	it('should display both decklist and inventory results in All tab', async () => {
+	it('should display both decklist and inventory sections in All tab', async () => {
 		mockFetch.mockResolvedValue({
 			ok: true,
 			json: async () => MOCK_RESULTS_WITH_DECKLISTS
@@ -210,10 +210,11 @@ describe('Search Page - Decklist Results Rendering', () => {
 		await fireEvent.click(button);
 
 		await waitFor(() => {
-			// Decklist results
+			// Decklist results should be visible
 			expect(screen.getByText("Atraxa, Praetors' Voice")).toBeInTheDocument();
-			// Inventory results should also be visible
-			expect(screen.getByText('Sol Ring')).toBeInTheDocument();
+			// Both sections should be present
+			expect(screen.getByText('Decklists')).toBeInTheDocument();
+			expect(screen.getByText('Inventory')).toBeInTheDocument();
 		});
 	});
 });
@@ -246,13 +247,15 @@ describe('Search Page - Tab Filtering for Decklists', () => {
 			expect(screen.getByText("Atraxa, Praetors' Voice")).toBeInTheDocument();
 		});
 
-		const decklistsTab = screen.getByRole('tab', { name: 'Decklists' });
+		const decklistsTab = screen.getByRole('tab', { name: /Decklists/i });
 		await fireEvent.click(decklistsTab);
 
 		await waitFor(() => {
 			// Decklist results should be visible
 			expect(screen.getByText("Atraxa, Praetors' Voice")).toBeInTheDocument();
 			expect(screen.getByText('Chulane, Teller of Tales')).toBeInTheDocument();
+			// Inventory section should not be present
+			expect(screen.queryByText('Inventory', { selector: '.section-heading' })).not.toBeInTheDocument();
 		});
 	});
 
@@ -275,17 +278,19 @@ describe('Search Page - Tab Filtering for Decklists', () => {
 			expect(screen.getByText("Atraxa, Praetors' Voice")).toBeInTheDocument();
 		});
 
-		const inventoryTab = screen.getByRole('tab', { name: 'Inventory' });
+		const inventoryTab = screen.getByRole('tab', { name: /Inventory/i });
 		await fireEvent.click(inventoryTab);
 
 		await waitFor(() => {
+			// Decklist section should NOT be visible
+			expect(screen.queryByText('Decklists', { selector: '.section-heading' })).not.toBeInTheDocument();
 			// Decklist results should NOT be visible
 			expect(screen.queryByText("Atraxa, Praetors' Voice")).not.toBeInTheDocument();
 			expect(screen.queryByText('Chulane, Teller of Tales')).not.toBeInTheDocument();
 		});
 	});
 
-	it('should show both results when switching back to All tab', async () => {
+	it('should show both sections when switching back to All tab', async () => {
 		mockFetch.mockResolvedValue({
 			ok: true,
 			json: async () => MOCK_RESULTS_WITH_DECKLISTS
@@ -300,16 +305,17 @@ describe('Search Page - Tab Filtering for Decklists', () => {
 		await fireEvent.input(input, { target: { value: 'Sol Ring' } });
 		await fireEvent.click(button);
 
-		const decklistsTab = screen.getByRole('tab', { name: 'Decklists' });
+		const decklistsTab = screen.getByRole('tab', { name: /Decklists/i });
 		await fireEvent.click(decklistsTab);
 
-		const allTab = screen.getByRole('tab', { name: 'All' });
+		const allTab = screen.getByRole('tab', { name: /All/i });
 		await fireEvent.click(allTab);
 
 		await waitFor(() => {
-			// Both types of results should be visible
+			// Both sections should be visible
 			expect(screen.getByText("Atraxa, Praetors' Voice")).toBeInTheDocument();
-			expect(screen.getByText('Sol Ring')).toBeInTheDocument();
+			expect(screen.getByText('Decklists')).toBeInTheDocument();
+			expect(screen.getByText('Inventory')).toBeInTheDocument();
 		});
 	});
 });
