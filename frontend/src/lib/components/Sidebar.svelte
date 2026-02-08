@@ -21,37 +21,33 @@
 	interface Props {
 		/** Controls sidebar visibility on mobile. Bindable state. */
 		open?: boolean;
-		/** Callback function triggered when the Search navigation item is clicked */
-		onSearchClick?: () => void;
 		/** Layout mode: 'sidebar' (full width with labels) or 'rail' (compact with icons only) */
 		mode?: 'sidebar' | 'rail';
 		/** Callback function triggered when toggling between sidebar and rail modes */
 		onToggleMode?: () => void;
 	}
 
-	let { open = $bindable(false), onSearchClick, mode = 'sidebar', onToggleMode }: Props = $props();
+	let { open = $bindable(false), mode = 'sidebar', onToggleMode }: Props = $props();
 
 	/**
 	 * Represents a navigation item in the sidebar
 	 */
 	interface NavItem {
-		/** Navigation route. Omit for non-navigational triggers like Search */
-		href?: string;
+		/** Navigation route */
+		href: string;
 		/** Display label for the navigation item */
 		label: string;
 		/** Lucide icon component to display */
 		icon: ComponentType;
-		/** Whether this item is a button trigger instead of a navigation link */
-		isButton?: boolean;
 	}
 
 	/**
 	 * Navigation items configuration
-	 * Defines all sidebar navigation entries including links and action triggers
+	 * Defines all sidebar navigation entries
 	 */
 	const navItems: NavItem[] = [
 		{ href: `${base}/`, label: 'Home', icon: House },
-		{ label: 'Search', icon: Search, isButton: true },
+		{ href: `${base}/search`, label: 'Search', icon: Search },
 		{ href: `${base}/metagame`, label: 'Metagame', icon: Medal },
 		{ href: `${base}/decks`, label: 'Decks', icon: Layers },
 		{ href: `${base}/reports`, label: 'Reports', icon: FileText },
@@ -72,14 +68,6 @@
 	}
 
 	/**
-	 * Handles Search navigation item click
-	 * Delegates to the onSearchClick callback if provided
-	 */
-	function handleSearchClick(): void {
-		onSearchClick?.();
-	}
-
-	/**
 	 * Handles toggle mode button click
 	 * Delegates to the onToggleMode callback if provided
 	 */
@@ -92,8 +80,7 @@
 	 * @param href - The navigation link href to check
 	 * @returns true if the href matches the current path
 	 */
-	function isActive(href?: string): boolean {
-		if (!href) return false;
+	function isActive(href: string): boolean {
 		const normalizedHref = href.replace(base, '') || '/';
 		return currentPath === normalizedHref;
 	}
@@ -121,27 +108,15 @@
 				<Navigation.Menu>
 					{#each navItems as item}
 						{@const Icon = item.icon}
-						{#if item.isButton}
-							<!-- Search trigger button -->
-							<Navigation.Trigger
-								onclick={handleSearchClick}
-								aria-label="{item.label} - Open search drawer"
-								class="nav-item"
-							>
-								<Icon class="h-5 w-5" />
-								<Navigation.TriggerText>{item.label}</Navigation.TriggerText>
-							</Navigation.Trigger>
-						{:else}
-							<!-- Navigation link -->
-							<Navigation.TriggerAnchor
-								href={item.href}
-								class="nav-item {isActive(item.href) ? 'active' : ''}"
-								aria-current={isActive(item.href) ? 'page' : undefined}
-							>
-								<Icon class="h-5 w-5" />
-								<Navigation.TriggerText>{item.label}</Navigation.TriggerText>
-							</Navigation.TriggerAnchor>
-						{/if}
+						<!-- Navigation link -->
+						<Navigation.TriggerAnchor
+							href={item.href}
+							class="nav-item {isActive(item.href) ? 'active' : ''}"
+							aria-current={isActive(item.href) ? 'page' : undefined}
+						>
+							<Icon class="h-5 w-5" />
+							<Navigation.TriggerText>{item.label}</Navigation.TriggerText>
+						</Navigation.TriggerAnchor>
 					{/each}
 
 					<!-- Sidebar/Rail mode toggle -->
