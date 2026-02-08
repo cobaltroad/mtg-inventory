@@ -91,8 +91,8 @@
 	 */
 	const hasNoResults = $derived(
 		results !== null &&
-			results.decklist_results.length === 0 &&
-			results.inventory_results.length === 0
+			results.results.decklists.length === 0 &&
+			results.results.inventory.length === 0
 	);
 </script>
 
@@ -187,7 +187,7 @@
 				<div class="results-placeholder">
 					<p>Results will be displayed here (Stories 11.4 & 11.5)</p>
 					<p class="results-summary">
-						Found {results?.total_decklist_count || 0} decklist results and {results?.total_inventory_count ||
+						Found {results?.results.decklists.length || 0} decklist results and {results?.results.inventory.length ||
 							0} inventory results
 					</p>
 				</div>
