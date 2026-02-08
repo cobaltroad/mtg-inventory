@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { base } from '$app/paths';
+	import { invalidate } from '$app/navigation';
 	import { Dialog, Portal } from '@skeletonlabs/skeleton-svelte';
 	import { X } from 'lucide-svelte';
 	import Toast from './Toast.svelte';
@@ -207,6 +208,14 @@
 			toastMessage = `Added ${printingToAdd.name} (${printingToAdd.set.toUpperCase()} #${printingToAdd.collector_number}) to inventory`;
 			showToast = true;
 
+			// Refresh the inventory page to show the new item
+			try {
+				await invalidate(`${API_BASE}/api/inventory`);
+			} catch (e) {
+				// Silently fail if invalidate is not available (e.g., in tests)
+				console.debug('Could not invalidate inventory cache:', e);
+			}
+
 			// Reset form to defaults after successful add
 			selectedPrinting = null;
 			acquiredDate = formatDateInTimeZone(userTimeZone);
@@ -214,6 +223,9 @@
 			treatment = 'Normal';
 			language = 'English';
 			inventoryState = 'idle';
+
+			// Close the modal after successful add
+			open = false;
 		} catch {
 			inventoryState = 'error';
 			inventoryError = 'Failed to add to inventory. Please check your connection and try again.';
@@ -250,7 +262,7 @@
 	}}
 	closeOnEscape={true}
 	trapFocus={false}
-	closeOnInteractOutside={true}
+	closeOnInteractOutside={false}
 >
 	<Portal>
 		<Dialog.Backdrop
@@ -295,6 +307,17 @@
 									tabindex="0"
 									onmouseenter={() => (selectedPrinting = printing)}
 									onfocus={() => (selectedPrinting = printing)}
+									onclick={(e) => {
+										e.stopPropagation();
+										selectedPrinting = printing;
+									}}
+									onkeydown={(e) => {
+										if (e.key === 'Enter' || e.key === ' ') {
+											e.preventDefault();
+											e.stopPropagation();
+											selectedPrinting = printing;
+										}
+									}}
 								>
 									<div class="printing-info">
 										<span class="set-name">{printing.set_name}</span>
@@ -320,6 +343,7 @@
 											bind:value={acquiredDate}
 											class="form-input {invalidField === 'acquired-date' ? 'invalid' : ''}"
 											oninput={() => clearValidationError('acquired-date')}
+											onclick={(e) => e.stopPropagation()}
 										/>
 									</div>
 
@@ -333,12 +357,18 @@
 											bind:value={price}
 											class="form-input {invalidField === 'price' ? 'invalid' : ''}"
 											oninput={() => clearValidationError('price')}
+											onclick={(e) => e.stopPropagation()}
 										/>
 									</div>
 
 									<div class="form-field">
 										<label for="treatment">Treatment</label>
-										<select id="treatment" bind:value={treatment} class="form-select">
+										<select
+											id="treatment"
+											bind:value={treatment}
+											class="form-select"
+											onclick={(e) => e.stopPropagation()}
+										>
 											{#each TREATMENT_OPTIONS as option}
 												<option value={option}>{option}</option>
 											{/each}
@@ -347,7 +377,12 @@
 
 									<div class="form-field">
 										<label for="language">Language</label>
-										<select id="language" bind:value={language} class="form-select">
+										<select
+											id="language"
+											bind:value={language}
+											class="form-select"
+											onclick={(e) => e.stopPropagation()}
+										>
 											{#each LANGUAGE_OPTIONS as option}
 												<option value={option}>{option}</option>
 											{/each}
@@ -355,8 +390,12 @@
 									</div>
 
 									<button
+										type="button"
 										class="inventory-button"
-										onclick={addToInventory}
+										onclick={(e) => {
+											e.stopPropagation();
+											addToInventory();
+										}}
 										disabled={inventoryState === 'loading'}
 									>
 										{inventoryState === 'loading' ? 'Adding...' : 'Add to Inventory'}
