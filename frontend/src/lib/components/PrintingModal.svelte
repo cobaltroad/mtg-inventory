@@ -263,109 +263,109 @@
 				role="dialog"
 				aria-label="Card printings"
 			>
-			<div class="drawer-header">
-				<Dialog.Title class="text-xl font-bold text-gray-900 dark:text-gray-100"
-					>{card.name} - Printings</Dialog.Title
-				>
-				<Dialog.CloseTrigger
-					class="rounded-md p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100"
-					aria-label="Close card printings drawer"
-				>
-					<X class="h-5 w-5" />
-				</Dialog.CloseTrigger>
-			</div>
+				<div class="drawer-header">
+					<Dialog.Title class="text-xl font-bold text-gray-900 dark:text-gray-100"
+						>{card.name} - Printings</Dialog.Title
+					>
+					<Dialog.CloseTrigger
+						class="rounded-md p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100"
+						aria-label="Close card printings drawer"
+					>
+						<X class="h-5 w-5" />
+					</Dialog.CloseTrigger>
+				</div>
 
-			{#if loading}
-				<div class="loading-container">
-					<p>Loading printings...</p>
-				</div>
-			{:else if error}
-				<div class="error-container">
-					<p>Unable to load printings. Please try again.</p>
-					<button onclick={fetchPrintings}>Retry</button>
-				</div>
-			{:else}
-				<div class="modal-body">
-					<div class="printings-list" data-testid="printings-list">
-						{#each printings as printing (printing.id)}
-							<div
-								class="printing-item"
-								data-testid="printing-item"
-								role="button"
-								tabindex="0"
-								onmouseenter={() => (selectedPrinting = printing)}
-								onfocus={() => (selectedPrinting = printing)}
-							>
-								<div class="printing-info">
-									<span class="set-name">{printing.set_name}</span>
-									<span class="set-code">({printing.set.toUpperCase()})</span>
-									<span class="collector-number">#{printing.collector_number}</span>
-								</div>
-							</div>
-						{/each}
+				{#if loading}
+					<div class="loading-container">
+						<p>Loading printings...</p>
 					</div>
-
-					{#if selectedPrinting && selectedPrinting.image_url}
-						<div class="image-preview-area">
-							<img
-								src={selectedPrinting.image_url}
-								alt="{selectedPrinting.name} from {selectedPrinting.set_name}"
-							/>
-							<div class="inventory-actions">
-								<div class="form-field">
-									<label for="acquired-date">Acquired Date</label>
-									<input
-										id="acquired-date"
-										type="date"
-										bind:value={acquiredDate}
-										class="form-input {invalidField === 'acquired-date' ? 'invalid' : ''}"
-										oninput={() => clearValidationError('acquired-date')}
-									/>
-								</div>
-
-								<div class="form-field">
-									<label for="price">Price</label>
-									<input
-										id="price"
-										type="number"
-										step="0.01"
-										min="0"
-										bind:value={price}
-										class="form-input {invalidField === 'price' ? 'invalid' : ''}"
-										oninput={() => clearValidationError('price')}
-									/>
-								</div>
-
-								<div class="form-field">
-									<label for="treatment">Treatment</label>
-									<select id="treatment" bind:value={treatment} class="form-select">
-										{#each TREATMENT_OPTIONS as option}
-											<option value={option}>{option}</option>
-										{/each}
-									</select>
-								</div>
-
-								<div class="form-field">
-									<label for="language">Language</label>
-									<select id="language" bind:value={language} class="form-select">
-										{#each LANGUAGE_OPTIONS as option}
-											<option value={option}>{option}</option>
-										{/each}
-									</select>
-								</div>
-
-								<button
-									class="inventory-button"
-									onclick={addToInventory}
-									disabled={inventoryState === 'loading'}
+				{:else if error}
+					<div class="error-container">
+						<p>Unable to load printings. Please try again.</p>
+						<button onclick={fetchPrintings}>Retry</button>
+					</div>
+				{:else}
+					<div class="modal-body">
+						<div class="printings-list" data-testid="printings-list">
+							{#each printings as printing (printing.id)}
+								<div
+									class="printing-item"
+									data-testid="printing-item"
+									role="button"
+									tabindex="0"
+									onmouseenter={() => (selectedPrinting = printing)}
+									onfocus={() => (selectedPrinting = printing)}
 								>
-									{inventoryState === 'loading' ? 'Adding...' : 'Add to Inventory'}
-								</button>
-							</div>
+									<div class="printing-info">
+										<span class="set-name">{printing.set_name}</span>
+										<span class="set-code">({printing.set.toUpperCase()})</span>
+										<span class="collector-number">#{printing.collector_number}</span>
+									</div>
+								</div>
+							{/each}
 						</div>
-					{/if}
-				</div>
-			{/if}
+
+						{#if selectedPrinting && selectedPrinting.image_url}
+							<div class="image-preview-area">
+								<img
+									src={selectedPrinting.image_url}
+									alt="{selectedPrinting.name} from {selectedPrinting.set_name}"
+								/>
+								<div class="inventory-actions">
+									<div class="form-field">
+										<label for="acquired-date">Acquired Date</label>
+										<input
+											id="acquired-date"
+											type="date"
+											bind:value={acquiredDate}
+											class="form-input {invalidField === 'acquired-date' ? 'invalid' : ''}"
+											oninput={() => clearValidationError('acquired-date')}
+										/>
+									</div>
+
+									<div class="form-field">
+										<label for="price">Price</label>
+										<input
+											id="price"
+											type="number"
+											step="0.01"
+											min="0"
+											bind:value={price}
+											class="form-input {invalidField === 'price' ? 'invalid' : ''}"
+											oninput={() => clearValidationError('price')}
+										/>
+									</div>
+
+									<div class="form-field">
+										<label for="treatment">Treatment</label>
+										<select id="treatment" bind:value={treatment} class="form-select">
+											{#each TREATMENT_OPTIONS as option}
+												<option value={option}>{option}</option>
+											{/each}
+										</select>
+									</div>
+
+									<div class="form-field">
+										<label for="language">Language</label>
+										<select id="language" bind:value={language} class="form-select">
+											{#each LANGUAGE_OPTIONS as option}
+												<option value={option}>{option}</option>
+											{/each}
+										</select>
+									</div>
+
+									<button
+										class="inventory-button"
+										onclick={addToInventory}
+										disabled={inventoryState === 'loading'}
+									>
+										{inventoryState === 'loading' ? 'Adding...' : 'Add to Inventory'}
+									</button>
+								</div>
+							</div>
+						{/if}
+					</div>
+				{/if}
 			</Dialog.Content>
 		</Dialog.Positioner>
 	</Portal>

@@ -238,8 +238,8 @@ describe('Search Drawer Integration - API Calls', () => {
 	});
 });
 
-describe('Search Drawer Integration - Sidebar Trigger', () => {
-	it('should have Search button in sidebar instead of link', () => {
+describe('Search Drawer Integration - Sidebar Navigation (Updated for Issue #108)', () => {
+	it('should have Search as a navigation link in sidebar (not a button)', () => {
 		// Mock window.location for Sidebar component
 		Object.defineProperty(window, 'location', {
 			value: { pathname: '/' },
@@ -248,34 +248,31 @@ describe('Search Drawer Integration - Sidebar Trigger', () => {
 
 		const { container } = render(Sidebar);
 
-		// Find the Search button in the sidebar
-		const searchButton = container.querySelector(
-			'button[aria-label*="Search"]'
-		) as HTMLButtonElement;
-		expect(searchButton).toBeInTheDocument();
-		expect(searchButton).toHaveAttribute('type', 'button');
+		// Search should now be a navigation link
+		const searchLink = container.querySelector('a[href*="/search"]');
+		expect(searchLink).toBeInTheDocument();
+		expect(searchLink?.tagName).toBe('A');
 
-		// Should not have a search link
-		const searchLink = container.querySelector('a[href*="search"]');
-		expect(searchLink).not.toBeInTheDocument();
+		// Should NOT have a search button trigger anymore
+		const searchButton = container.querySelector(
+			'button[aria-label*="Search - Open search drawer"]'
+		);
+		expect(searchButton).not.toBeInTheDocument();
 	});
 
-	it('should open drawer when Search button is clicked', async () => {
+	it('should navigate to /search page instead of opening drawer', () => {
 		Object.defineProperty(window, 'location', {
 			value: { pathname: '/' },
 			writable: true
 		});
 
-		const onSearchClick = vi.fn();
-		const { container } = render(Sidebar, { props: { onSearchClick } });
+		const { container } = render(Sidebar);
 
-		const searchButton = container.querySelector(
-			'button[aria-label*="Search"]'
-		) as HTMLButtonElement;
-		await fireEvent.click(searchButton);
+		const searchLink = container.querySelector('a[href*="/search"]');
+		expect(searchLink).toHaveAttribute('href');
 
-		// Callback should be called
-		expect(onSearchClick).toHaveBeenCalledTimes(1);
+		const href = searchLink?.getAttribute('href');
+		expect(href).toContain('/search');
 	});
 
 	it('should still have Home and Inventory as navigation links', () => {
@@ -304,10 +301,9 @@ describe('Search Drawer Integration - Sidebar Trigger', () => {
 
 			const { container } = render(Sidebar);
 
-			const searchButton = container.querySelector(
-				'button[aria-label*="Search"]'
-			) as HTMLButtonElement;
-			expect(searchButton).toBeInTheDocument();
+			// Search is now a navigation link, not a button
+			const searchLink = container.querySelector('a[href*="/search"]') as HTMLAnchorElement;
+			expect(searchLink).toBeInTheDocument();
 
 			cleanup();
 		});

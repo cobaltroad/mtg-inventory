@@ -47,26 +47,26 @@ describe('Sidebar Component - Navigation Items', () => {
 		expect(homeLink).toHaveTextContent('Home');
 	});
 
-	it('should render Search as a trigger button (not anchor)', () => {
+	it('should render Search as a navigation link (updated for issue #108)', () => {
 		const { container } = render(Sidebar);
-		const searchTrigger = container.querySelector(
-			'button[data-scope="navigation"][data-part="trigger"]'
-		);
-		expect(searchTrigger).toBeInTheDocument();
 
-		// Should have text content "Search"
-		expect(searchTrigger).toHaveTextContent('Search');
-
-		// Should not be an anchor link
+		// Search should now be a navigation link
 		const searchLink = container.querySelector('a[href*="search"]');
-		expect(searchLink).not.toBeInTheDocument();
+		expect(searchLink).toBeInTheDocument();
+		expect(searchLink).toHaveTextContent('Search');
+
+		// Should NOT be a button trigger anymore
+		const searchButton = container.querySelector(
+			'button[aria-label*="Search - Open search drawer"]'
+		);
+		expect(searchButton).not.toBeInTheDocument();
 	});
 
-	it('should render Collections placeholder navigation link', () => {
+	it('should render Metagame navigation link', () => {
 		const { container } = render(Sidebar);
-		const collectionsLink = container.querySelector('a[href*="collections"]');
-		expect(collectionsLink).toBeInTheDocument();
-		expect(collectionsLink).toHaveTextContent('Collections');
+		const metagameLink = container.querySelector('a[href*="metagame"]');
+		expect(metagameLink).toBeInTheDocument();
+		expect(metagameLink).toHaveTextContent('Metagame');
 	});
 
 	it('should render Decks placeholder navigation link', () => {
@@ -99,48 +99,37 @@ describe('Sidebar Component - Navigation Items', () => {
 			container.querySelectorAll('button[data-scope="navigation"][data-part="trigger"]')
 		);
 
-		// Total items: 5 links (Home, Collections, Decks, Reports, Inventory) + 1 trigger (Search)
-		expect(navLinks.length + navTriggers.length).toBe(6);
+		// Total items: 6 links (Home, Search, Metagame, Decks, Reports, Inventory)
+		// Search is now a link, not a trigger (updated for issue #108)
+		// There is 1 trigger for the mode toggle button (Collapse/Expand)
+		expect(navLinks.length).toBe(6);
+		expect(navTriggers.length).toBe(1); // Mode toggle button
 	});
 });
 
-describe('Sidebar Component - Search Drawer Trigger', () => {
-	it('should call onSearchClick when Search trigger is clicked', async () => {
-		const onSearchClick = vi.fn();
-		const { container } = render(Sidebar, { props: { onSearchClick } });
-
-		const searchTrigger = container.querySelector(
-			'button[data-scope="navigation"][data-part="trigger"]'
-		);
-		expect(searchTrigger).toBeInTheDocument();
-
-		await fireEvent.click(searchTrigger as HTMLElement);
-
-		expect(onSearchClick).toHaveBeenCalledTimes(1);
-	});
-
-	it('should have proper ARIA label on Search trigger', () => {
+describe('Sidebar Component - Search Navigation Link', () => {
+	it('should render Search as a navigation link (not a button)', () => {
 		const { container } = render(Sidebar);
-		const searchTrigger = container.querySelector(
-			'button[data-scope="navigation"][data-part="trigger"]'
-		);
 
-		expect(searchTrigger).toHaveAttribute('aria-label', 'Search - Open search drawer');
+		// Search should be a link now, not a button trigger
+		const searchLink = container.querySelector('a[href*="/search"]');
+		expect(searchLink).toBeInTheDocument();
+		expect(searchLink?.tagName).toBe('A');
 	});
 
-	it('should not navigate to a route when Search trigger is clicked', async () => {
-		const onSearchClick = vi.fn();
-		const { container } = render(Sidebar, { props: { onSearchClick } });
+	it('should have correct href for Search link', () => {
+		const { container } = render(Sidebar);
+		const searchLink = container.querySelector('a[href*="/search"]');
 
-		const searchTrigger = container.querySelector(
-			'button[data-scope="navigation"][data-part="trigger"]'
-		);
+		expect(searchLink).toHaveAttribute('href');
+		const href = searchLink?.getAttribute('href');
+		expect(href).toContain('/search');
+	});
 
-		// Should not be an anchor element
-		expect(searchTrigger?.tagName).toBe('BUTTON');
-
-		// Should not have href attribute
-		expect(searchTrigger).not.toHaveAttribute('href');
+	it('should not have onSearchClick callback anymore', () => {
+		// This test verifies the API change - onSearchClick prop no longer exists
+		const props = { mode: 'sidebar' as const };
+		expect(() => render(Sidebar, { props })).not.toThrow();
 	});
 });
 

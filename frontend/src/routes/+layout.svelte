@@ -61,13 +61,6 @@
 	let modalOpen = $state(false);
 
 	/**
-	 * Opens the search drawer when the search button in the sidebar is clicked.
-	 */
-	function handleSearchClick() {
-		searchDrawerOpen = true;
-	}
-
-	/**
 	 * Toggles between sidebar and rail navigation modes.
 	 */
 	function toggleSidebarMode() {
@@ -119,12 +112,7 @@
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
 
 <div class="app-container">
-	<Sidebar
-		bind:open={sidebarOpen}
-		mode={sidebarMode}
-		onSearchClick={handleSearchClick}
-		onToggleMode={toggleSidebarMode}
-	/>
+	<Sidebar bind:open={sidebarOpen} mode={sidebarMode} onToggleMode={toggleSidebarMode} />
 
 	<div class="content-wrapper" class:rail-mode={sidebarMode === 'rail'}>
 		<AppBar class="app-bar-root">
