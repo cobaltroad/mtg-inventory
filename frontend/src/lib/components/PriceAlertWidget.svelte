@@ -22,7 +22,7 @@
 		try {
 			loading = true;
 			error = null;
-			const response = await fetch(`${base}/api/price_alerts`);
+			const response = await fetch(`${base}/api/price_alerts?uu`);
 
 			if (!response.ok) {
 				throw new Error('Failed to fetch price alerts');

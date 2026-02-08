@@ -102,6 +102,19 @@ npm run test:watch        # Run tests in watch mode
   }
   ```
 
+- **Avoiding Race Conditions**: When multiple widgets load simultaneously (e.g., dashboard widgets), append `?uu` to API calls to skip backend memoization and prevent race conditions
+  ```typescript
+  // ✅ Correct - prevents race conditions in concurrent requests
+  const response = await fetch(`${base}/api/inventory?uu`, { ... });
+  const response = await fetch(`${base}/api/price_alerts?uu`, { ... });
+
+  // For endpoints with existing query params, use &uu
+  const response = await fetch(`${base}/api/inventory/value_timeline?time_period=30&uu`, { ... });
+
+  // ❌ Without ?uu - may cause race conditions when widgets load in parallel
+  const response = await fetch(`${base}/api/inventory`, { ... });
+  ```
+
 ## Background Jobs & Scheduled Tasks
 
 The application uses **Solid Queue** for background job processing. Jobs run in a separate Docker container (`mtg_jobs`).

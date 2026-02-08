@@ -120,7 +120,7 @@
 
 		try {
 			const response = await fetch(
-				`${base}/api/inventory/value_timeline?time_period=${timePeriod}`
+				`${base}/api/inventory/value_timeline?time_period=${timePeriod}&uu`
 			);
 
 			if (!response.ok) {

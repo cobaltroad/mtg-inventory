@@ -30,13 +30,16 @@ class ApplicationController < ActionController::API
   # ---------------------------------------------------------------------------
   private
 
-  def current_user
-    # Force fresh lookup on every request to prevent parallel requests from
-    # poisoning @current_user memoization
-    User.find_by(email: User::DEFAULT_EMAIL) || raise(DefaultUserMissingError)
+  def force_user_reload?
+    params[:uu].present?
+  end
 
-    # @current_user ||= begin
-    #  User.find_by(email: User::DEFAULT_EMAIL) || raise(DefaultUserMissingError)
-    # end
+  def current_user
+    if force_user_reload?
+      # Skip memoization when ?uu is present
+      User.find_by(email: User::DEFAULT_EMAIL) || raise(DefaultUserMissingError)
+    else
+      @current_user ||= User.find_by(email: User::DEFAULT_EMAIL) || raise(DefaultUserMissingError)
+    end
   end
 end
