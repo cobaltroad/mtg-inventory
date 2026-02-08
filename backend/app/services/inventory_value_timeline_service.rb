@@ -37,6 +37,17 @@ class InventoryValueTimelineService
     # Get all inventory items for the user
     inventory_items = user.collection_items.where(collection_type: "inventory")
 
+    # NEW: Get date range and preload ALL relevant prices in 1 query
+    start_date = time_period.days.ago.to_date
+    end_date = Date.today
+    card_ids = inventory_items.pluck(:card_id).uniq
+
+    @all_prices = CardPrice
+      .where(card_id: card_ids)
+      .where("fetched_at BETWEEN ? AND ?", start_date.beginning_of_day, end_date.end_of_day)
+      .order(:card_id, :fetched_at)
+      .group_by(&:card_id)  # { card_id => [prices sorted by fetched_at] }
+
     # Calculate value for each day in the time period
     timeline = calculate_timeline(inventory_items)
 
@@ -85,43 +96,19 @@ class InventoryValueTimelineService
   def calculate_value_for_date(inventory_items, date)
     total_value = 0
 
-    # Get unique card IDs from inventory
-    card_ids = inventory_items.pluck(:card_id).uniq
-
-    # Get the most recent price for each card up to the specified date
-    price_map = build_price_map(card_ids, date)
-
     # Calculate value for each inventory item
     inventory_items.each do |item|
-      price_record = price_map[item.card_id]
-      next if price_record.nil?
+      prices = @all_prices[item.card_id] || []
+      latest_price = prices.find { |p| p.fetched_at <= date.end_of_day }
+      next unless latest_price
 
-      unit_price = price_record.price_for_treatment(item.treatment)
-      next if unit_price.nil?
+      unit_price = latest_price.price_for_treatment(item.treatment)
+      next unless unit_price
 
       total_value += unit_price * item.quantity
     end
 
     total_value
-  end
-
-  # Builds a map of card_id => most recent CardPrice for the given date
-  def build_price_map(card_ids, date)
-    return {} if card_ids.empty?
-
-    # For each card, find the most recent price up to the specified date
-    price_map = {}
-
-    card_ids.each do |card_id|
-      price = CardPrice.where(card_id: card_id)
-                       .where("fetched_at <= ?", date.end_of_day)
-                       .order(fetched_at: :desc)
-                       .first
-
-      price_map[card_id] = price if price
-    end
-
-    price_map
   end
 
   # Calculates summary statistics for the timeline

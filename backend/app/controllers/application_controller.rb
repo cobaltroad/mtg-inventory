@@ -31,8 +31,12 @@ class ApplicationController < ActionController::API
   private
 
   def current_user
-    @current_user ||= begin
-      User.find_by(email: User::DEFAULT_EMAIL) || raise(DefaultUserMissingError)
-    end
+    # Force fresh lookup on every request to prevent parallel requests from
+    # poisoning @current_user memoization
+    User.find_by(email: User::DEFAULT_EMAIL) || raise(DefaultUserMissingError)
+
+    # @current_user ||= begin
+    #  User.find_by(email: User::DEFAULT_EMAIL) || raise(DefaultUserMissingError)
+    # end
   end
 end
