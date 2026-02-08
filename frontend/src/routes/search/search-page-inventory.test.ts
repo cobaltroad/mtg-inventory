@@ -250,10 +250,7 @@ describe('Search Page - Inventory Results Rendering', () => {
 		await waitFor(() => {
 			const images = screen.getAllByRole('img', { name: /Lightning Bolt/i });
 			expect(images.length).toBeGreaterThanOrEqual(3);
-			expect(images[0]).toHaveAttribute(
-				'src',
-				'https://cards.scryfall.io/normal/lea-161.jpg'
-			);
+			expect(images[0]).toHaveAttribute('src', 'https://cards.scryfall.io/normal/lea-161.jpg');
 		});
 	});
 

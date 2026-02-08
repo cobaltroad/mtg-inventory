@@ -2,7 +2,11 @@
 	import { onMount } from 'svelte';
 	import { Search as SearchIcon } from 'lucide-svelte';
 	import { performSearch } from '$lib/services/searchService';
-	import type { SearchResults, SearchTab, InventoryResult as InventoryResultType } from '$lib/types/search';
+	import type {
+		SearchResults,
+		SearchTab,
+		InventoryResult as InventoryResultType
+	} from '$lib/types/search';
 	import DecklistResult from '$lib/components/search/DecklistResult.svelte';
 	import InventoryResult from '$lib/components/search/InventoryResult.svelte';
 	import PrintingModal from '$lib/components/PrintingModal.svelte';
