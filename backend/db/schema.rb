@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_07_040101) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_08_015631) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -107,6 +107,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_07_040101) do
     t.index ["user_id", "card_id", "created_at"], name: "index_price_alerts_on_user_id_and_card_id_and_created_at"
     t.index ["user_id", "dismissed"], name: "index_price_alerts_on_user_id_and_dismissed"
     t.index ["user_id"], name: "index_price_alerts_on_user_id"
+  end
+
+  create_table "scraper_executions", force: :cascade do |t|
+    t.integer "commanders_attempted", default: 0
+    t.integer "commanders_failed", default: 0
+    t.integer "commanders_succeeded", default: 0
+    t.datetime "created_at", null: false
+    t.text "error_summary"
+    t.datetime "finished_at"
+    t.datetime "started_at", null: false
+    t.integer "status", default: 0, null: false
+    t.integer "total_cards_processed", default: 0
+    t.datetime "updated_at", null: false
+    t.index ["started_at"], name: "index_scraper_executions_on_started_at"
+    t.index ["status"], name: "index_scraper_executions_on_status"
   end
 
   create_table "solid_queue_blocked_executions", force: :cascade do |t|
