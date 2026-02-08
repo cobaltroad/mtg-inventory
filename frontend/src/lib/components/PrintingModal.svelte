@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { base } from '$app/paths';
+	import { invalidate } from '$app/navigation';
 	import { Dialog, Portal } from '@skeletonlabs/skeleton-svelte';
 	import { X } from 'lucide-svelte';
 	import Toast from './Toast.svelte';
@@ -206,6 +207,14 @@
 			// Show toast notification with printing details
 			toastMessage = `Added ${printingToAdd.name} (${printingToAdd.set.toUpperCase()} #${printingToAdd.collector_number}) to inventory`;
 			showToast = true;
+
+			// Refresh the inventory page to show the new item
+			try {
+				await invalidate(`${API_BASE}/api/inventory`);
+			} catch (e) {
+				// Silently fail if invalidate is not available (e.g., in tests)
+				console.debug('Could not invalidate inventory cache:', e);
+			}
 
 			// Reset form to defaults after successful add
 			selectedPrinting = null;

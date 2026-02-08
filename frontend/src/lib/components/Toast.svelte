@@ -34,7 +34,7 @@
 	.toast {
 		position: fixed;
 		top: 1rem;
-		right: 1rem;
+		left: 1rem;
 		padding: 1rem 1.5rem;
 		border-radius: 8px;
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -57,7 +57,7 @@
 
 	@keyframes slideIn {
 		from {
-			transform: translateX(100%);
+			transform: translateX(-100%);
 			opacity: 0;
 		}
 		to {
