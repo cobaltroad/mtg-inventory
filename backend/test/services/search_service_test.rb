@@ -255,4 +255,16 @@ class SearchServiceTest < ActiveSupport::TestCase
                    "Expected match_count to equal number of card_matches"
     end
   end
+
+  # ---------------------------------------------------------------------------
+  # Inventory search tests
+  # ---------------------------------------------------------------------------
+  test "search_inventory returns empty array for empty inventory" do
+    user = User.create!(email: "test5@example.com", name: "Test User 5")
+
+    service = SearchService.new(query: "sol ring")
+    results = service.search_inventory(user, "sol ring")
+
+    assert_equal [], results
+  end
 end
