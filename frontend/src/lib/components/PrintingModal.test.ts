@@ -218,9 +218,7 @@ describe('PrintingModal - Issue #117: Drawer closes unexpectedly', () => {
 			});
 
 			// Find and click the Add to Inventory button
-			const addButton = document.body.querySelector(
-				'button.inventory-button'
-			) as HTMLButtonElement;
+			const addButton = document.body.querySelector('button.inventory-button') as HTMLButtonElement;
 			expect(addButton).toBeInTheDocument();
 			expect(addButton.textContent).toContain('Add to Inventory');
 
@@ -255,9 +253,7 @@ describe('PrintingModal - Issue #117: Drawer closes unexpectedly', () => {
 			});
 
 			// Click Add to Inventory
-			const addButton = document.body.querySelector(
-				'button.inventory-button'
-			) as HTMLButtonElement;
+			const addButton = document.body.querySelector('button.inventory-button') as HTMLButtonElement;
 			await fireEvent.click(addButton);
 
 			// Wait for success toast to appear
@@ -318,9 +314,7 @@ describe('PrintingModal - Issue #117: Drawer closes unexpectedly', () => {
 			});
 
 			// Click Add to Inventory
-			const addButton = document.body.querySelector(
-				'button.inventory-button'
-			) as HTMLButtonElement;
+			const addButton = document.body.querySelector('button.inventory-button') as HTMLButtonElement;
 			await fireEvent.click(addButton);
 
 			// Verify the correct printing was sent to the API
@@ -420,16 +414,12 @@ describe('PrintingModal - Issue #117: Drawer closes unexpectedly', () => {
 			expect(priceInput.value).toBe('25.50');
 
 			// Submit
-			const addButton = document.body.querySelector(
-				'button.inventory-button'
-			) as HTMLButtonElement;
+			const addButton = document.body.querySelector('button.inventory-button') as HTMLButtonElement;
 			await fireEvent.click(addButton);
 
 			// Verify price was submitted correctly
 			await waitFor(() => {
-				const lastCall = mockFetch.mock.calls.find((call) =>
-					call[0].includes('/api/inventory')
-				);
+				const lastCall = mockFetch.mock.calls.find((call) => call[0].includes('/api/inventory'));
 				if (lastCall) {
 					const body = JSON.parse(lastCall[1].body);
 					expect(body.price).toBe(25.5);

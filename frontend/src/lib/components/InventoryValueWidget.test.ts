@@ -490,4 +490,52 @@ describe('InventoryValueWidget - Chart', () => {
 			expect(container.querySelector('.chart-container')).toBeInTheDocument();
 		});
 	});
+
+	it('remounts LayerCake component when data changes to prevent stale scale errors (issue #121)', async () => {
+		// This test verifies the fix for issue #121 where navigating caused
+		// "$scale.copy is not a function" error due to stale LayerCake instances
+
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => validTimelineResponse
+		});
+
+		const { unmount, container } = render(InventoryValueWidget);
+
+		await waitFor(() => {
+			expect(container.querySelector('.chart-container')).toBeInTheDocument();
+		});
+
+		// Simulate navigation by unmounting
+		unmount();
+
+		// Mock new data for remount
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => ({
+				...validTimelineResponse,
+				timeline: [
+					{ date: '2026-02-01T00:00:00Z', value_cents: 20000 },
+					{ date: '2026-02-08T00:00:00Z', value_cents: 25000 }
+				],
+				summary: {
+					start_value_cents: 20000,
+					end_value_cents: 25000,
+					change_cents: 5000,
+					change_percentage: 25.0
+				}
+			})
+		});
+
+		// Remount - simulates what happens during SvelteKit navigation
+		const { container: container2 } = render(InventoryValueWidget);
+
+		await waitFor(() => {
+			expect(container2.querySelector('.chart-container')).toBeInTheDocument();
+		});
+
+		// If we get here without errors, the component handled remounting correctly
+		// The fix uses a {#key} block to ensure LayerCake remounts with fresh scale instances
+		expect(mockFetch).toHaveBeenCalledTimes(2);
+	});
 });

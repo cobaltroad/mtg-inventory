@@ -281,20 +281,22 @@
 		<!-- Chart -->
 		{#if hasValidChartData}
 			<div class="chart-container" style="height: 300px;">
-				<LayerCake
-					padding={{ top: 20, right: 20, bottom: 40, left: 60 }}
-					x="date"
-					y="value"
-					xScale="time"
-					yScale="linear"
-					data={chartData}
-				>
-					<Svg>
-						<AxisX />
-						<AxisY ticks={5} formatTick={(d) => `$${d}`} />
-						<Line />
-					</Svg>
-				</LayerCake>
+				{#key chartData}
+					<LayerCake
+						padding={{ top: 20, right: 20, bottom: 40, left: 60 }}
+						x="date"
+						y="value"
+						xScale="time"
+						yScale="linear"
+						data={chartData}
+					>
+						<Svg>
+							<AxisX />
+							<AxisY ticks={5} formatTick={(d) => `$${d}`} />
+							<Line />
+						</Svg>
+					</LayerCake>
+				{/key}
 			</div>
 		{/if}
 	{/if}
