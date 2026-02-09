@@ -82,6 +82,7 @@
 	let inventoryQuantity = $state(0);
 	let inventoryError = $state('');
 	let toastMessage = $state('');
+	let toastType = $state<'success' | 'error'>('success');
 	let showToast = $state(false);
 
 	// Enhanced tracking form fields
@@ -196,6 +197,7 @@
 					? `Failed to add to inventory: ${errorData.errors.join(', ')}`
 					: 'Failed to add to inventory';
 				toastMessage = inventoryError;
+				toastType = 'error';
 				showToast = true;
 				return;
 			}
@@ -206,6 +208,7 @@
 
 			// Show toast notification with printing details
 			toastMessage = `Added ${printingToAdd.name} (${printingToAdd.set.toUpperCase()} #${printingToAdd.collector_number}) to inventory`;
+			toastType = 'success';
 			showToast = true;
 
 			// Refresh the inventory page to show the new item
@@ -230,6 +233,7 @@
 			inventoryState = 'error';
 			inventoryError = 'Failed to add to inventory. Please check your connection and try again.';
 			toastMessage = inventoryError;
+			toastType = 'error';
 			showToast = true;
 		}
 	}
@@ -391,7 +395,7 @@
 {#if showToast}
 	<Toast
 		message={toastMessage}
-		type={inventoryState === 'success' ? 'success' : 'error'}
+		type={toastType}
 		onDismiss={() => {
 			showToast = false;
 		}}

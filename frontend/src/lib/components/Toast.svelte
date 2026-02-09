@@ -46,13 +46,13 @@
 	}
 
 	.toast.success {
-		background: #16a34a;
-		color: white;
+		background: var(--color-success-500) !important;
+		color: #1f2937 !important;
 	}
 
 	.toast.error {
-		background: #dc2626;
-		color: white;
+		background: var(--color-error-500) !important;
+		color: var(--color-error-50) !important;
 	}
 
 	@keyframes slideIn {
