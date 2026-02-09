@@ -1,24 +1,357 @@
-# README
+# MTG Inventory - Backend
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+Rails 8.1 API-only server for the MTG inventory management system.
 
-Things you may want to cover:
+See the [main README](../README.md) for Docker Compose setup and background job management.
 
-* Ruby version
+## Tech Stack
 
-* System dependencies
+- **Framework**: Rails 8.1 (API-only mode)
+- **Ruby Version**: 3.4
+- **Database**: PostgreSQL 16
+- **Job Queue**: Solid Queue
+- **Testing**: Minitest with fixtures
+- **Code Quality**: RuboCop (Rails Omakase), Brakeman, Bundler Audit
 
-* Configuration
+## Local Development Setup
 
-* Database creation
+### Prerequisites
 
-* Database initialization
+- Ruby 3.4
+- PostgreSQL 16
+- Bundler
 
-* How to run the test suite
+### Installation
 
-* Services (job queues, cache servers, search engines, etc.)
+```bash
+cd backend
+bundle install
+```
 
-* Deployment instructions
+### Database Setup
 
-* ...
+```bash
+# Create, migrate, and seed database (idempotent)
+rails db:prepare
+
+# Or manually:
+rails db:create
+rails db:migrate
+rails db:seed
+```
+
+### Running the Server
+
+```bash
+rails server -b 0.0.0.0  # Runs on port 3000
+```
+
+The `-b 0.0.0.0` flag allows connections from Docker containers.
+
+## Testing
+
+### Run Tests
+
+```bash
+# All tests
+rails test
+
+# Specific test file
+rails test test/models/card_test.rb
+
+# Specific test
+rails test test/models/card_test.rb:12
+```
+
+### Test Structure
+
+- **Models**: `test/models/` - ActiveRecord model tests
+- **Controllers**: `test/controllers/` - API endpoint tests
+- **Jobs**: `test/jobs/` - Background job tests
+- **Fixtures**: `test/fixtures/` - Test data
+
+### Test Coverage
+
+Tests use Minitest with fixtures for data setup. All new features should include:
+- Model tests for validations and associations
+- Controller tests for API endpoints
+- Job tests for background processing
+
+## Code Quality
+
+### Linting
+
+```bash
+# Run RuboCop (Rails Omakase style)
+rubocop
+
+# Auto-correct safe violations
+rubocop -a
+
+# Auto-correct all violations (use with caution)
+rubocop -A
+```
+
+### Security Analysis
+
+```bash
+# Scan for security vulnerabilities in code
+brakeman
+
+# Check for vulnerable gem versions
+bundler-audit
+```
+
+## Database Management
+
+### Migrations
+
+```bash
+# Create a migration
+rails generate migration AddFieldToTable field:type
+
+# Run pending migrations
+rails db:migrate
+
+# Rollback last migration
+rails db:rollback
+
+# Reset database (drop, create, migrate, seed)
+rails db:reset
+```
+
+### Seeds
+
+The seed file (`db/seeds.rb`) includes:
+- Sample inventory items
+- Test commanders
+- Sample price alerts
+
+## API Endpoints
+
+The API is organized into namespaced controllers under `app/controllers/api/`.
+
+### Core Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/inventory` | GET | List all inventory items |
+| `/api/inventory` | POST | Add card to inventory |
+| `/api/inventory/:id` | GET | Get single inventory item |
+| `/api/inventory/:id` | PATCH/PUT | Update inventory item |
+| `/api/inventory/:id` | DELETE | Remove from inventory |
+| `/api/commanders` | GET | List EDH commanders |
+| `/api/commanders/:id` | GET | Get commander with decklist |
+| `/api/price_alerts` | GET | List price alerts |
+| `/api/cards/search` | GET | Search cards by name |
+
+See `config/routes.rb` for the complete API reference.
+
+### API Response Format
+
+Standard JSON responses with appropriate HTTP status codes:
+
+```ruby
+# Success (200 OK)
+{ "data": [...] }
+
+# Created (201 Created)
+{ "data": {...}, "message": "Created successfully" }
+
+# Error (4xx/5xx)
+{ "error": "Error message" }
+```
+
+## Background Jobs
+
+Background jobs use **Solid Queue** and are located in `app/jobs/`.
+
+### Job Classes
+
+- **ScrapeEdhrecCommandersJob** - Fetches top commanders from EDHREC
+- **ScrapeCommanderDecklistJob** - Scrapes individual commander decklists
+- **UpdateCardPricesJob** - Updates card prices from Scryfall
+- **CacheCardImageJob** - Pre-caches card images for faster loading
+
+### Creating a New Job
+
+```bash
+rails generate job MyJob
+```
+
+Then implement in `app/jobs/my_job.rb`:
+
+```ruby
+class MyJobJob < ApplicationJob
+  queue_as :default
+
+  def perform(*args)
+    # Job logic here
+  end
+end
+```
+
+### Rate Limiting
+
+The `RateLimiter` service (`app/services/rate_limiter.rb`) enforces delays:
+
+```ruby
+RateLimiter.throttle(:edhrec) do
+  # Makes request with min 2 second delay
+end
+
+RateLimiter.throttle(:scryfall) do
+  # Makes request with min 100ms delay
+end
+```
+
+### Job Configuration
+
+Scheduled jobs are defined in `config/recurring.yml`:
+
+```yaml
+production:
+  scrape_commanders:
+    class: ScrapeEdhrecCommandersJob
+    schedule: "0 8 * * 0"  # Sunday 8am
+```
+
+See the [main README](../README.md#background-jobs--scheduled-tasks) for job monitoring and manual invocation.
+
+## Models
+
+### Core Models
+
+- **Card** - Represents a Magic: The Gathering card (linked to Scryfall)
+- **InventoryItem** - Tracks cards in user's collection
+- **Commander** - EDH commander with decklist
+- **PriceAlert** - Alerts when card prices change
+- **ScryfallCard** - Cached Scryfall card data
+
+### Model Relationships
+
+```ruby
+Card
+  has_many :inventory_items
+  has_many :price_alerts
+  belongs_to :scryfall_card
+
+Commander
+  has_many :commander_deck_cards
+  has_many :cards, through: :commander_deck_cards
+
+InventoryItem
+  belongs_to :card
+```
+
+### Model Validations
+
+Models include comprehensive validations:
+
+```ruby
+class Card < ApplicationRecord
+  validates :name, presence: true
+  validates :scryfall_id, presence: true, uniqueness: true
+end
+```
+
+## Services
+
+Service objects in `app/services/` handle complex business logic:
+
+- **RateLimiter** - Rate limiting for external APIs
+- **EdhrecScraper** - EDHREC website scraping
+- **ScryfallImporter** - Import cards from Scryfall API
+
+### Creating a Service
+
+```ruby
+# app/services/my_service.rb
+class MyService
+  def self.call(*args)
+    new(*args).call
+  end
+
+  def initialize(*args)
+    # Setup
+  end
+
+  def call
+    # Service logic
+  end
+end
+```
+
+## Configuration
+
+### Environment Variables
+
+Configure via `.env` file or environment:
+
+```bash
+DATABASE_URL=postgresql://user:pass@localhost:5432/mtg_inventory
+RAILS_ENV=development
+RAILS_LOG_LEVEL=info
+```
+
+### Credentials
+
+Edit encrypted credentials:
+
+```bash
+rails credentials:edit
+```
+
+## Deployment
+
+The backend is containerized with Docker. See [main README](../README.md#quick-start) for Docker Compose setup.
+
+### Production Considerations
+
+- Set `RAILS_ENV=production`
+- Configure proper database credentials
+- Enable SSL in production
+- Set up proper logging and monitoring
+- Configure rate limiting based on API quotas
+
+## Troubleshooting
+
+### Common Issues
+
+**Database connection errors:**
+```bash
+# Check PostgreSQL is running
+docker compose ps db
+
+# Reset database
+rails db:reset
+```
+
+**Job queue issues:**
+```bash
+# Check job queue status
+rails jobs:stats
+
+# Clear failed jobs
+rails jobs:clear_finished
+```
+
+**Missing dependencies:**
+```bash
+bundle install
+```
+
+## Contributing
+
+- Follow Rails Omakase style guide (enforced by RuboCop)
+- Write tests for all new features
+- Run linting before committing: `rubocop -a`
+- Ensure all tests pass: `rails test`
+- Document API endpoints in this README
+
+## Additional Resources
+
+- [Rails Guides](https://guides.rubyonrails.org/)
+- [Solid Queue Documentation](https://github.com/rails/solid_queue)
+- [Scryfall API Documentation](https://scryfall.com/docs/api)
+- [Main Project README](../README.md)
