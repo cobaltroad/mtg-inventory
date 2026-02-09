@@ -361,33 +361,11 @@
 										/>
 									</div>
 
-									<div class="form-field">
-										<label for="treatment">Treatment</label>
-										<select
-											id="treatment"
-											bind:value={treatment}
-											class="form-select"
-											onclick={(e) => e.stopPropagation()}
-										>
-											{#each TREATMENT_OPTIONS as option}
-												<option value={option}>{option}</option>
-											{/each}
-										</select>
-									</div>
+									<!-- Treatment field hidden - defaulted to Normal for now -->
+									<!-- Future enhancement: Will be replaced with "Finish" field per issue #127 -->
 
-									<div class="form-field">
-										<label for="language">Language</label>
-										<select
-											id="language"
-											bind:value={language}
-											class="form-select"
-											onclick={(e) => e.stopPropagation()}
-										>
-											{#each LANGUAGE_OPTIONS as option}
-												<option value={option}>{option}</option>
-											{/each}
-										</select>
-									</div>
+									<!-- Language field hidden - defaulted to English for now -->
+									<!-- Future enhancement: Add language selection UI -->
 
 									<button
 										type="button"
