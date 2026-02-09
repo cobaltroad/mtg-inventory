@@ -74,6 +74,10 @@ module StructuredLogging
     redacted.gsub!(/secret[=:]\s*["']?[^"'\s,}]+["']?/i, "secret=[REDACTED]")
     redacted.gsub!(/token[=:]\s*["']?[^"'\s,}]+["']?/i, "token=[REDACTED]")
 
+    # Redact full file system paths (keep only relative paths from app root)
+    # Matches patterns like /var/app/..., /home/..., etc.
+    redacted.gsub!(%r{/(?:var|home|opt|usr)/[^\s"',\}]+}, "[REDACTED_PATH]")
+
     redacted
   end
 end

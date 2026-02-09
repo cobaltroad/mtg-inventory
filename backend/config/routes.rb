@@ -42,9 +42,21 @@ Rails.application.routes.draw do
     # Search
     get "search", to: "search#index"
 
-    # Admin - Scraper executions
+    # Admin - Execution history for background jobs
     namespace :admin do
       resources :scraper_executions, only: [ :index, :show ] do
+        collection do
+          get :stats
+        end
+      end
+
+      resources :price_update_executions, only: [ :index, :show ] do
+        collection do
+          get :stats
+        end
+      end
+
+      resources :image_cache_executions, only: [ :index, :show ] do
         collection do
           get :stats
         end
