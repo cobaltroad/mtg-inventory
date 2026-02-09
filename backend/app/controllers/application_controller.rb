@@ -31,15 +31,15 @@ class ApplicationController < ActionController::API
   private
 
   def force_user_reload?
-    params[:uu].present?
+    params.key? :uu
   end
 
   def current_user
-    if force_user_reload?
-      # Skip memoization when ?uu is present
-      User.find_by(email: User::DEFAULT_EMAIL) || raise(DefaultUserMissingError)
-    else
+    # Skip memoization when ?uu is present
+    # unless force_user_reload?
+    unless true
       @current_user ||= User.find_by(email: User::DEFAULT_EMAIL) || raise(DefaultUserMissingError)
     end
+    User.find_by(email: User::DEFAULT_EMAIL) || raise(DefaultUserMissingError)
   end
 end
