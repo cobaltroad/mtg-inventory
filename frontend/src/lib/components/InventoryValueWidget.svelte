@@ -53,6 +53,7 @@
 	let error = $state<string | null>(null);
 	let timePeriod = $state<number>(30);
 	let timelineData = $state<TimelineData | null>(null);
+	let chartKey = $state(0); // Counter to force LayerCake remount
 
 	// ============================================================================
 	// Utility Functions
@@ -135,6 +136,7 @@
 			}
 
 			timelineData = data;
+			chartKey++; // Increment to force LayerCake remount
 		} catch (err) {
 			console.error('Error fetching inventory value timeline:', err);
 			error =
@@ -281,7 +283,7 @@
 		<!-- Chart -->
 		{#if hasValidChartData}
 			<div class="chart-container" style="height: 300px;">
-				{#key chartData}
+				{#key chartKey}
 					<LayerCake
 						padding={{ top: 20, right: 20, bottom: 40, left: 60 }}
 						x="date"
