@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2026-02-09
+
+### Added
+- Extended logging and monitoring to all background jobs (#125)
+- ScraperExecution model for tracking scraper job history (#93)
+- Admin API endpoints for scraper execution management (#93)
+- Structured JSON logging in scraper jobs (#93)
+
+### Fixed
+- LayerCake scale errors on home page navigation (#121)
+- Inventory drawer closing unexpectedly on interaction (#117)
+- Memoization race conditions with ?uu parameter
+
+### Changed
+- Simplified home page by removing search link
+- Improved drawer behavior with better interaction handling
+
 ## [0.1.0] - 2026-02-06
 
 ### Added
@@ -47,5 +64,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Earlier releases are not documented in this changelog.
 
+[0.3.2]: https://github.com/cobaltroad/mtg-inventory/compare/v0.3.1...v0.3.2
 [0.1.0]: https://github.com/cobaltroad/mtg-inventory/compare/v0.0.3...v0.1.0
 [0.0.3]: https://github.com/cobaltroad/mtg-inventory/releases/tag/v0.0.3
