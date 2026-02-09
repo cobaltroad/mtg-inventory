@@ -28,8 +28,8 @@ export type SortOption =
 	| 'set-desc'
 	| 'release-newest'
 	| 'release-oldest'
-	| 'quantity-high'
-	| 'quantity-low'
+	| 'value-high'
+	| 'value-low'
 	| 'date-newest'
 	| 'date-oldest';
 

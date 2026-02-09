@@ -58,11 +58,19 @@ export function sortInventory(items: InventoryItem[], sortOption: SortOption): I
 				return a.released_at.localeCompare(b.released_at);
 			});
 
-		case 'quantity-high':
-			return sorted.sort((a, b) => b.quantity - a.quantity);
+		case 'value-high':
+			return sorted.sort((a, b) => {
+				const aValue = a.total_price_cents ?? 0;
+				const bValue = b.total_price_cents ?? 0;
+				return bValue - aValue;
+			});
 
-		case 'quantity-low':
-			return sorted.sort((a, b) => a.quantity - b.quantity);
+		case 'value-low':
+			return sorted.sort((a, b) => {
+				const aValue = a.total_price_cents ?? 0;
+				const bValue = b.total_price_cents ?? 0;
+				return aValue - bValue;
+			});
 
 		case 'date-newest':
 			return sorted.sort((a, b) => b.created_at.localeCompare(a.created_at));

@@ -16,8 +16,8 @@
 		{ value: 'set-desc', label: 'Set Name (Z-A)' },
 		{ value: 'release-newest', label: 'Release Date (Newest First)' },
 		{ value: 'release-oldest', label: 'Release Date (Oldest First)' },
-		{ value: 'quantity-high', label: 'Quantity (Highest to Lowest)' },
-		{ value: 'quantity-low', label: 'Quantity (Lowest to Highest)' },
+		{ value: 'value-high', label: 'Value (Highest to Lowest)' },
+		{ value: 'value-low', label: 'Value (Lowest to Highest)' },
 		{ value: 'date-newest', label: 'Date Added (Most Recent)' },
 		{ value: 'date-oldest', label: 'Date Added (Oldest)' }
 	];

@@ -16,6 +16,8 @@ const MOCK_ITEMS: InventoryItem[] = [
 		collector_number: '234',
 		released_at: '2015-11-13',
 		image_url: 'https://example.com/1.jpg',
+		unit_price_cents: 50, // $0.50 each
+		total_price_cents: 150, // $1.50 total (3 x $0.50)
 		created_at: '2025-01-15T10:00:00Z',
 		updated_at: '2025-01-15T10:00:00Z',
 		user_id: 1,
@@ -31,6 +33,8 @@ const MOCK_ITEMS: InventoryItem[] = [
 		collector_number: '48',
 		released_at: '2018-12-07',
 		image_url: 'https://example.com/2.jpg',
+		unit_price_cents: 5000, // $50.00 each
+		total_price_cents: 5000, // $50.00 total (1 x $50.00)
 		created_at: '2025-01-16T10:00:00Z',
 		updated_at: '2025-01-16T10:00:00Z',
 		user_id: 1,
@@ -46,6 +50,8 @@ const MOCK_ITEMS: InventoryItem[] = [
 		collector_number: '100',
 		released_at: '2015-11-13',
 		image_url: 'https://example.com/3.jpg',
+		unit_price_cents: 200, // $2.00 each
+		total_price_cents: 1000, // $10.00 total (5 x $2.00)
 		created_at: '2025-01-14T10:00:00Z',
 		updated_at: '2025-01-14T10:00:00Z',
 		user_id: 1,
@@ -61,6 +67,8 @@ const MOCK_ITEMS: InventoryItem[] = [
 		collector_number: '5',
 		released_at: '1993-08-05',
 		image_url: 'https://example.com/4.jpg',
+		unit_price_cents: 500000, // $5,000.00 each
+		total_price_cents: 1000000, // $10,000.00 total (2 x $5,000.00)
 		created_at: '2025-01-17T10:00:00Z',
 		updated_at: '2025-01-17T10:00:00Z',
 		user_id: 1,
@@ -191,23 +199,23 @@ describe('sortInventory - Release Date', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Tests: sortInventory - Quantity
+// Tests: sortInventory - Value
 // ---------------------------------------------------------------------------
-describe('sortInventory - Quantity', () => {
-	it('sorts by quantity highest to lowest', () => {
-		const result = sortInventory(MOCK_ITEMS, 'quantity-high');
-		expect(result[0].quantity).toBe(5);
-		expect(result[1].quantity).toBe(3);
-		expect(result[2].quantity).toBe(2);
-		expect(result[3].quantity).toBe(1);
+describe('sortInventory - Value', () => {
+	it('sorts by value highest to lowest', () => {
+		const result = sortInventory(MOCK_ITEMS, 'value-high');
+		expect(result[0].total_price_cents).toBe(1000000); // Black Lotus - $10,000
+		expect(result[1].total_price_cents).toBe(5000); // Ancient Tomb - $50
+		expect(result[2].total_price_cents).toBe(1000); // Mox Pearl - $10
+		expect(result[3].total_price_cents).toBe(150); // Zombie Token - $1.50
 	});
 
-	it('sorts by quantity lowest to highest', () => {
-		const result = sortInventory(MOCK_ITEMS, 'quantity-low');
-		expect(result[0].quantity).toBe(1);
-		expect(result[1].quantity).toBe(2);
-		expect(result[2].quantity).toBe(3);
-		expect(result[3].quantity).toBe(5);
+	it('sorts by value lowest to highest', () => {
+		const result = sortInventory(MOCK_ITEMS, 'value-low');
+		expect(result[0].total_price_cents).toBe(150); // Zombie Token - $1.50
+		expect(result[1].total_price_cents).toBe(1000); // Mox Pearl - $10
+		expect(result[2].total_price_cents).toBe(5000); // Ancient Tomb - $50
+		expect(result[3].total_price_cents).toBe(1000000); // Black Lotus - $10,000
 	});
 });
 
