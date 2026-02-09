@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_08_015631) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_09_012439) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -92,6 +92,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_08_015631) do
     t.index ["partner_id"], name: "index_decklists_on_partner_id"
   end
 
+  create_table "image_cache_executions", force: :cascade do |t|
+    t.boolean "cache_hit", default: false
+    t.string "card_id", null: false
+    t.bigint "collection_item_id", null: false
+    t.datetime "created_at", null: false
+    t.boolean "downloaded", default: false
+    t.text "error_message"
+    t.integer "file_size_bytes"
+    t.datetime "finished_at"
+    t.datetime "started_at", null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["card_id"], name: "index_image_cache_executions_on_card_id"
+    t.index ["collection_item_id"], name: "index_image_cache_executions_on_collection_item_id"
+    t.index ["started_at"], name: "index_image_cache_executions_on_started_at"
+    t.index ["status"], name: "index_image_cache_executions_on_status"
+  end
+
   create_table "price_alerts", force: :cascade do |t|
     t.string "alert_type", null: false
     t.string "card_id", null: false
@@ -107,6 +125,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_08_015631) do
     t.index ["user_id", "card_id", "created_at"], name: "index_price_alerts_on_user_id_and_card_id_and_created_at"
     t.index ["user_id", "dismissed"], name: "index_price_alerts_on_user_id_and_dismissed"
     t.index ["user_id"], name: "index_price_alerts_on_user_id"
+  end
+
+  create_table "price_update_executions", force: :cascade do |t|
+    t.integer "cards_attempted", default: 0
+    t.integer "cards_failed", default: 0
+    t.integer "cards_skipped", default: 0
+    t.integer "cards_succeeded", default: 0
+    t.datetime "created_at", null: false
+    t.text "error_summary"
+    t.datetime "finished_at"
+    t.string "mode", null: false
+    t.integer "price_alerts_created", default: 0
+    t.datetime "started_at", null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["mode"], name: "index_price_update_executions_on_mode"
+    t.index ["started_at"], name: "index_price_update_executions_on_started_at"
+    t.index ["status"], name: "index_price_update_executions_on_status"
   end
 
   create_table "scraper_executions", force: :cascade do |t|

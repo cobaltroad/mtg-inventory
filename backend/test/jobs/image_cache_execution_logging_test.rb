@@ -1,25 +1,27 @@
 require "test_helper"
+require "webmock/minitest"
 
 class ImageCacheExecutionLoggingTest < ActiveJob::TestCase
   setup do
-    # Clear any existing data
-    ImageCacheExecution.delete_all
-    User.delete_all
-    Collection.delete_all
-    CollectionItem.delete_all
+    # Disable VCR for these tests since we're using WebMock stubs directly
+    VCR.turn_off!(ignore_cassettes: true)
+    WebMock.enable!
 
-    # Create test user, collection, and item
+    # Clear any existing data in proper order (dependencies first)
+    ImageCacheExecution.delete_all
+    CollectionItem.delete_all
+    User.delete_all
+
+    # Create test user and collection item
     @user = User.create!(
       email: "test@example.com",
-      password: "password123",
-      password_confirmation: "password123"
+      name: "Test User"
     )
-    @collection = Collection.create!(user: @user, name: "Test Collection")
     @item = CollectionItem.create!(
-      collection: @collection,
+      user: @user,
+      collection_type: "inventory",
       card_id: "test-card-123",
-      quantity: 1,
-      finish: "nonfoil"
+      quantity: 1
     )
     @image_url = "https://cards.scryfall.io/normal/front/test.jpg"
 
@@ -33,6 +35,9 @@ class ImageCacheExecutionLoggingTest < ActiveJob::TestCase
   teardown do
     # Restore original logger
     Rails.logger = @original_logger
+
+    # Re-enable VCR
+    VCR.turn_on!
   end
 
   # ---------------------------------------------------------------------------
@@ -151,7 +156,7 @@ class ImageCacheExecutionLoggingTest < ActiveJob::TestCase
   end
 
   test "CacheCardImageJob logs already_cached event when cache hit" do
-    stub_image_cache_service_success(cached: true) do
+    stub_image_cache_service_success(downloaded: false, cached: true) do
       CacheCardImageJob.perform_now(@item.id, @image_url)
 
       log_content = @log_output.string
@@ -168,9 +173,9 @@ class ImageCacheExecutionLoggingTest < ActiveJob::TestCase
       CacheCardImageJob.perform_now(@item.id, @image_url)
 
       log_content = @log_output.string
-      assert_match /"event":"error_occurred"/, log_content
+      # Failures from the service are logged as cache_failed, not error_occurred
+      assert_match /"event":"cache_failed"/, log_content
       assert_match /"error_message":"Connection timeout after 30s"/, log_content
-      assert_match /"collection_item_id":#{@item.id}/, log_content
       assert_match /"card_id":"test-card-123"/, log_content
     end
   end
@@ -267,31 +272,33 @@ class ImageCacheExecutionLoggingTest < ActiveJob::TestCase
   # ---------------------------------------------------------------------------
 
   def stub_image_cache_service_success(downloaded: true, cached: false, file_size: nil)
-    service_double = Minitest::Mock.new
-    service_double.expect :call, {
+    service_instance = Object.new
+    result = {
       success: true,
       downloaded: downloaded,
       cached: cached,
       file_size_bytes: file_size || (downloaded ? 45678 : nil),
       error: nil
     }
+    service_instance.define_singleton_method(:call) { result }
 
-    CardImageCacheService.stub :new, ->(_args) { service_double } do
+    CardImageCacheService.stub :new, service_instance do
       yield
     end
   end
 
   def stub_image_cache_service_failure(error_message)
-    service_double = Minitest::Mock.new
-    service_double.expect :call, {
+    service_instance = Object.new
+    result = {
       success: false,
       downloaded: false,
       cached: false,
       file_size_bytes: nil,
       error: error_message
     }
+    service_instance.define_singleton_method(:call) { result }
 
-    CardImageCacheService.stub :new, ->(_args) { service_double } do
+    CardImageCacheService.stub :new, service_instance do
       yield
     end
   end

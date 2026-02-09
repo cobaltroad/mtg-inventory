@@ -7,6 +7,8 @@
 #
 # Scheduled to run daily at 2 AM UTC using Solid Queue for historical price tracking.
 class UpdateCardPricesJob < ApplicationJob
+  include StructuredLogging
+
   queue_as :default
 
   # Batch processing configuration
@@ -32,66 +34,155 @@ class UpdateCardPricesJob < ApplicationJob
   # @raise [ArgumentError] if card_id is provided but invalid
   # ---------------------------------------------------------------------------
   def perform(card_id = nil)
-    if card_id.nil?
-      # Batch mode: process all cards across all collections
-      process_all_cards
-    else
-      # Single card mode: process specific card (legacy behavior)
-      process_single_card(card_id)
+    mode = card_id.nil? ? "batch" : "single_card"
+    execution = PriceUpdateExecution.create!(
+      started_at: Time.current,
+      mode: mode
+    )
+
+    log_event(
+      level: :info,
+      event: "price_update_started",
+      execution_id: execution.id,
+      mode: mode,
+      card_id: card_id
+    )
+
+    begin
+      if card_id.nil?
+        # Batch mode: process all cards across all collections
+        process_all_cards(execution)
+      else
+        # Single card mode: process specific card (legacy behavior)
+        process_single_card(card_id, execution)
+      end
+
+      # Determine final status
+      final_status = determine_final_status(execution)
+      execution.update!(
+        finished_at: Time.current,
+        status: final_status
+      )
+
+      log_event(
+        level: :info,
+        event: "price_update_completed",
+        execution_id: execution.id,
+        status: final_status,
+        mode: mode,
+        cards_attempted: execution.cards_attempted,
+        cards_succeeded: execution.cards_succeeded,
+        cards_failed: execution.cards_failed,
+        cards_skipped: execution.cards_skipped,
+        price_alerts_created: execution.price_alerts_created,
+        duration_seconds: execution.execution_time_seconds
+      )
+    rescue StandardError => e
+      execution.update!(
+        finished_at: Time.current,
+        status: :failure,
+        error_summary: "#{e.class.name}: #{e.message}"
+      )
+
+      log_error(
+        error: e,
+        execution_id: execution.id,
+        mode: mode,
+        card_id: card_id
+      )
+
+      raise
     end
   end
 
   private
 
   # Process all unique cards across all user collections
-  def process_all_cards
-    start_time = Time.current
-
+  def process_all_cards(execution)
     # Get all unique card_ids from all collection items
     all_card_ids = CollectionItem.distinct.pluck(:card_id)
 
     if all_card_ids.empty?
-      Rails.logger.info("No cards found to update")
+      log_event(level: :info, event: "no_cards_to_process")
       return
     end
-
-    Rails.logger.info("Starting batch price update for #{all_card_ids.count} unique cards")
 
     # Filter out cards already processed today for idempotency
     card_ids_to_process = filter_unprocessed_cards(all_card_ids)
+    cards_skipped = all_card_ids.count - card_ids_to_process.count
 
     if card_ids_to_process.empty?
-      Rails.logger.info("All cards already processed today")
+      execution.update!(cards_skipped: cards_skipped)
+      log_event(level: :info, event: "all_cards_already_processed", cards_skipped: cards_skipped)
       return
     end
 
-    Rails.logger.info("Processing #{card_ids_to_process.count} cards (#{all_card_ids.count - card_ids_to_process.count} already processed today)")
-
-    # Process cards in batches
+    # Initialize counters
     total_processed = 0
     total_successful = 0
+    total_failed = 0
 
+    # Process cards in batches
     card_ids_to_process.each_slice(BATCH_SIZE).with_index do |batch, batch_index|
+      log_event(
+        level: :info,
+        event: "batch_started",
+        batch_number: batch_index + 1,
+        batch_size: batch.size
+      )
+
       batch.each do |card_id|
         begin
           fetch_and_store_price(card_id)
           total_successful += 1
+
+          log_event(
+            level: :info,
+            event: "card_processed",
+            card_id: card_id,
+            success: true
+          )
+        rescue CardPriceService::RateLimitError => e
+          # Log rate limit and re-raise to trigger retry
+          log_rate_limit(service: "Scryfall", retry_after: e.try(:retry_after))
+          raise
         rescue CardPriceService::NetworkError, CardPriceService::RateLimitError => e
           # Re-raise to trigger retry - idempotency ensures we resume correctly
-          Rails.logger.error("Failed batch processing at card #{card_id}: #{e.message}")
+          log_error(error: e, card_id: card_id, context: "batch_processing")
           raise
         rescue StandardError => e
           # Log but continue processing other cards
-          Rails.logger.error("Error processing card #{card_id}: #{e.message}")
+          total_failed += 1
+          log_event(
+            level: :warn,
+            event: "card_processed",
+            card_id: card_id,
+            success: false,
+            error_message: e.message
+          )
         end
 
         total_processed += 1
 
         # Log progress periodically
         if (total_processed % PROGRESS_LOG_INTERVAL).zero?
-          Rails.logger.info("Processed #{total_processed} cards...")
+          log_event(
+            level: :info,
+            event: "progress_update",
+            cards_processed: total_processed,
+            cards_succeeded: total_successful,
+            cards_failed: total_failed
+          )
         end
       end
+
+      log_event(
+        level: :info,
+        event: "batch_completed",
+        batch_number: batch_index + 1,
+        success_count: total_successful,
+        failure_count: total_failed
+      )
 
       # Add delay between batches (except after last batch)
       unless batch_index == (card_ids_to_process.length / BATCH_SIZE.to_f).ceil - 1
@@ -99,31 +190,46 @@ class UpdateCardPricesJob < ApplicationJob
       end
     end
 
-    execution_time = (Time.current - start_time).round(2)
-    Rails.logger.info("Completed price update job in #{execution_time} seconds")
-    Rails.logger.info("Updated prices for #{total_successful} cards")
-
     # Detect price changes and create alerts
-    detect_price_changes
+    alerts_count = detect_price_changes
+
+    # Update execution record with final counts
+    execution.update!(
+      cards_attempted: total_processed,
+      cards_succeeded: total_successful,
+      cards_failed: total_failed,
+      cards_skipped: cards_skipped,
+      price_alerts_created: alerts_count
+    )
   end
 
   # Process a single card (legacy single-card mode)
-  def process_single_card(card_id)
+  def process_single_card(card_id, execution)
     validate_card_id!(card_id)
 
-    Rails.logger.info("Updating prices for card: #{card_id}")
+    log_event(level: :info, event: "single_card_started", card_id: card_id)
 
     begin
       fetch_and_store_price(card_id)
-      Rails.logger.info("Successfully updated prices for card: #{card_id}")
+
+      execution.update!(
+        cards_attempted: 1,
+        cards_succeeded: 1,
+        cards_failed: 0
+      )
+
+      log_event(level: :info, event: "card_processed", card_id: card_id, success: true)
     rescue CardPriceService::RateLimitError => e
-      Rails.logger.error("Failed to update prices for card #{card_id}: #{e.message}")
+      execution.update!(cards_attempted: 1, cards_failed: 1)
+      log_rate_limit(service: "Scryfall", retry_after: e.try(:retry_after))
       raise # Re-raise to trigger retry
     rescue CardPriceService::NetworkError => e
-      Rails.logger.error("Failed to update prices for card #{card_id}: #{e.message}")
+      execution.update!(cards_attempted: 1, cards_failed: 1)
+      log_error(error: e, card_id: card_id)
       raise # Re-raise to trigger retry
     rescue StandardError => e
-      Rails.logger.error("Unexpected error updating prices for card #{card_id}: #{e.message}")
+      execution.update!(cards_attempted: 1, cards_failed: 1)
+      log_error(error: e, card_id: card_id)
       raise
     end
   end
@@ -181,18 +287,34 @@ class UpdateCardPricesJob < ApplicationJob
 
   # Detect significant price changes and create alerts for users
   def detect_price_changes
-    Rails.logger.info("Detecting price changes for alerts...")
-    start_time = Time.current
+    log_event(level: :info, event: "detecting_price_changes")
 
     begin
       service = PriceAlertService.new
       alerts = service.detect_price_changes
 
-      execution_time = (Time.current - start_time).round(2)
-      Rails.logger.info("Created #{alerts.count} price alerts in #{execution_time} seconds")
+      log_event(
+        level: :info,
+        event: "price_alerts_detected",
+        count: alerts.count
+      )
+
+      alerts.count
     rescue StandardError => e
-      Rails.logger.error("Error detecting price changes: #{e.message}")
+      log_error(error: e, context: "price_change_detection")
       # Don't raise - we don't want to fail the whole job if alert detection fails
+      0
+    end
+  end
+
+  # Determine final execution status based on results
+  def determine_final_status(execution)
+    if execution.cards_failed.zero?
+      :success
+    elsif execution.cards_succeeded.positive?
+      :partial_success
+    else
+      :failure
     end
   end
 end
