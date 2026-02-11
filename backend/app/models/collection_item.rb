@@ -1,10 +1,8 @@
 class CollectionItem < ApplicationRecord
   COLLECTION_TYPES = %w[inventory wishlist].freeze
 
-  TREATMENT_OPTIONS = [
-    "Normal", "Foil", "Etched", "Showcase", "Extended Art",
-    "Borderless", "Full Art", "Retro Frame", "Textured Foil"
-  ].freeze
+  # Scryfall-aligned finish types for pricing consistency
+  FINISH_TYPES = %w[nonfoil foil etched].freeze
 
   LANGUAGE_OPTIONS = [
     "English", "Japanese", "German", "French", "Spanish",
@@ -27,7 +25,7 @@ class CollectionItem < ApplicationRecord
   validates :acquired_price_cents,
             numericality: { only_integer: true, greater_than_or_equal_to: 0 },
             allow_nil: true
-  validates :treatment, inclusion: { in: TREATMENT_OPTIONS }, allow_nil: true
+  validates :finish, inclusion: { in: FINISH_TYPES }, allow_nil: true
   validates :language, inclusion: { in: LANGUAGE_OPTIONS }, allow_nil: true
 
   validate :acquired_date_cannot_be_in_future
@@ -44,15 +42,15 @@ class CollectionItem < ApplicationRecord
     CardPrice.latest_for(card_id)
   end
 
-  # Returns the unit price in cents based on the item's treatment.
-  # Delegates to CardPrice#price_for_treatment to select the appropriate price field.
+  # Returns the unit price in cents based on the item's finish.
+  # Delegates to CardPrice#price_for_finish to select the appropriate price field.
   #
   # @return [Integer, nil] Price in cents, or nil if no price data available
   def unit_price_cents
     price = latest_price
     return nil if price.nil?
 
-    price.price_for_treatment(treatment)
+    price.price_for_finish(finish)
   end
 
   # Returns the total price for all copies of this item (unit price × quantity).

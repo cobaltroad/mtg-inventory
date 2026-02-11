@@ -1,15 +1,15 @@
 # Provides historical pricing data for individual Magic: The Gathering cards.
 #
 # This controller serves price history data for visualization and analysis,
-# allowing users to track price trends over time for different card treatments
-# (normal, foil, etched).
+# allowing users to track price trends over time for different card finishes
+# (nonfoil, foil, etched).
 class CardPriceHistoryController < ApplicationController
   # Valid time period options for price history queries
   VALID_TIME_PERIODS = [ 7, 30, 90, 365, "all" ].freeze
 
-  # Treatment types and their corresponding price fields
-  TREATMENTS = {
-    "normal" => :usd_cents,
+  # Finish types and their corresponding price fields
+  FINISHES = {
+    "nonfoil" => :usd_cents,
     "foil" => :usd_foil_cents,
     "etched" => :usd_etched_cents
   }.freeze
@@ -21,7 +21,7 @@ class CardPriceHistoryController < ApplicationController
   #
   # Returns historical price data for a specific card with support for:
   # - Time period filtering (7, 30, 90, 365 days, or all)
-  # - Multiple treatment types (normal, foil, etched)
+  # - Multiple finish types (nonfoil, foil, etched)
   # - Percentage change calculations with direction indicators
   #
   # Query Parameters:
@@ -40,7 +40,7 @@ class CardPriceHistoryController < ApplicationController
   #     }
   #   ],
   #   "summary": {
-  #     "normal": {
+  #     "nonfoil": {
   #       "start_price_cents": 1000,
   #       "end_price_cents": 1500,
   #       "percentage_change": 50.0,
@@ -108,30 +108,30 @@ class CardPriceHistoryController < ApplicationController
     end
   end
 
-  # Calculates summary statistics for each treatment type
+  # Calculates summary statistics for each finish type
   # Returns percentage change and direction for the time period
   def calculate_summary(prices)
     return {} if prices.empty?
 
     summary = {}
 
-    TREATMENTS.each do |treatment_name, price_field|
-      treatment_summary = calculate_treatment_summary(prices, price_field)
-      summary[treatment_name] = treatment_summary if treatment_summary
+    FINISHES.each do |finish_name, price_field|
+      finish_summary = calculate_finish_summary(prices, price_field)
+      summary[finish_name] = finish_summary if finish_summary
     end
 
     summary
   end
 
-  # Calculates summary for a specific treatment type
-  def calculate_treatment_summary(prices, price_field)
-    # Filter to records that have this treatment price
-    prices_with_treatment = prices.select { |p| p.send(price_field).present? }
+  # Calculates summary for a specific finish type
+  def calculate_finish_summary(prices, price_field)
+    # Filter to records that have this finish price
+    prices_with_finish = prices.select { |p| p.send(price_field).present? }
 
-    return nil if prices_with_treatment.empty?
+    return nil if prices_with_finish.empty?
 
-    start_price = prices_with_treatment.first.send(price_field)
-    end_price = prices_with_treatment.last.send(price_field)
+    start_price = prices_with_finish.first.send(price_field)
+    end_price = prices_with_finish.last.send(price_field)
 
     # Calculate percentage change
     percentage_change = if start_price.zero?

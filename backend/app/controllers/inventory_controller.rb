@@ -37,7 +37,7 @@ class InventoryController < ApplicationController
   end
 
   # Calculates the total current market value of the user's inventory.
-  # Uses treatment-based pricing (foil, etched, normal) and excludes cards without price data.
+  # Uses finish-based pricing (foil, etched, nonfoil) and excludes cards without price data.
   # Results are cached for 1 hour and invalidated on inventory/price updates.
   #
   # Returns JSON with:
@@ -168,7 +168,7 @@ class InventoryController < ApplicationController
       image_cached: image_cached,
       acquired_date: item.acquired_date,
       acquired_price_cents: item.acquired_price_cents,
-      treatment: item.treatment,
+      finish: item.finish,
       language: item.language,
       unit_price_cents: unit_price,
       total_price_cents: total_price,

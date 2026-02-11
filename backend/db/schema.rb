@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_09_012439) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_11_230214) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -60,9 +60,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_09_012439) do
     t.string "card_id", null: false
     t.string "collection_type", null: false
     t.datetime "created_at", null: false
+    t.string "finish"
     t.string "language"
     t.integer "quantity", default: 1, null: false
-    t.string "treatment"
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.index ["user_id", "card_id", "collection_type"], name: "idx_on_user_id_card_id_collection_type_4c84eddf15", unique: true
@@ -116,10 +116,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_09_012439) do
     t.datetime "created_at", null: false
     t.boolean "dismissed", default: false, null: false
     t.datetime "dismissed_at"
+    t.string "finish"
     t.integer "new_price_cents", null: false
     t.integer "old_price_cents", null: false
     t.decimal "percentage_change", precision: 10, scale: 2, null: false
-    t.string "treatment"
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.index ["user_id", "card_id", "created_at"], name: "index_price_alerts_on_user_id_and_card_id_and_created_at"

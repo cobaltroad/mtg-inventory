@@ -85,7 +85,7 @@ module CollectionItemActions
   end
 
   # Constants for default values
-  DEFAULT_TREATMENT = "Normal"
+  DEFAULT_FINISH = "nonfoil"
   DEFAULT_LANGUAGE = "English"
   DEFAULT_PRICE_CENTS = 0
   CENTS_PER_DOLLAR = 100
@@ -98,7 +98,7 @@ module CollectionItemActions
     {
       acquired_price_cents: resolve_price_in_cents,
       acquired_date: params[:acquired_date].presence || Date.today,
-      treatment: params[:treatment].presence || DEFAULT_TREATMENT,
+      finish: params[:finish].presence || DEFAULT_FINISH,
       language: params[:language].presence || DEFAULT_LANGUAGE
     }
   end
@@ -109,7 +109,7 @@ module CollectionItemActions
     enhanced_params = enhanced_tracking_params
     return if enhanced_params.empty?
 
-    %i[acquired_price_cents acquired_date treatment language].each do |field|
+    %i[acquired_price_cents acquired_date finish language].each do |field|
       item.public_send("#{field}=", enhanced_params[field]) if item.public_send(field).nil?
     end
   end
@@ -119,7 +119,7 @@ module CollectionItemActions
     params.key?(:acquired_price_cents) ||
       params.key?(:price) ||
       params.key?(:acquired_date) ||
-      params.key?(:treatment) ||
+      params.key?(:finish) ||
       params.key?(:language)
   end
 

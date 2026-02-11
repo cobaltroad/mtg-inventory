@@ -1,6 +1,6 @@
 class CardSearchController < ApplicationController
   # ---------------------------------------------------------------------------
-  # #index -- searches for cards by name, optionally filtered by treatment
+  # #index -- searches for cards by name, optionally filtered by finish
   # ---------------------------------------------------------------------------
   def index
     unless params[:q].present?
@@ -10,7 +10,7 @@ class CardSearchController < ApplicationController
 
     service = CardSearchService.new(
       query: params[:q],
-      treatments: Array(params[:treatments])
+      finishes: Array(params[:finishes])
     )
 
     render json: { cards: service.call }
