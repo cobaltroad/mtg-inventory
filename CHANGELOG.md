@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] - 2026-02-11
+
+### Added
+- Inventory pagination with customizable page size (#132)
+- Extended logging and monitoring to all background jobs (#125)
+- ScraperExecution model for tracking scraper job history (#93)
+- Admin API endpoints for scraper execution management (#93)
+- Structured JSON logging in scraper jobs (#93)
+- Value-based sorting in inventory (replaces quantity sort)
+- Development schedule for price updates (every 2 days)
+
+### Fixed
+- Stale image display in PrintingModal when switching between printings (#129)
+- Image extraction for two-sided/double-faced cards (#128)
+- LayerCake scale errors on home page navigation (#121)
+- Inventory drawer closing unexpectedly on interaction (#117)
+- Duplicate dropdown arrows in page size selector (dark mode)
+- Toast notification color handling and contrast
+- Memoization race conditions with ?uu parameter
+
+### Changed
+- Simplified home page by removing search link
+- Improved drawer behavior with better interaction handling
+- Temporarily hidden Treatment and Language fields
+- Updated documentation and moved guides to wiki
+
 ## [0.3.2] - 2026-02-09
 
 ### Added
@@ -64,6 +90,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Earlier releases are not documented in this changelog.
 
+[0.3.3]: https://github.com/cobaltroad/mtg-inventory/compare/v0.3.1...v0.3.3
 [0.3.2]: https://github.com/cobaltroad/mtg-inventory/compare/v0.3.1...v0.3.2
 [0.1.0]: https://github.com/cobaltroad/mtg-inventory/compare/v0.0.3...v0.1.0
 [0.0.3]: https://github.com/cobaltroad/mtg-inventory/releases/tag/v0.0.3
