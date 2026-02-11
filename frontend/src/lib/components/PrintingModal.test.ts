@@ -330,7 +330,7 @@ describe('PrintingModal - Issue #117: Drawer closes unexpectedly', () => {
 			});
 		});
 
-		it('should have all form fields (acquired_date, price, treatment, language) available', async () => {
+		it('should have all form fields (acquired_date, price) available', async () => {
 			render(PrintingModal, {
 				props: {
 					card: MOCK_CARD,
@@ -344,11 +344,9 @@ describe('PrintingModal - Issue #117: Drawer closes unexpectedly', () => {
 				expect(addButton).toBeInTheDocument();
 			});
 
-			// Verify all form fields exist and are properly bound
+			// Verify visible form fields exist and are properly bound
 			const dateInput = document.body.querySelector('#acquired-date') as HTMLInputElement;
 			const priceInput = document.body.querySelector('#price') as HTMLInputElement;
-			const treatmentSelect = document.body.querySelector('#treatment') as HTMLSelectElement;
-			const languageSelect = document.body.querySelector('#language') as HTMLSelectElement;
 
 			expect(dateInput).toBeInTheDocument();
 			expect(dateInput.type).toBe('date');
@@ -356,16 +354,11 @@ describe('PrintingModal - Issue #117: Drawer closes unexpectedly', () => {
 			expect(priceInput).toBeInTheDocument();
 			expect(priceInput.type).toBe('number');
 
-			expect(treatmentSelect).toBeInTheDocument();
-			expect(treatmentSelect.tagName).toBe('SELECT');
-
-			expect(languageSelect).toBeInTheDocument();
-			expect(languageSelect.tagName).toBe('SELECT');
-
 			// Verify default values
 			expect(priceInput.value).toBe('0');
-			expect(treatmentSelect.value).toBe('Normal');
-			expect(languageSelect.value).toBe('English');
+
+			// Note: treatment and language fields are currently hidden but still
+			// have default values of 'Normal' and 'English' respectively
 		});
 
 		it('should preserve form field values when hovering changes the art multiple times', async () => {
