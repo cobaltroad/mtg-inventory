@@ -43,11 +43,11 @@ class CardSearchServiceTest < ActiveSupport::TestCase
 
     stub_scryfall_request(query, scryfall_response)
 
-    service1 = CardSearchService.new(query: query, treatments: [])
+    service1 = CardSearchService.new(query: query, finishes: [])
     results1 = service1.call
 
     # Second call with same query should use cache
-    service2 = CardSearchService.new(query: query, treatments: [])
+    service2 = CardSearchService.new(query: query, finishes: [])
     results2 = service2.call
 
     # Should only make one HTTP request (second uses cache)
@@ -71,10 +71,10 @@ class CardSearchServiceTest < ActiveSupport::TestCase
     stub_scryfall_request(query1, response1)
     stub_scryfall_request(query2, response2)
 
-    service1 = CardSearchService.new(query: query1, treatments: [])
+    service1 = CardSearchService.new(query: query1, finishes: [])
     results1 = service1.call
 
-    service2 = CardSearchService.new(query: query2, treatments: [])
+    service2 = CardSearchService.new(query: query2, finishes: [])
     results2 = service2.call
 
     assert_requested :get, scryfall_url(query1), times: 1
@@ -92,11 +92,11 @@ class CardSearchServiceTest < ActiveSupport::TestCase
     stub_scryfall_request(query, response)
 
     # First call without treatments
-    service1 = CardSearchService.new(query: query, treatments: [])
+    service1 = CardSearchService.new(query: query, finishes: [])
     service1.call
 
     # Second call with empty treatments should hit cache
-    service2 = CardSearchService.new(query: query, treatments: [])
+    service2 = CardSearchService.new(query: query, finishes: [])
     service2.call
 
     assert_requested :get, scryfall_url(query), times: 1
@@ -125,11 +125,11 @@ class CardSearchServiceTest < ActiveSupport::TestCase
     stub_scryfall_request(query, response)
 
     # First call with no treatment filter - should cache full results
-    service1 = CardSearchService.new(query: query, treatments: [])
+    service1 = CardSearchService.new(query: query, finishes: [])
     results1 = service1.call
 
     # Second call with borderless filter - should use cache but filter locally
-    service2 = CardSearchService.new(query: query, treatments: [ "borderless" ])
+    service2 = CardSearchService.new(query: query, finishes: [ "borderless" ])
     results2 = service2.call
 
     assert_requested :get, scryfall_url(query), times: 1
@@ -149,11 +149,11 @@ class CardSearchServiceTest < ActiveSupport::TestCase
     stub_scryfall_request(query, response)
 
     # Call with no treatments
-    service1 = CardSearchService.new(query: query, treatments: [])
+    service1 = CardSearchService.new(query: query, finishes: [])
     service1.call
 
     # Call with treatments should use same cache
-    service2 = CardSearchService.new(query: query, treatments: [ "borderless" ])
+    service2 = CardSearchService.new(query: query, finishes: [ "borderless" ])
     service2.call
 
     assert_requested :get, scryfall_url(query), times: 1
@@ -169,10 +169,10 @@ class CardSearchServiceTest < ActiveSupport::TestCase
         headers: { "Content-Type" => "application/json" }
       )
 
-    service1 = CardSearchService.new(query: query, treatments: [])
+    service1 = CardSearchService.new(query: query, finishes: [])
     results1 = service1.call
 
-    service2 = CardSearchService.new(query: query, treatments: [])
+    service2 = CardSearchService.new(query: query, finishes: [])
     results2 = service2.call
 
     assert_requested :get, scryfall_url(query), times: 1
@@ -190,7 +190,7 @@ class CardSearchServiceTest < ActiveSupport::TestCase
     stub_scryfall_request(query, response)
 
     # First call
-    service1 = CardSearchService.new(query: query, treatments: [])
+    service1 = CardSearchService.new(query: query, finishes: [])
     service1.call
 
     # Simulate cache expiration
@@ -198,7 +198,7 @@ class CardSearchServiceTest < ActiveSupport::TestCase
     Rails.cache.delete(cache_key)
 
     # Second call after cache expiration
-    service2 = CardSearchService.new(query: query, treatments: [])
+    service2 = CardSearchService.new(query: query, finishes: [])
     service2.call
 
     assert_requested :get, scryfall_url(query), times: 2
@@ -220,7 +220,7 @@ class CardSearchServiceTest < ActiveSupport::TestCase
 
     stub_scryfall_request(query, response)
 
-    service = CardSearchService.new(query: query, treatments: [])
+    service = CardSearchService.new(query: query, finishes: [])
     results = service.call
 
     assert_equal 1, results.size
@@ -248,7 +248,7 @@ class CardSearchServiceTest < ActiveSupport::TestCase
 
     stub_scryfall_request(query, response)
 
-    service = CardSearchService.new(query: query, treatments: [])
+    service = CardSearchService.new(query: query, finishes: [])
     results = service.call
 
     assert_includes results.first[:treatments], "borderless"

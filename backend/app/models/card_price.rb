@@ -66,16 +66,16 @@ class CardPrice < ApplicationRecord
   # Instance Methods
   # ---------------------------------------------------------------------------
 
-  # Returns the appropriate price in cents based on treatment type.
-  # Selects the correct price field based on treatment and falls back appropriately:
-  # - Foil treatment: uses usd_foil_cents, falls back to usd_cents
-  # - Etched treatment: uses usd_etched_cents, falls back to usd_cents
-  # - Normal/nil treatment: uses usd_cents
+  # Returns the appropriate price in cents based on finish type.
+  # Selects the correct price field based on finish and falls back appropriately:
+  # - foil finish: uses usd_foil_cents, falls back to usd_cents
+  # - etched finish: uses usd_etched_cents, falls back to usd_cents
+  # - nonfoil/nil finish: uses usd_cents
   #
-  # @param treatment [String, nil] The treatment type (e.g., "Foil", "Etched", "Normal")
+  # @param finish [String, nil] The finish type (e.g., "foil", "etched", "nonfoil")
   # @return [Integer, nil] Price in cents, or nil if no price data available
-  def price_for_treatment(treatment)
-    case treatment&.downcase
+  def price_for_finish(finish)
+    case finish&.downcase
     when "foil"
       usd_foil_cents || usd_cents
     when "etched"

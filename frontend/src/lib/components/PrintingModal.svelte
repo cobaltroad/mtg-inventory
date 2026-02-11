@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { base } from '$app/paths';
 	import { invalidate } from '$app/navigation';
-	import { Dialog, Portal } from '@skeletonlabs/skeleton-svelte';
+	import { Dialog, Portal, SegmentedControl } from '@skeletonlabs/skeleton-svelte';
 	import { X } from 'lucide-svelte';
 	import Toast from './Toast.svelte';
 
@@ -30,18 +30,8 @@
 
 	type InventoryState = 'idle' | 'loading' | 'success' | 'error';
 
-	// Treatment options for enhanced tracking
-	const TREATMENT_OPTIONS = [
-		'Normal',
-		'Foil',
-		'Etched',
-		'Showcase',
-		'Extended Art',
-		'Borderless',
-		'Full Art',
-		'Retro Frame',
-		'Textured Foil'
-	];
+	// Finish options aligned with Scryfall API
+	const FINISH_OPTIONS = ['nonfoil', 'foil', 'etched'];
 
 	// Language options for enhanced tracking
 	const LANGUAGE_OPTIONS = [
@@ -88,7 +78,7 @@
 	// Enhanced tracking form fields
 	let acquiredDate = $state(formatDateInTimeZone(userTimeZone));
 	let price = $state(0.0);
-	let treatment = $state('Normal');
+	let finish = $state('nonfoil');
 	let language = $state('English');
 
 	// Validation state
@@ -185,7 +175,7 @@
 					quantity: 1,
 					acquired_date: acquiredDate,
 					price: parseFloat(price.toString()),
-					treatment: treatment,
+					finish: finish,
 					language: language
 				})
 			});
@@ -223,7 +213,7 @@
 			selectedPrinting = null;
 			acquiredDate = formatDateInTimeZone(userTimeZone);
 			price = 0.0;
-			treatment = 'Normal';
+			finish = 'nonfoil';
 			language = 'English';
 			inventoryState = 'idle';
 
@@ -368,8 +358,19 @@
 										/>
 									</div>
 
-									<!-- Treatment field hidden - defaulted to Normal for now -->
-									<!-- Future enhancement: Will be replaced with "Finish" field per issue #127 -->
+									<!-- Finish Selection -->
+									<div class="form-group">
+										<label for="finish" class="form-label">Finish</label>
+										<SegmentedControl.Root
+											bind:value={finish}
+											onclick={(e) => e.stopPropagation()}
+											class="segmented-control-horizontal"
+										>
+											<SegmentedControl.Item value="nonfoil">Nonfoil</SegmentedControl.Item>
+											<SegmentedControl.Item value="foil">Foil</SegmentedControl.Item>
+											<SegmentedControl.Item value="etched">Etched</SegmentedControl.Item>
+										</SegmentedControl.Root>
+									</div>
 
 									<!-- Language field hidden - defaulted to English for now -->
 									<!-- Future enhancement: Add language selection UI -->
@@ -529,6 +530,8 @@
 
 	.image-preview-area img {
 		width: 100%;
+		max-height: 400px;
+		object-fit: contain;
 		border-radius: 8px;
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 	}
@@ -607,6 +610,25 @@
 		cursor: pointer;
 	}
 
+	/* Form Group Styles */
+	.form-group {
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.form-label {
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: #374151;
+	}
+
+	/* Horizontal orientation for segmented control */
+	:global(.segmented-control-horizontal) {
+		flex-direction: row;
+	}
+
 	:global(.dark) .drawer-header {
 		border-bottom-color: #374151;
 	}
@@ -624,6 +646,10 @@
 		background: #1f2937;
 		border-color: #4b5563;
 		color: #f9fafb;
+	}
+
+	:global(.dark) .form-label {
+		color: #d1d5db;
 	}
 
 	@media (max-width: 768px) {

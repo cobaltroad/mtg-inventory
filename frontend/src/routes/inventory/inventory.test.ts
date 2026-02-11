@@ -18,7 +18,7 @@ const MOCK_INVENTORY_ITEMS = [
 		image_url: 'https://cards.scryfall.io/normal/front/b/l/black-lotus.jpg',
 		acquired_date: '2025-01-15',
 		acquired_price_cents: 5000,
-		treatment: 'Foil',
+		finish: 'foil',
 		language: 'English',
 		created_at: '2025-01-15T10:00:00Z',
 		updated_at: '2025-01-15T10:00:00Z',
@@ -37,7 +37,7 @@ const MOCK_INVENTORY_ITEMS = [
 		image_url: 'https://cards.scryfall.io/normal/front/a/r/ancestral-recall.jpg',
 		acquired_date: null,
 		acquired_price_cents: null,
-		treatment: null,
+		finish: null,
 		language: null,
 		created_at: '2025-01-16T10:00:00Z',
 		updated_at: '2025-01-16T10:00:00Z',
@@ -254,7 +254,7 @@ describe('Inventory Page - Data Display', () => {
 		});
 
 		await waitFor(() => {
-			expect(screen.getByText('Foil')).toBeInTheDocument();
+			expect(screen.getByText('foil')).toBeInTheDocument();
 			expect(screen.getByText('Acquired: 2025-01-15')).toBeInTheDocument();
 			expect(screen.getByText(/\$50\.00/)).toBeInTheDocument();
 		});
@@ -271,7 +271,7 @@ describe('Inventory Page - Data Display', () => {
 		});
 
 		await waitFor(() => {
-			expect(screen.queryByText('Foil')).not.toBeInTheDocument();
+			expect(screen.queryByText('foil')).not.toBeInTheDocument();
 			expect(screen.queryByText(/Acquired:/)).not.toBeInTheDocument();
 			expect(screen.queryByText(/Price:/)).not.toBeInTheDocument();
 		});

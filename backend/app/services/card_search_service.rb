@@ -3,7 +3,9 @@ require "uri"
 require "json"
 
 class CardSearchService
-  VALID_TREATMENTS = %w[foil etched borderless showcase extended_art full_art].freeze
+  VALID_FINISHES = %w[nonfoil foil etched].freeze
+  VALID_TREATMENTS = %w[borderless showcase extended_art full_art].freeze
+  VALID_FILTERS = (VALID_FINISHES + VALID_TREATMENTS).freeze
 
   # Cache external API results for 24 hours to reduce API usage.
   # Can be overridden via CARD_SEARCH_CACHE_TTL environment variable (in seconds).
@@ -21,25 +23,25 @@ class CardSearchService
   class TimeoutError < StandardError; end
   class InvalidResponseError < StandardError; end
 
-  def initialize(query:, treatments: [])
+  def initialize(query:, finishes: [])
     @query = query
-    @treatments = treatments & VALID_TREATMENTS
+    @finishes = finishes & VALID_FILTERS
   end
 
   # ---------------------------------------------------------------------------
-  # Fetches a single page of cards matching the query, derives treatments for
-  # each card, and optionally filters to only cards that carry at least one of
-  # the requested treatments (OR logic).
+  # Fetches a single page of cards matching the query, derives finishes/treatments
+  # for each card, and optionally filters to only cards that carry at least one
+  # of the requested finishes (OR logic).
   #
   # Caching strategy:
-  # - External API results are cached by query string only (not treatments)
-  # - Treatment filtering is applied after cache retrieval
-  # - This allows different treatment filters to share the same cached API data
+  # - External API results are cached by query string only (not finishes)
+  # - Finish filtering is applied after cache retrieval
+  # - This allows different finish filters to share the same cached API data
   # - Cache TTL: 24 hours by default (configurable via CARD_SEARCH_CACHE_TTL)
   # ---------------------------------------------------------------------------
   def call
     results = fetch_cards_with_cache
-    @treatments.any? ? filter_by_treatments(results) : results
+    @finishes.any? ? filter_by_finishes(results) : results
   end
 
   private
@@ -170,10 +172,11 @@ class CardSearchService
     treatments
   end
 
-  # Extracts treatments from finishes array
+  # Extracts treatments from finishes array (aligned with Scryfall API)
   def extract_finish_treatments(card)
     finishes = card["finishes"] || []
     treatments = []
+    treatments << "nonfoil" if finishes.include?("nonfoil")
     treatments << "foil" if finishes.include?("foil")
     treatments << "etched" if finishes.include?("etched")
     treatments
@@ -198,8 +201,8 @@ class CardSearchService
     card["full_art"] == true
   end
 
-  # Filters results to only cards with at least one requested treatment
-  def filter_by_treatments(results)
-    results.select { |card| (card[:treatments] & @treatments).any? }
+  # Filters results to only cards with at least one requested finish/treatment
+  def filter_by_finishes(results)
+    results.select { |card| (card[:treatments] & @finishes).any? }
   end
 end

@@ -845,7 +845,7 @@ describe('PrintingModal - Integration', () => {
 	// ---------------------------------------------------------------------------
 	describe('Client-Side Validation with Submission', () => {
 		// Scenario 4: Valid data submits successfully
-		it('submits successfully with valid past date, price, treatment, and language', async () => {
+		it('submits successfully with valid past date, price, finish, and language', async () => {
 			const mockFetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
 				if (typeof url === 'string' && url.includes('/printings')) {
 					return Promise.resolve({
@@ -901,8 +901,8 @@ describe('PrintingModal - Integration', () => {
 					expect(body.quantity).toBe(1);
 					expect(body.acquired_date).toBe('2024-01-15');
 					expect(body.price).toBe(25.5);
-					// Treatment and language should be present (defaults are ok for this test)
-					expect(body.treatment).toBeDefined();
+					// Finish and language should be present (defaults are ok for this test)
+					expect(body.finish).toBeDefined();
 					expect(body.language).toBeDefined();
 				}
 			});
@@ -1014,9 +1014,9 @@ describe('PrintingModal - Integration', () => {
 			await fireEvent.input(priceInput, { target: { value: '25.50' } });
 			await tick();
 
-			const treatmentSelect = screen.getByLabelText(/treatment/i) as HTMLSelectElement;
-			treatmentSelect.value = 'Foil';
-			await fireEvent.change(treatmentSelect);
+			const finishSelect = screen.getByLabelText(/finish/i) as HTMLSelectElement;
+			finishSelect.value = 'foil';
+			await fireEvent.change(finishSelect);
 			await tick();
 
 			const languageSelect = screen.getByLabelText(/language/i) as HTMLSelectElement;
@@ -1026,7 +1026,7 @@ describe('PrintingModal - Integration', () => {
 
 			// Wait for values to be updated
 			await waitFor(() => {
-				expect(treatmentSelect).toHaveValue('Foil');
+				expect(finishSelect).toHaveValue('foil');
 				expect(languageSelect).toHaveValue('Japanese');
 			});
 
@@ -1046,10 +1046,10 @@ describe('PrintingModal - Integration', () => {
 					expect(body.quantity).toBe(1);
 					expect(body.acquired_date).toBe('2025-01-15');
 					expect(body.price).toBe(25.5);
-					expect(body.treatment).toBeDefined();
+					expect(body.finish).toBeDefined();
 					expect(body.language).toBeDefined();
-					// Verify treatment and language are included (even if not the exact values we set)
-					expect(typeof body.treatment).toBe('string');
+					// Verify finish and language are included (even if not the exact values we set)
+					expect(typeof body.finish).toBe('string');
 					expect(typeof body.language).toBe('string');
 				}
 			});
@@ -1105,7 +1105,7 @@ describe('PrintingModal - Integration', () => {
 					expect(body.quantity).toBe(1);
 					expect(body.acquired_date).toMatch(/\d{4}-\d{2}-\d{2}/); // Today's date
 					expect(body.price).toBe(0);
-					expect(body.treatment).toBe('Normal');
+					expect(body.finish).toBe('nonfoil');
 					expect(body.language).toBe('English');
 				}
 			});
@@ -1149,8 +1149,8 @@ describe('PrintingModal - Integration', () => {
 			const priceInput = screen.getByLabelText(/price/i) as HTMLInputElement;
 			await fireEvent.input(priceInput, { target: { value: '25.50' } });
 
-			const treatmentSelect = screen.getByLabelText(/treatment/i) as HTMLSelectElement;
-			await fireEvent.change(treatmentSelect, { target: { value: 'Foil' } });
+			const finishSelect = screen.getByLabelText(/finish/i) as HTMLSelectElement;
+			await fireEvent.change(finishSelect, { target: { value: 'foil' } });
 
 			const addButton = screen.getByRole('button', { name: /add to inventory/i });
 			await fireEvent.click(addButton);
@@ -1167,10 +1167,10 @@ describe('PrintingModal - Integration', () => {
 
 			await waitFor(() => {
 				const priceInputAfter = screen.getByLabelText(/price/i) as HTMLInputElement;
-				const treatmentSelectAfter = screen.getByLabelText(/treatment/i) as HTMLSelectElement;
+				const finishSelectAfter = screen.getByLabelText(/finish/i) as HTMLSelectElement;
 
 				expect(priceInputAfter).toHaveValue(0);
-				expect(treatmentSelectAfter).toHaveValue('Normal');
+				expect(finishSelectAfter).toHaveValue('nonfoil');
 			});
 		});
 
@@ -1187,7 +1187,7 @@ describe('PrintingModal - Integration', () => {
 					return Promise.resolve({
 						ok: false,
 						status: 422,
-						json: () => Promise.resolve({ errors: ['Treatment is not included in the list'] })
+						json: () => Promise.resolve({ errors: ['Finish is not included in the list'] })
 					});
 				}
 				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
@@ -1219,7 +1219,7 @@ describe('PrintingModal - Integration', () => {
 				const toast = screen.getByRole('status');
 				expect(toast).toBeInTheDocument();
 				expect(toast).toHaveTextContent(
-					/failed to add to inventory: treatment is not included in the list/i
+					/failed to add to inventory: finish is not included in the list/i
 				);
 			});
 
@@ -1324,8 +1324,8 @@ describe('PrintingModal - Integration', () => {
 			const priceInput = screen.getByLabelText(/price/i) as HTMLInputElement;
 			await fireEvent.input(priceInput, { target: { value: '25.50' } });
 
-			const treatmentSelect = screen.getByLabelText(/treatment/i) as HTMLSelectElement;
-			await fireEvent.change(treatmentSelect, { target: { value: 'Foil' } });
+			const finishSelect = screen.getByLabelText(/finish/i) as HTMLSelectElement;
+			await fireEvent.change(finishSelect, { target: { value: 'foil' } });
 
 			const languageSelect = screen.getByLabelText(/language/i) as HTMLSelectElement;
 			await fireEvent.change(languageSelect, { target: { value: 'Japanese' } });
@@ -1346,12 +1346,12 @@ describe('PrintingModal - Integration', () => {
 
 			const acquiredDateInputAfter = screen.getByLabelText(/acquired date/i) as HTMLInputElement;
 			const priceInputAfter = screen.getByLabelText(/price/i) as HTMLInputElement;
-			const treatmentSelectAfter = screen.getByLabelText(/treatment/i) as HTMLSelectElement;
+			const finishSelectAfter = screen.getByLabelText(/finish/i) as HTMLSelectElement;
 			const languageSelectAfter = screen.getByLabelText(/language/i) as HTMLSelectElement;
 
 			expect(acquiredDateInputAfter.value).toMatch(/\d{4}-\d{2}-\d{2}/); // Today's date
 			expect(priceInputAfter).toHaveValue(0);
-			expect(treatmentSelectAfter).toHaveValue('Normal');
+			expect(finishSelectAfter).toHaveValue('nonfoil');
 			expect(languageSelectAfter).toHaveValue('English');
 		});
 

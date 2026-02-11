@@ -19,7 +19,7 @@ describe('InventoryResult', () => {
 		collector_number: '161',
 		quantity: 4,
 		image_url: 'https://example.com/card.jpg',
-		treatment: 'Foil',
+		finish: 'foil',
 		unit_price_cents: 500,
 		total_price_cents: 2000
 	};
@@ -57,14 +57,14 @@ describe('InventoryResult', () => {
 		expect(screen.getByText(/Qty.*4/i)).toBeInTheDocument();
 	});
 
-	it('should render treatment when provided', () => {
+	it('should render finish when provided', () => {
 		render(InventoryResult, { result: mockResult, onViewDetails: mockViewDetails });
-		expect(screen.getByText('Foil')).toBeInTheDocument();
+		expect(screen.getByText('foil')).toBeInTheDocument();
 	});
 
-	it('should not render treatment when not provided', () => {
+	it('should not render finish when not provided', () => {
 		render(InventoryResult, { result: mockResultNoPrice, onViewDetails: mockViewDetails });
-		expect(screen.queryByText('Foil')).not.toBeInTheDocument();
+		expect(screen.queryByText('foil')).not.toBeInTheDocument();
 	});
 
 	it('should render card image when image_url is provided', () => {

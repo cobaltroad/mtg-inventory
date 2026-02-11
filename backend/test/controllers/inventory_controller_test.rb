@@ -167,7 +167,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
       quantity: 2,
       acquired_date: Date.parse("2025-12-15"),
       acquired_price_cents: 1250,
-      treatment: "Foil",
+      finish: "foil",
       language: "Japanese"
     )
 
@@ -184,7 +184,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2, item["quantity"]
     assert_equal "2025-12-15", item["acquired_date"]
     assert_equal 1250, item["acquired_price_cents"]
-    assert_equal "Foil", item["treatment"]
+    assert_equal "foil", item["finish"]
     assert_equal "Japanese", item["language"]
     assert_equal "Black Lotus", item["card_name"]
   end
@@ -442,7 +442,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
       quantity: 2,
       acquired_date: Date.parse("2025-01-15"),
       acquired_price_cents: 1500,
-      treatment: "Foil",
+      finish: "foil",
       language: "Japanese"
     )
 
@@ -468,7 +468,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     assert_equal 7, body["quantity"]
     assert_equal "2025-01-15", body["acquired_date"]
     assert_equal 1500, body["acquired_price_cents"]
-    assert_equal "Foil", body["treatment"]
+    assert_equal "foil", body["finish"]
     assert_equal "Japanese", body["language"]
   end
 
@@ -493,7 +493,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
       quantity: 5,
       acquired_date: Date.parse("2025-01-10"),
       acquired_price_cents: 2000,
-      treatment: "Foil",
+      finish: "foil",
       language: "German"
     )
     item_id = item.id
@@ -615,7 +615,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
       quantity: 2,
       acquired_date: "2025-12-15",
       acquired_price_cents: 1250,
-      treatment: "Foil",
+      finish: "foil",
       language: "Japanese"
     }, as: :json
 
@@ -625,13 +625,13 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2, body["quantity"]
     assert_equal "2025-12-15", body["acquired_date"]
     assert_equal 1250, body["acquired_price_cents"]
-    assert_equal "Foil", body["treatment"]
+    assert_equal "foil", body["finish"]
     assert_equal "Japanese", body["language"]
 
     # Verify persistence
     item = CollectionItem.find_by(user: @user, card_id: "enhanced_card")
     assert_equal 1250, item.acquired_price_cents
-    assert_equal "Foil", item.treatment
+    assert_equal "foil", item.finish
     assert_equal "Japanese", item.language
     assert_equal Date.parse("2025-12-15"), item.acquired_date
   end
@@ -672,13 +672,13 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, body["quantity"]
     assert_equal 1000, body["acquired_price_cents"]
     assert_equal Date.today.to_s, body["acquired_date"]
-    assert_equal "Normal", body["treatment"]
+    assert_equal "nonfoil", body["finish"]
     assert_equal "English", body["language"]
 
     # Verify persistence
     item = CollectionItem.find_by(user: @user, card_id: "partial_card")
     assert_equal 1000, item.acquired_price_cents
-    assert_equal "Normal", item.treatment
+    assert_equal "nonfoil", item.finish
     assert_equal "English", item.language
     assert_equal Date.today, item.acquired_date
   end
@@ -698,13 +698,13 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     assert_equal 3, body["quantity"]
     assert_nil body["acquired_date"]
     assert_nil body["acquired_price_cents"]
-    assert_nil body["treatment"]
+    assert_nil body["finish"]
     assert_nil body["language"]
 
     # Verify persistence
     item = CollectionItem.find_by(user: @user, card_id: "legacy_card")
     assert_nil item.acquired_price_cents
-    assert_nil item.treatment
+    assert_nil item.finish
     assert_nil item.language
     assert_nil item.acquired_date
   end
@@ -739,18 +739,18 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     assert_includes body["errors"].join(" "), "cannot be in the future"
   end
 
-  test "POST /api/inventory with invalid treatment returns 422 with error message" do
-    stub_valid_card("bad_treatment_card")
+  test "POST /api/inventory with invalid finish returns 422 with error message" do
+    stub_valid_card("bad_finish_card")
 
     post api_path("/inventory"), params: {
-      card_id: "bad_treatment_card",
+      card_id: "bad_finish_card",
       quantity: 1,
-      treatment: "SuperUltraFoil"
+      finish: "SuperUltraFoil"
     }, as: :json
 
     assert_response :unprocessable_entity
     body = JSON.parse(response.body)
-    assert_includes body["errors"].join(" "), "Treatment"
+    assert_includes body["errors"].join(" "), "Finish"
   end
 
   test "POST /api/inventory with invalid language returns 422 with error message" do
@@ -775,7 +775,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
       collection_type: "inventory",
       quantity: 1,
       acquired_price_cents: 500,
-      treatment: "Foil",
+      finish: "foil",
       language: "German",
       acquired_date: Date.parse("2025-01-01")
     )
@@ -794,7 +794,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
 
     # Verify existing enhanced fields are preserved
     assert_equal 500, body["acquired_price_cents"]
-    assert_equal "Foil", body["treatment"]
+    assert_equal "foil", body["finish"]
     assert_equal "German", body["language"]
     assert_equal "2025-01-01", body["acquired_date"]
 
@@ -1222,7 +1222,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
       card_id: "priced_card",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     CardPrice.create!(
@@ -1252,7 +1252,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
       card_id: "foil_card",
       collection_type: "inventory",
       quantity: 2,
-      treatment: "Foil"
+      finish: "foil"
     )
 
     CardPrice.create!(
@@ -1280,7 +1280,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
       card_id: "foil_fallback_card",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Foil"
+      finish: "foil"
     )
 
     CardPrice.create!(
@@ -1308,7 +1308,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
       card_id: "etched_card",
       collection_type: "inventory",
       quantity: 3,
-      treatment: "Etched"
+      finish: "etched"
     )
 
     CardPrice.create!(
@@ -1336,7 +1336,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
       card_id: "etched_fallback_card",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Etched"
+      finish: "etched"
     )
 
     CardPrice.create!(
@@ -1385,7 +1385,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
       card_id: "multi_card",
       collection_type: "inventory",
       quantity: 5,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     CardPrice.create!(

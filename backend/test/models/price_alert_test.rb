@@ -19,9 +19,25 @@ class PriceAlertTest < ActiveSupport::TestCase
       old_price_cents: 100,
       new_price_cents: 150,
       percentage_change: 50.0,
-      treatment: "normal"
+      finish: "nonfoil"
     )
     assert alert.valid?
+  end
+
+  test "should accept valid finish values" do
+    valid_finishes = ["nonfoil", "foil", "etched", nil]
+    valid_finishes.each do |finish_value|
+      alert = PriceAlert.new(
+        user: @user,
+        card_id: @card_id,
+        alert_type: "price_increase",
+        old_price_cents: 100,
+        new_price_cents: 150,
+        percentage_change: 50.0,
+        finish: finish_value
+      )
+      assert alert.valid?, "#{finish_value} should be a valid finish value"
+    end
   end
 
   test "should require user" do

@@ -300,42 +300,58 @@ class CollectionItemTest < ActiveSupport::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # Scenario 5 & 6: treatment validations
+  # Scenario 5 & 6: finish validations (updated from treatment)
   # ---------------------------------------------------------------------------
-  test "is valid with all treatment options" do
-    CollectionItem::TREATMENT_OPTIONS.each do |treatment|
+  test "is valid with all finish options" do
+    CollectionItem::FINISH_TYPES.each do |finish|
       item = CollectionItem.new(
         user: @user,
-        card_id: "abc123-#{treatment.parameterize}",
+        card_id: "abc123-#{finish.parameterize}",
         collection_type: "inventory",
         quantity: 1,
-        treatment: treatment
+        finish: finish
       )
-      assert item.valid?, "#{treatment} should be valid but got: #{item.errors.full_messages.inspect}"
+      assert item.valid?, "#{finish} should be valid but got: #{item.errors.full_messages.inspect}"
     end
   end
 
-  test "is valid with nil treatment" do
+  test "is valid with nil finish" do
     item = CollectionItem.new(
       user: @user,
       card_id: "abc123",
       collection_type: "inventory",
       quantity: 1,
-      treatment: nil
+      finish: nil
     )
     assert item.valid?, item.errors.full_messages.inspect
   end
 
-  test "is invalid with unrecognized treatment" do
+  test "is invalid with unrecognized finish" do
     item = CollectionItem.new(
       user: @user,
       card_id: "abc123",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "InvalidTreatment"
+      finish: "InvalidFinish"
     )
     assert item.invalid?
-    assert_includes item.errors[:treatment], "is not included in the list"
+    assert_includes item.errors[:finish], "is not included in the list"
+  end
+
+  test "is invalid with old treatment values" do
+    # Old values like "Normal", "Foil" (capitalized), "Showcase" should be rejected
+    old_values = ["Normal", "Foil", "Etched", "Showcase", "Extended Art"]
+    old_values.each do |value|
+      item = CollectionItem.new(
+        user: @user,
+        card_id: "abc123-#{value.parameterize}",
+        collection_type: "inventory",
+        quantity: 1,
+        finish: value
+      )
+      assert item.invalid?, "#{value} should be invalid (old treatment value)"
+      assert_includes item.errors[:finish], "is not included in the list"
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -416,17 +432,17 @@ class CollectionItemTest < ActiveSupport::TestCase
     assert_nil item.latest_price
   end
 
-  test "unit_price_cents returns usd_cents for normal treatment" do
+  test "unit_price_cents returns usd_cents for nonfoil finish" do
     item = CollectionItem.create!(
       user: @user,
-      card_id: "normal_card",
+      card_id: "nonfoil_card",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     CardPrice.create!(
-      card_id: "normal_card",
+      card_id: "nonfoil_card",
       fetched_at: 1.day.ago,
       usd_cents: 200,
       usd_foil_cents: 500
@@ -435,17 +451,17 @@ class CollectionItemTest < ActiveSupport::TestCase
     assert_equal 200, item.unit_price_cents
   end
 
-  test "unit_price_cents returns usd_cents for nil treatment" do
+  test "unit_price_cents returns usd_cents for nil finish" do
     item = CollectionItem.create!(
       user: @user,
-      card_id: "nil_treatment_card",
+      card_id: "nil_finish_card",
       collection_type: "inventory",
       quantity: 1,
-      treatment: nil
+      finish: nil
     )
 
     CardPrice.create!(
-      card_id: "nil_treatment_card",
+      card_id: "nil_finish_card",
       fetched_at: 1.day.ago,
       usd_cents: 300,
       usd_foil_cents: 600
@@ -454,13 +470,13 @@ class CollectionItemTest < ActiveSupport::TestCase
     assert_equal 300, item.unit_price_cents
   end
 
-  test "unit_price_cents returns usd_foil_cents for Foil treatment" do
+  test "unit_price_cents returns usd_foil_cents for foil finish" do
     item = CollectionItem.create!(
       user: @user,
       card_id: "foil_card",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Foil"
+      finish: "foil"
     )
 
     CardPrice.create!(
@@ -479,7 +495,7 @@ class CollectionItemTest < ActiveSupport::TestCase
       card_id: "foil_fallback_card",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Foil"
+      finish: "foil"
     )
 
     CardPrice.create!(
@@ -492,13 +508,13 @@ class CollectionItemTest < ActiveSupport::TestCase
     assert_equal 200, item.unit_price_cents
   end
 
-  test "unit_price_cents returns usd_etched_cents for Etched treatment" do
+  test "unit_price_cents returns usd_etched_cents for etched finish" do
     item = CollectionItem.create!(
       user: @user,
       card_id: "etched_card",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Etched"
+      finish: "etched"
     )
 
     CardPrice.create!(
@@ -517,7 +533,7 @@ class CollectionItemTest < ActiveSupport::TestCase
       card_id: "etched_fallback_card",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Etched"
+      finish: "etched"
     )
 
     CardPrice.create!(
@@ -547,7 +563,7 @@ class CollectionItemTest < ActiveSupport::TestCase
       card_id: "all_nil_prices_card",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Foil"
+      finish: "foil"
     )
 
     CardPrice.create!(
@@ -567,7 +583,7 @@ class CollectionItemTest < ActiveSupport::TestCase
       card_id: "total_price_card",
       collection_type: "inventory",
       quantity: 4,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     CardPrice.create!(
