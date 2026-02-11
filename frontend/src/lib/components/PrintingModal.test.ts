@@ -429,6 +429,66 @@ describe('PrintingModal - Issue #117: Drawer closes unexpectedly', () => {
 	});
 
 	/**
+	 * Issue #128: Handle missing image_url for two-sided cards
+	 */
+	describe('Image URL handling - Issue #128', () => {
+		it('should display image when image_url is present', async () => {
+			render(PrintingModal, {
+				props: {
+					card: MOCK_CARD,
+					open: true
+				}
+			});
+
+			// Wait for printings to load and image to display
+			await waitFor(() => {
+				const img = document.body.querySelector('.image-preview-area img') as HTMLImageElement;
+				expect(img).toBeInTheDocument();
+				expect(img.src).toContain(MOCK_PRINTINGS[0].image_url);
+			});
+		});
+
+		it('should handle missing image_url gracefully', async () => {
+			const printingsWithoutImage = [
+				{
+					...MOCK_PRINTINGS[0],
+					image_url: undefined
+				}
+			];
+
+			vi.stubGlobal(
+				'fetch',
+				vi.fn().mockImplementation((url: string) => {
+					if (typeof url === 'string' && url.includes('/printings')) {
+						return Promise.resolve({
+							ok: true,
+							json: () => Promise.resolve({ printings: printingsWithoutImage })
+						});
+					}
+					return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+				})
+			);
+
+			render(PrintingModal, {
+				props: {
+					card: MOCK_CARD,
+					open: true
+				}
+			});
+
+			// Wait for printings to load
+			await waitFor(() => {
+				const printingItems = document.body.querySelectorAll('[data-testid="printing-item"]');
+				expect(printingItems.length).toBe(1);
+			});
+
+			// Image preview area should not be rendered when image_url is missing
+			const imagePreview = document.body.querySelector('.image-preview-area');
+			expect(imagePreview).not.toBeInTheDocument();
+		});
+	});
+
+	/**
 	 * Additional tests for proper drawer behavior
 	 */
 	describe('Additional drawer interaction tests', () => {
