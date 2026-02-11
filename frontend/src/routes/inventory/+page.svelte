@@ -12,6 +12,12 @@
 	import type { PageData } from './$types';
 	import type { SortOption } from '$lib/types/inventory';
 
+	// Constants
+	const DEFAULT_PAGE_SIZE = 20;
+	const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
+	const STORAGE_KEY_SORT = 'inventory-sort';
+	const STORAGE_KEY_PAGE_SIZE = 'inventory-page-size';
+
 	let { data }: { data: PageData } = $props();
 
 	// Get search drawer opener from context
@@ -38,7 +44,7 @@
 
 	// Pagination state
 	let currentPage = $state(1);
-	let pageSize = $state(20);
+	let pageSize = $state(DEFAULT_PAGE_SIZE);
 
 	// Apply filtering and sorting
 	let filteredItems = $derived(filterBySet(allItems, currentFilter));
@@ -61,42 +67,53 @@
 		return `${allItems.length} ${pluralize(allItems.length, 'card')}`;
 	});
 
-	// Load preferences from localStorage
+	// Load preferences from localStorage on mount
 	onMount(() => {
-		const savedSort = localStorage.getItem('inventory-sort');
+		const savedSort = localStorage.getItem(STORAGE_KEY_SORT);
 		if (savedSort) {
 			currentSort = savedSort as SortOption;
 		}
 
-		const savedPageSize = localStorage.getItem('inventory-page-size');
+		const savedPageSize = localStorage.getItem(STORAGE_KEY_PAGE_SIZE);
 		if (savedPageSize) {
-			pageSize = parseInt(savedPageSize, 10);
+			const parsed = parseInt(savedPageSize, 10);
+			// Validate that the saved page size is a valid option
+			if (PAGE_SIZE_OPTIONS.includes(parsed as typeof PAGE_SIZE_OPTIONS[number])) {
+				pageSize = parsed;
+			}
 		}
 	});
 
-	// Save sort preference to localStorage
+	/**
+	 * Updates sort order and persists to localStorage
+	 */
 	function handleSortChange(newSort: SortOption) {
 		currentSort = newSort;
-		localStorage.setItem('inventory-sort', newSort);
+		localStorage.setItem(STORAGE_KEY_SORT, newSort);
 	}
 
-	// Handle filter change
+	/**
+	 * Updates filter and resets pagination to first page
+	 */
 	function handleFilterChange(newFilter: string) {
 		currentFilter = newFilter;
-		// Reset to first page when filter changes
-		currentPage = 1;
+		currentPage = 1; // Reset to first page when filter changes
 	}
 
-	// Handle page size change
+	/**
+	 * Updates page size, persists to localStorage, and resets to first page
+	 */
 	function handlePageSizeChange(event: Event) {
 		const target = event.currentTarget as HTMLSelectElement;
-		pageSize = parseInt(target.value, 10);
-		localStorage.setItem('inventory-page-size', target.value);
-		// Reset to first page when page size changes
-		currentPage = 1;
+		const newSize = parseInt(target.value, 10);
+		pageSize = newSize;
+		localStorage.setItem(STORAGE_KEY_PAGE_SIZE, target.value);
+		currentPage = 1; // Reset to first page when page size changes
 	}
 
-	// Handle page change
+	/**
+	 * Updates current page when user navigates
+	 */
 	function handlePageChange(event: { page: number }) {
 		currentPage = event.page;
 	}
