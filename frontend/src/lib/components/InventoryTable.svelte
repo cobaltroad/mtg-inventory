@@ -196,8 +196,8 @@
 						</td>
 						<td>
 							<div class="details-cell">
-								{#if item.treatment}
-									<span class="detail-badge">{item.treatment}</span>
+								{#if item.finish}
+									<span class="detail-badge">{item.finish}</span>
 								{/if}
 								{#if item.language}
 									<span class="detail-badge">{item.language}</span>

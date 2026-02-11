@@ -357,8 +357,8 @@ describe('PrintingModal - Issue #117: Drawer closes unexpectedly', () => {
 			// Verify default values
 			expect(priceInput.value).toBe('0');
 
-			// Note: treatment and language fields are currently hidden but still
-			// have default values of 'Normal' and 'English' respectively
+			// Note: finish and language fields are currently hidden but still
+			// have default values of 'nonfoil' and 'English' respectively
 		});
 
 		it('should preserve form field values when hovering changes the art multiple times', async () => {

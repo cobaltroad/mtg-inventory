@@ -30,18 +30,8 @@
 
 	type InventoryState = 'idle' | 'loading' | 'success' | 'error';
 
-	// Treatment options for enhanced tracking
-	const TREATMENT_OPTIONS = [
-		'Normal',
-		'Foil',
-		'Etched',
-		'Showcase',
-		'Extended Art',
-		'Borderless',
-		'Full Art',
-		'Retro Frame',
-		'Textured Foil'
-	];
+	// Finish options aligned with Scryfall API
+	const FINISH_OPTIONS = ['nonfoil', 'foil', 'etched'];
 
 	// Language options for enhanced tracking
 	const LANGUAGE_OPTIONS = [
@@ -88,7 +78,7 @@
 	// Enhanced tracking form fields
 	let acquiredDate = $state(formatDateInTimeZone(userTimeZone));
 	let price = $state(0.0);
-	let treatment = $state('Normal');
+	let finish = $state('nonfoil');
 	let language = $state('English');
 
 	// Validation state
@@ -185,7 +175,7 @@
 					quantity: 1,
 					acquired_date: acquiredDate,
 					price: parseFloat(price.toString()),
-					treatment: treatment,
+					finish: finish,
 					language: language
 				})
 			});
@@ -223,7 +213,7 @@
 			selectedPrinting = null;
 			acquiredDate = formatDateInTimeZone(userTimeZone);
 			price = 0.0;
-			treatment = 'Normal';
+			finish = 'nonfoil';
 			language = 'English';
 			inventoryState = 'idle';
 
@@ -368,7 +358,7 @@
 										/>
 									</div>
 
-									<!-- Treatment field hidden - defaulted to Normal for now -->
+									<!-- Finish field hidden - defaulted to Normal for now -->
 									<!-- Future enhancement: Will be replaced with "Finish" field per issue #127 -->
 
 									<!-- Language field hidden - defaulted to English for now -->

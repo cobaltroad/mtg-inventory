@@ -40,10 +40,10 @@
 			<span class="collector-number">#{result.collector_number}</span>
 		</div>
 
-		<div class="quantity-treatment">
+		<div class="quantity-finish">
 			<span class="quantity">Qty: {result.quantity}</span>
-			{#if result.treatment}
-				<span class="treatment">{result.treatment}</span>
+			{#if result.finish}
+				<span class="finish">{result.finish}</span>
 			{/if}
 		</div>
 
@@ -185,7 +185,7 @@
 		color: rgb(156 163 175);
 	}
 
-	.quantity-treatment {
+	.quantity-finish {
 		display: flex;
 		gap: 1rem;
 		font-size: 0.875rem;
@@ -200,7 +200,7 @@
 		color: rgb(229 231 235);
 	}
 
-	.treatment {
+	.finish {
 		padding: 0.125rem 0.5rem;
 		background: rgb(219 234 254);
 		color: rgb(29 78 216);
@@ -209,7 +209,7 @@
 		font-size: 0.75rem;
 	}
 
-	:global(.dark) .treatment {
+	:global(.dark) .finish {
 		background: rgb(30 58 138);
 		color: rgb(191 219 254);
 	}

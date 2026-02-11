@@ -29,7 +29,7 @@ export interface InventoryResult {
 	collector_number: string;
 	quantity: number;
 	image_url?: string;
-	treatment?: string;
+	finish?: string;
 	unit_price_cents?: number;
 	total_price_cents?: number;
 }

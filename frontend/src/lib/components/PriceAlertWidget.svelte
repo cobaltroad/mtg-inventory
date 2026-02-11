@@ -10,7 +10,7 @@
 		old_price_cents: number;
 		new_price_cents: number;
 		percentage_change: string;
-		treatment: string | null;
+		finish: string | null;
 		created_at: string;
 	}
 
@@ -109,8 +109,8 @@
 									{:else}
 										Price Drop
 									{/if}
-									{#if alert.treatment && alert.treatment !== 'normal'}
-										<span class="text-surface-600-300-token">({alert.treatment})</span>
+									{#if alert.finish && alert.finish !== 'normal'}
+										<span class="text-surface-600-300-token">({alert.finish})</span>
 									{/if}
 								</p>
 								<p class="text-surface-600-300-token mt-1 text-xs">

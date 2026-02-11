@@ -17,7 +17,7 @@ const MOCK_ITEM_FULL: InventoryItemType = {
 	image_url: 'https://cards.scryfall.io/normal/front/b/l/black-lotus.jpg',
 	acquired_date: '2025-01-15',
 	acquired_price_cents: 5000,
-	treatment: 'Foil',
+	finish: 'foil',
 	language: 'Japanese',
 	created_at: '2025-01-15T10:00:00Z',
 	updated_at: '2025-01-15T10:00:00Z',
@@ -36,7 +36,7 @@ const MOCK_ITEM_MINIMAL: InventoryItemType = {
 	image_url: 'https://cards.scryfall.io/normal/front/l/b/lightning-bolt.jpg',
 	acquired_date: null,
 	acquired_price_cents: null,
-	treatment: null,
+	finish: null,
 	language: null,
 	created_at: '2025-01-16T10:00:00Z',
 	updated_at: '2025-01-16T10:00:00Z',
@@ -129,9 +129,9 @@ describe('InventoryItem - Image Handling', () => {
 // Tests: Enhanced Tracking Fields
 // ---------------------------------------------------------------------------
 describe('InventoryItem - Enhanced Tracking Fields', () => {
-	it('displays treatment when present', () => {
+	it('displays finish when present', () => {
 		render(InventoryItem, { props: { item: MOCK_ITEM_FULL } });
-		expect(screen.getByText('Foil')).toBeInTheDocument();
+		expect(screen.getByText('foil')).toBeInTheDocument();
 	});
 
 	it('displays language when present', () => {
@@ -149,9 +149,9 @@ describe('InventoryItem - Enhanced Tracking Fields', () => {
 		expect(screen.getByText('Price: $50.00')).toBeInTheDocument();
 	});
 
-	it('does not display treatment when null', () => {
+	it('does not display finish when null', () => {
 		render(InventoryItem, { props: { item: MOCK_ITEM_MINIMAL } });
-		expect(screen.queryByText('Foil')).not.toBeInTheDocument();
+		expect(screen.queryByText('foil')).not.toBeInTheDocument();
 	});
 
 	it('does not display language when null', () => {

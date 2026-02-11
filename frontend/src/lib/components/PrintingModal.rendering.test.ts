@@ -210,10 +210,10 @@ describe('PrintingModal - Rendering', () => {
 				expect(priceInput).toBeInTheDocument();
 				expect(priceInput).toHaveValue(0);
 
-				// Treatment dropdown with "Normal"
-				const treatmentSelect = screen.getByLabelText(/treatment/i);
-				expect(treatmentSelect).toBeInTheDocument();
-				expect(treatmentSelect).toHaveValue('Normal');
+				// Finish dropdown with "nonfoil"
+				const finishSelect = screen.getByLabelText(/finish/i);
+				expect(finishSelect).toBeInTheDocument();
+				expect(finishSelect).toHaveValue('nonfoil');
 
 				// Language dropdown with "English"
 				const languageSelect = screen.getByLabelText(/language/i);

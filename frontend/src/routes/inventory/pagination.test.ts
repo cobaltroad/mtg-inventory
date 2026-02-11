@@ -19,7 +19,7 @@ function generateMockItems(count: number) {
 		image_url: `https://example.com/card-${i + 1}.jpg`,
 		acquired_date: null,
 		acquired_price_cents: null,
-		treatment: null,
+		finish: null,
 		language: null,
 		created_at: '2025-01-01T10:00:00Z',
 		updated_at: '2025-01-01T10:00:00Z',

@@ -13,7 +13,7 @@ import type { SearchResults } from '$lib/types/search';
  * - Empty states for inventory
  * - Card images display
  * - Price formatting
- * - Treatment display
+ * - Finish display
  * - PrintingModal integration
  */
 
@@ -36,7 +36,7 @@ const MOCK_RESULTS_WITH_INVENTORY: SearchResults = {
 				collector_number: '161',
 				quantity: 4,
 				image_url: 'https://cards.scryfall.io/normal/lea-161.jpg',
-				treatment: 'Foil',
+				finish: 'foil',
 				unit_price_cents: 500,
 				total_price_cents: 2000
 			},
@@ -49,7 +49,7 @@ const MOCK_RESULTS_WITH_INVENTORY: SearchResults = {
 				collector_number: '222',
 				quantity: 2,
 				image_url: 'https://cards.scryfall.io/normal/m10-222.jpg',
-				treatment: 'Non-Foil',
+				finish: 'Non-Foil',
 				unit_price_cents: 50,
 				total_price_cents: 100
 			},
@@ -211,7 +211,7 @@ describe('Search Page - Inventory Results Rendering', () => {
 		});
 	});
 
-	it('should display treatment type in inventory results', async () => {
+	it('should display finish type in inventory results', async () => {
 		mockFetch.mockResolvedValue({
 			ok: true,
 			json: async () => MOCK_RESULTS_WITH_INVENTORY
@@ -227,7 +227,7 @@ describe('Search Page - Inventory Results Rendering', () => {
 		await fireEvent.click(button);
 
 		await waitFor(() => {
-			expect(screen.getByText('Foil')).toBeInTheDocument();
+			expect(screen.getByText('foil')).toBeInTheDocument();
 			expect(screen.getByText('Non-Foil')).toBeInTheDocument();
 		});
 	});

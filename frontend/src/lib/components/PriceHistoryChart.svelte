@@ -18,13 +18,13 @@
 	let chartInstance: ChartType | null = null;
 	let canvasElement = $state<HTMLCanvasElement | undefined>(undefined);
 
-	// Treatment visibility toggles
+	// Finish visibility toggles
 	let showNormal = $state(true);
 	let showFoil = $state(true);
 	let showEtched = $state(true);
 
-	// Available treatments based on data
-	let availableTreatments = $derived(() => {
+	// Available finishs based on data
+	let availableFinishs = $derived(() => {
 		if (!priceData?.summary) return [];
 		return Object.keys(priceData.summary);
 	});
@@ -58,8 +58,8 @@
 		}
 	}
 
-	// Treatment configuration for datasets
-	const treatmentConfig = {
+	// Finish configuration for datasets
+	const finishConfig = {
 		normal: {
 			label: 'Normal',
 			field: 'usd_cents',
@@ -80,9 +80,9 @@
 		}
 	};
 
-	// Create dataset for a treatment type
-	function createDataset(treatment: keyof typeof treatmentConfig) {
-		const config = treatmentConfig[treatment];
+	// Create dataset for a finish type
+	function createDataset(finish: keyof typeof finishConfig) {
+		const config = finishConfig[finish];
 		const data = priceData.prices
 			.map((p: any) => ({
 				x: new Date(p.fetched_at),
@@ -109,12 +109,12 @@
 			chartInstance.destroy();
 		}
 
-		// Prepare datasets for active treatments
+		// Prepare datasets for active finishs
 		const datasets: any[] = [];
 
-		for (const [treatment, config] of Object.entries(treatmentConfig)) {
-			if (config.show() && priceData.summary[treatment]) {
-				datasets.push(createDataset(treatment as keyof typeof treatmentConfig));
+		for (const [finish, config] of Object.entries(finishConfig)) {
+			if (config.show() && priceData.summary[finish]) {
+				datasets.push(createDataset(finish as keyof typeof finishConfig));
 			}
 		}
 
@@ -195,11 +195,11 @@
 		fetchPriceHistory();
 	}
 
-	// Toggle treatment visibility
-	function toggleTreatment(treatment: string) {
-		if (treatment === 'normal') showNormal = !showNormal;
-		if (treatment === 'foil') showFoil = !showFoil;
-		if (treatment === 'etched') showEtched = !showEtched;
+	// Toggle finish visibility
+	function toggleFinish(finish: string) {
+		if (finish === 'nonfoil') showNormal = !showNormal;
+		if (finish === 'foil') showFoil = !showFoil;
+		if (finish === 'etched') showEtched = !showEtched;
 		createChart();
 	}
 
@@ -309,20 +309,20 @@
 			<p>No price history available for this card.</p>
 		</div>
 	{:else}
-		<!-- Treatment Toggles -->
-		<div class="treatment-toggles">
-			{#each availableTreatments() as treatment}
-				{@const isNormal = treatment === 'normal'}
-				{@const isFoil = treatment === 'foil'}
-				{@const isEtched = treatment === 'etched'}
+		<!-- Finish Toggles -->
+		<div class="finish-toggles">
+			{#each availableFinishs() as finish}
+				{@const isNormal = finish === 'nonfoil'}
+				{@const isFoil = finish === 'foil'}
+				{@const isEtched = finish === 'etched'}
 				{@const isActive =
 					(isNormal && showNormal) || (isFoil && showFoil) || (isEtched && showEtched)}
 
 				<button
-					class="treatment-toggle {isActive ? 'active' : ''}"
-					onclick={() => toggleTreatment(treatment)}
+					class="finish-toggle {isActive ? 'active' : ''}"
+					onclick={() => toggleFinish(finish)}
 				>
-					{treatment.charAt(0).toUpperCase() + treatment.slice(1)}
+					{finish.charAt(0).toUpperCase() + finish.slice(1)}
 				</button>
 			{/each}
 		</div>
@@ -334,19 +334,19 @@
 
 		<!-- Price Change Summary -->
 		<div class="summary-container">
-			{#each Object.entries(priceData.summary) as [treatment, summary]}
+			{#each Object.entries(priceData.summary) as [finish, summary]}
 				{@const s = summary as any}
-				{@const isNormal = treatment === 'normal'}
-				{@const isFoil = treatment === 'foil'}
-				{@const isEtched = treatment === 'etched'}
+				{@const isNormal = finish === 'nonfoil'}
+				{@const isFoil = finish === 'foil'}
+				{@const isEtched = finish === 'etched'}
 				{@const isVisible =
 					(isNormal && showNormal) || (isFoil && showFoil) || (isEtched && showEtched)}
 
 				{#if isVisible}
 					<div class="summary-card">
 						<div class="summary-header">
-							<span class="treatment-name"
-								>{treatment.charAt(0).toUpperCase() + treatment.slice(1)}</span
+							<span class="finish-name"
+								>{finish.charAt(0).toUpperCase() + finish.slice(1)}</span
 							>
 							<span class="percentage-change {getDirectionColor(s.direction)}">
 								{getDirectionIndicator(s.direction)}{s.percentage_change > 0
@@ -465,14 +465,14 @@
 		color: var(--color-surface-600);
 	}
 
-	.treatment-toggles {
+	.finish-toggles {
 		display: flex;
 		gap: 0.5rem;
 		margin-bottom: 1rem;
 		flex-wrap: wrap;
 	}
 
-	.treatment-toggle {
+	.finish-toggle {
 		padding: 0.375rem 0.75rem;
 		background: var(--color-surface-100);
 		border: 1px solid var(--color-surface-300);
@@ -483,11 +483,11 @@
 		transition: all 0.2s;
 	}
 
-	.treatment-toggle:hover {
+	.finish-toggle:hover {
 		background: var(--color-surface-200);
 	}
 
-	.treatment-toggle.active {
+	.finish-toggle.active {
 		background: var(--color-primary-100);
 		border-color: var(--color-primary-500);
 		color: var(--color-primary-700);
@@ -519,7 +519,7 @@
 		margin-bottom: 0.5rem;
 	}
 
-	.treatment-name {
+	.finish-name {
 		font-size: 0.875rem;
 		font-weight: 600;
 		color: var(--color-surface-700);
@@ -555,17 +555,17 @@
 		background: var(--color-surface-600);
 	}
 
-	:global(.dark) .treatment-toggle {
+	:global(.dark) .finish-toggle {
 		background: var(--color-surface-700);
 		border-color: var(--color-surface-600);
 		color: var(--color-surface-200);
 	}
 
-	:global(.dark) .treatment-toggle:hover {
+	:global(.dark) .finish-toggle:hover {
 		background: var(--color-surface-600);
 	}
 
-	:global(.dark) .treatment-toggle.active {
+	:global(.dark) .finish-toggle.active {
 		background: var(--color-primary-900);
 		border-color: var(--color-primary-500);
 		color: var(--color-primary-200);
@@ -576,7 +576,7 @@
 		border-color: var(--color-surface-600);
 	}
 
-	:global(.dark) .treatment-name {
+	:global(.dark) .finish-name {
 		color: var(--color-surface-200);
 	}
 

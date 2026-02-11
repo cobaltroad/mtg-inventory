@@ -10,7 +10,7 @@ export interface InventoryItem {
 	image_url: string;
 	acquired_date?: string | null;
 	acquired_price_cents?: number | null;
-	treatment?: string | null;
+	finish?: string | null;
 	language?: string | null;
 	unit_price_cents?: number | null;
 	total_price_cents?: number | null;
@@ -20,6 +20,11 @@ export interface InventoryItem {
 	user_id: number;
 	collection_type: string;
 }
+
+// Valid finish types aligned with Scryfall API
+export type CardFinish = 'nonfoil' | 'foil' | 'etched';
+
+export const FINISH_OPTIONS: readonly CardFinish[] = ['nonfoil', 'foil', 'etched'] as const;
 
 export type SortOption =
 	| 'name-asc'

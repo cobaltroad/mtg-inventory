@@ -190,10 +190,10 @@ describe('PriceHistoryChart Component', () => {
 	});
 
 	// ---------------------------------------------------------------------------
-	// Treatment toggle tests
+	// Finish toggle tests
 	// ---------------------------------------------------------------------------
 
-	it('renders treatment toggles for available treatments', async () => {
+	it('renders finish toggles for available finishs', async () => {
 		(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
 			ok: true,
 			json: async () => mockPriceHistoryData
@@ -202,15 +202,15 @@ describe('PriceHistoryChart Component', () => {
 		render(PriceHistoryChart, { props: { cardId: mockCardId } });
 
 		await waitFor(() => {
-			const toggles = document.querySelectorAll('.treatment-toggle');
+			const toggles = document.querySelectorAll('.finish-toggle');
 			expect(toggles.length).toBeGreaterThan(0);
 			const toggleTexts = Array.from(toggles).map((t) => t.textContent);
-			expect(toggleTexts).toContain('Normal');
-			expect(toggleTexts).toContain('Foil');
+			expect(toggleTexts).toContain('nonfoil');
+			expect(toggleTexts).toContain('foil');
 		});
 	});
 
-	it('does not show toggle for treatment with no data', async () => {
+	it('does not show toggle for finish with no data', async () => {
 		(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
 			ok: true,
 			json: async () => mockPriceHistoryData
@@ -220,12 +220,12 @@ describe('PriceHistoryChart Component', () => {
 
 		await waitFor(() => {
 			// Etched has null data, should not appear
-			const etchedToggle = screen.queryByText('Etched');
+			const etchedToggle = screen.queryByText('etched');
 			expect(etchedToggle).toBeNull();
 		});
 	});
 
-	it('toggles treatment visibility when clicked', async () => {
+	it('toggles finish visibility when clicked', async () => {
 		(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
 			ok: true,
 			json: async () => mockPriceHistoryData
@@ -234,12 +234,12 @@ describe('PriceHistoryChart Component', () => {
 		render(PriceHistoryChart, { props: { cardId: mockCardId } });
 
 		await waitFor(() => {
-			const toggles = document.querySelectorAll('.treatment-toggle');
+			const toggles = document.querySelectorAll('.finish-toggle');
 			expect(toggles.length).toBeGreaterThan(0);
 		});
 
-		const toggles = document.querySelectorAll('.treatment-toggle');
-		const normalToggle = Array.from(toggles).find((t) => t.textContent === 'Normal') as HTMLElement;
+		const toggles = document.querySelectorAll('.finish-toggle');
+		const normalToggle = Array.from(toggles).find((t) => t.textContent === 'nonfoil') as HTMLElement;
 
 		// Should be active initially
 		expect(normalToggle.classList.contains('active')).toBe(true);
@@ -255,7 +255,7 @@ describe('PriceHistoryChart Component', () => {
 	// Price change summary tests
 	// ---------------------------------------------------------------------------
 
-	it('displays price change summary for normal treatment', async () => {
+	it('displays price change summary for normal finish', async () => {
 		(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
 			ok: true,
 			json: async () => mockPriceHistoryData
@@ -486,11 +486,11 @@ describe('PriceHistoryChart Component', () => {
 	});
 
 	// ---------------------------------------------------------------------------
-	// Multiple treatments test
+	// Multiple finishs test
 	// ---------------------------------------------------------------------------
 
-	it('displays multiple treatment lines when data available', async () => {
-		const multiTreatmentData = {
+	it('displays multiple finish lines when data available', async () => {
+		const multiFinishData = {
 			...mockPriceHistoryData,
 			prices: [
 				{
@@ -530,17 +530,17 @@ describe('PriceHistoryChart Component', () => {
 
 		(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
 			ok: true,
-			json: async () => multiTreatmentData
+			json: async () => multiFinishData
 		});
 
 		render(PriceHistoryChart, { props: { cardId: mockCardId } });
 
 		await waitFor(() => {
-			const toggles = document.querySelectorAll('.treatment-toggle');
+			const toggles = document.querySelectorAll('.finish-toggle');
 			const toggleTexts = Array.from(toggles).map((t) => t.textContent);
-			expect(toggleTexts).toContain('Normal');
-			expect(toggleTexts).toContain('Foil');
-			expect(toggleTexts).toContain('Etched');
+			expect(toggleTexts).toContain('nonfoil');
+			expect(toggleTexts).toContain('foil');
+			expect(toggleTexts).toContain('etched');
 		});
 	});
 });

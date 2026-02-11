@@ -63,7 +63,7 @@ describe('PrintingModal - Form', () => {
 			expect(priceInput).toHaveValue(25.5);
 		});
 
-		it('displays all treatment options in dropdown', async () => {
+		it('displays all finish options in dropdown', async () => {
 			const mockFetch = mockFetchForPrintings();
 			vi.stubGlobal('fetch', mockFetch);
 
@@ -77,16 +77,16 @@ describe('PrintingModal - Form', () => {
 			await fireEvent.mouseEnter(printingItems[0]);
 
 			await waitFor(() => {
-				expect(screen.getByLabelText(/treatment/i)).toBeInTheDocument();
+				expect(screen.getByLabelText(/finish/i)).toBeInTheDocument();
 			});
 
-			const treatmentSelect = screen.getByLabelText(/treatment/i);
+			const finishSelect = screen.getByLabelText(/finish/i);
 			const expectedOptions = [
-				'Normal',
-				'Foil',
-				'Etched',
-				'Showcase',
-				'Extended Art',
+				'nonfoil',
+				'foil',
+				'etched',
+				'nonfoil',
+				'nonfoil',
 				'Borderless',
 				'Full Art',
 				'Retro Frame',
@@ -94,11 +94,11 @@ describe('PrintingModal - Form', () => {
 			];
 
 			expectedOptions.forEach((option) => {
-				expect(treatmentSelect).toContainHTML(`<option value="${option}">${option}</option>`);
+				expect(finishSelect).toContainHTML(`<option value="${option}">${option}</option>`);
 			});
 		});
 
-		it('allows selecting different treatment option', async () => {
+		it('allows selecting different finish option', async () => {
 			const mockFetch = mockFetchForPrintings();
 			vi.stubGlobal('fetch', mockFetch);
 
@@ -112,13 +112,13 @@ describe('PrintingModal - Form', () => {
 			await fireEvent.mouseEnter(printingItems[0]);
 
 			await waitFor(() => {
-				expect(screen.getByLabelText(/treatment/i)).toBeInTheDocument();
+				expect(screen.getByLabelText(/finish/i)).toBeInTheDocument();
 			});
 
-			const treatmentSelect = screen.getByLabelText(/treatment/i) as HTMLSelectElement;
-			await fireEvent.change(treatmentSelect, { target: { value: 'Foil' } });
+			const finishSelect = screen.getByLabelText(/finish/i) as HTMLSelectElement;
+			await fireEvent.change(finishSelect, { target: { value: 'foil' } });
 
-			expect(treatmentSelect).toHaveValue('Foil');
+			expect(finishSelect).toHaveValue('foil');
 		});
 
 		it('displays all language options in dropdown', async () => {
@@ -203,12 +203,12 @@ describe('PrintingModal - Form', () => {
 			const priceInput = screen.getByLabelText(/price/i) as HTMLInputElement;
 			await fireEvent.input(priceInput, { target: { value: '25.50' } });
 
-			const treatmentSelect = screen.getByLabelText(/treatment/i) as HTMLSelectElement;
-			await fireEvent.change(treatmentSelect, { target: { value: 'Foil' } });
+			const finishSelect = screen.getByLabelText(/finish/i) as HTMLSelectElement;
+			await fireEvent.change(finishSelect, { target: { value: 'foil' } });
 
 			// Verify modified values
 			expect(priceInput).toHaveValue(25.5);
-			expect(treatmentSelect).toHaveValue('Foil');
+			expect(finishSelect).toHaveValue('foil');
 
 			// Select second printing
 			await fireEvent.mouseEnter(printingItems[1]);
@@ -216,9 +216,9 @@ describe('PrintingModal - Form', () => {
 			await waitFor(() => {
 				// Values should be preserved (not reset)
 				const updatedPriceInput = screen.getByLabelText(/price/i) as HTMLInputElement;
-				const updatedTreatmentSelect = screen.getByLabelText(/treatment/i) as HTMLSelectElement;
+				const updatedFinishSelect = screen.getByLabelText(/finish/i) as HTMLSelectElement;
 				expect(updatedPriceInput).toHaveValue(25.5);
-				expect(updatedTreatmentSelect).toHaveValue('Foil');
+				expect(updatedFinishSelect).toHaveValue('foil');
 			});
 		});
 	});
