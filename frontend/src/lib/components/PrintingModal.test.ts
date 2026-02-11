@@ -482,6 +482,246 @@ describe('PrintingModal - Issue #117: Drawer closes unexpectedly', () => {
 	});
 
 	/**
+	 * Issue #129: PrintingModal displays stale image data from previously viewed cards
+	 */
+	describe('Issue #129: Stale image data prevention', () => {
+		const MOCK_CARD_A = {
+			id: 'lightning-bolt-id',
+			name: 'Lightning Bolt'
+		};
+
+		const MOCK_PRINTINGS_A = [
+			{
+				id: 'bolt-printing-1',
+				name: 'Lightning Bolt',
+				set: 'lea',
+				set_name: 'Limited Edition Alpha',
+				collector_number: '161',
+				image_url: 'https://example.com/bolt-lea-161.jpg',
+				released_at: '1993-08-05'
+			}
+		];
+
+		const MOCK_CARD_B = {
+			id: 'dark-ritual-id',
+			name: 'Dark Ritual'
+		};
+
+		const MOCK_PRINTINGS_B = [
+			{
+				id: 'ritual-printing-1',
+				name: 'Dark Ritual',
+				set: 'lea',
+				set_name: 'Limited Edition Alpha',
+				collector_number: '101',
+				image_url: 'https://example.com/ritual-lea-101.jpg',
+				released_at: '1993-08-05'
+			}
+		];
+
+		it('should reset selectedPrinting to null when modal reopens for different card', async () => {
+			// Setup mock fetch that tracks which card is being fetched
+			const mockFetch = vi.fn().mockImplementation((url: string) => {
+				if (typeof url === 'string' && url.includes(MOCK_CARD_A.id)) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS_A })
+					});
+				}
+				if (typeof url === 'string' && url.includes(MOCK_CARD_B.id)) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS_B })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			// Simulate the real app behavior: component stays mounted, props change
+			let isOpen = true;
+			let currentCard = MOCK_CARD_A;
+
+			const { rerender } = render(PrintingModal, {
+				props: {
+					card: currentCard,
+					open: isOpen
+				}
+			});
+
+			// Wait for Card A's printings to load and auto-select
+			await waitFor(() => {
+				const img = document.body.querySelector('.image-preview-area img') as HTMLImageElement;
+				expect(img).toBeInTheDocument();
+				expect(img.src).toContain(MOCK_PRINTINGS_A[0].image_url);
+			});
+
+			// Close the modal (component stays mounted)
+			isOpen = false;
+			rerender({
+				card: currentCard,
+				open: isOpen
+			});
+
+			await new Promise((resolve) => setTimeout(resolve, 50));
+
+			// Change to Card B and reopen
+			currentCard = MOCK_CARD_B;
+			isOpen = true;
+			rerender({
+				card: currentCard,
+				open: isOpen
+			});
+
+			// THIS IS THE BUG: At this moment, selectedPrinting still has Card A's data
+			// So the template renders Card A's image briefly before Card B loads
+			// We need to verify this doesn't happen
+			await new Promise((resolve) => setTimeout(resolve, 10));
+
+			// Check immediately after opening - should NOT show Card A's image
+			const imagesImmediately = document.body.querySelectorAll('.image-preview-area img');
+			imagesImmediately.forEach((img) => {
+				const src = (img as HTMLImageElement).src;
+				// If an image appears, it should never be Card A's image
+				if (src) {
+					expect(src).not.toContain(MOCK_PRINTINGS_A[0].image_url);
+				}
+			});
+
+			// Wait for Card B's image to load
+			await waitFor(() => {
+				const img = document.body.querySelector('.image-preview-area img') as HTMLImageElement;
+				expect(img).toBeInTheDocument();
+				expect(img.src).toContain(MOCK_PRINTINGS_B[0].image_url);
+			});
+		});
+
+		it('should show loading state when modal opens with no selected printing', async () => {
+			// Mock a delayed fetch to simulate loading state
+			let resolveFetch: ((value: any) => void) | null = null;
+			const fetchPromise = new Promise((resolve) => {
+				resolveFetch = resolve;
+			});
+
+			const mockFetch = vi.fn().mockImplementation((url: string) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return fetchPromise.then(() => ({
+						ok: true,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
+					}));
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, {
+				props: {
+					card: MOCK_CARD,
+					open: true
+				}
+			});
+
+			// While loading and no selected printing, we should NOT see the image preview area
+			// This prevents stale images from showing
+			const imagePreviewBefore = document.body.querySelector('.image-preview-area');
+			expect(imagePreviewBefore).not.toBeInTheDocument();
+
+			// Resolve the fetch
+			if (resolveFetch) {
+				resolveFetch({});
+			}
+
+			// After loading completes, image should appear
+			await waitFor(() => {
+				const img = document.body.querySelector('.image-preview-area img') as HTMLImageElement;
+				expect(img).toBeInTheDocument();
+			});
+		});
+
+		it('should prevent stale images across rapid open/close cycles', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string) => {
+				if (typeof url === 'string' && url.includes(MOCK_CARD_A.id)) {
+					// Simulate slower fetch for Card A
+					return new Promise((resolve) => {
+						setTimeout(() => {
+							resolve({
+								ok: true,
+								json: () => Promise.resolve({ printings: MOCK_PRINTINGS_A })
+							});
+						}, 50);
+					});
+				}
+				if (typeof url === 'string' && url.includes(MOCK_CARD_B.id)) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS_B })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			let isOpen = true;
+			let currentCard = MOCK_CARD_A;
+
+			const { rerender } = render(PrintingModal, {
+				props: {
+					card: currentCard,
+					open: isOpen
+				}
+			});
+
+			// Open for Card A but close before it finishes loading
+			await new Promise((resolve) => setTimeout(resolve, 25)); // Close before 50ms fetch completes
+
+			isOpen = false;
+			rerender({
+				card: currentCard,
+				open: isOpen
+			});
+
+			// Immediately open for Card B
+			currentCard = MOCK_CARD_B;
+			isOpen = true;
+			rerender({
+				card: currentCard,
+				open: isOpen
+			});
+
+			// Card B's modal should not show Card A's loading state or image
+			await waitFor(() => {
+				const img = document.body.querySelector('.image-preview-area img') as HTMLImageElement;
+				expect(img).toBeInTheDocument();
+			});
+
+			const finalImg = document.body.querySelector('.image-preview-area img') as HTMLImageElement;
+			expect(finalImg.src).toContain(MOCK_PRINTINGS_B[0].image_url);
+			expect(finalImg.src).not.toContain(MOCK_PRINTINGS_A[0].image_url);
+		});
+
+		it('should auto-select first printing after data loads without stale state', async () => {
+			render(PrintingModal, {
+				props: {
+					card: MOCK_CARD,
+					open: true
+				}
+			});
+
+			// Wait for auto-selection to happen
+			await waitFor(() => {
+				const img = document.body.querySelector('.image-preview-area img') as HTMLImageElement;
+				expect(img).toBeInTheDocument();
+				expect(img.src).toContain(MOCK_PRINTINGS[0].image_url);
+			});
+
+			// Verify first printing is selected
+			const firstPrintingImage = MOCK_PRINTINGS[0].image_url;
+			const img = document.body.querySelector('.image-preview-area img') as HTMLImageElement;
+			expect(img.src).toContain(firstPrintingImage);
+		});
+	});
+
+	/**
 	 * Additional tests for proper drawer behavior
 	 */
 	describe('Additional drawer interaction tests', () => {

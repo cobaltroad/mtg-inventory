@@ -240,6 +240,9 @@
 
 	$effect(() => {
 		if (open) {
+			// Reset state to prevent stale data (fixes #129)
+			selectedPrinting = null;
+			printings = [];
 			fetchPrintings();
 			// Reset inventory state when opening drawer
 			inventoryState = 'idle';
