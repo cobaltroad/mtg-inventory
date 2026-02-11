@@ -35,15 +35,15 @@ class AddEnhancedTrackingToCollectionItemsTest < ActiveSupport::TestCase
            "acquired_price_cents should be nullable"
   end
 
-  test "migration adds treatment column with string type" do
-    assert @connection.column_exists?(:collection_items, :treatment),
-           "treatment column should exist"
+  test "migration adds finish column with string type" do
+    assert @connection.column_exists?(:collection_items, :finish),
+           "finish column should exist"
 
-    column = @connection.columns(:collection_items).find { |c| c.name == "treatment" }
+    column = @connection.columns(:collection_items).find { |c| c.name == "finish" }
     assert_equal :string, column.type,
-                 "treatment should be of type string"
+                 "finish should be of type string"
     assert column.null,
-           "treatment should be nullable"
+           "finish should be nullable"
   end
 
   test "migration adds language column with string type" do
@@ -70,8 +70,8 @@ class AddEnhancedTrackingToCollectionItemsTest < ActiveSupport::TestCase
                  "Existing records should have NULL acquired_date"
       assert_nil item.acquired_price_cents,
                  "Existing records should have NULL acquired_price_cents"
-      assert_nil item.treatment,
-                 "Existing records should have NULL treatment"
+      assert_nil item.finish,
+                 "Existing records should have NULL finish"
       assert_nil item.language,
                  "Existing records should have NULL language"
     else
@@ -86,7 +86,7 @@ class AddEnhancedTrackingToCollectionItemsTest < ActiveSupport::TestCase
 
       assert_nil item.acquired_date
       assert_nil item.acquired_price_cents
-      assert_nil item.treatment
+      assert_nil item.finish
       assert_nil item.language
     end
   end
@@ -129,8 +129,8 @@ class AddEnhancedTrackingToCollectionItemsTest < ActiveSupport::TestCase
                  "schema.rb should contain acquired_date column")
     assert_match(/acquired_price_cents/, schema_content,
                  "schema.rb should contain acquired_price_cents column")
-    assert_match(/treatment/, schema_content,
-                 "schema.rb should contain treatment column")
+    assert_match(/finish/, schema_content,
+                 "schema.rb should contain finish column")
     assert_match(/language/, schema_content,
                  "schema.rb should contain language column")
 
@@ -139,8 +139,8 @@ class AddEnhancedTrackingToCollectionItemsTest < ActiveSupport::TestCase
                  "acquired_date should be of type date in schema.rb")
     assert_match(/t\.integer\s+"acquired_price_cents"/, schema_content,
                  "acquired_price_cents should be of type integer in schema.rb")
-    assert_match(/t\.string\s+"treatment"/, schema_content,
-                 "treatment should be of type string in schema.rb")
+    assert_match(/t\.string\s+"finish"/, schema_content,
+                 "finish should be of type string in schema.rb")
     assert_match(/t\.string\s+"language"/, schema_content,
                  "language should be of type string in schema.rb")
   end
