@@ -43,7 +43,7 @@ class CardSearchControllerTest < ActionDispatch::IntegrationTest
         fake_service
       end
 
-      get api_path("/cards/search"), params: { q: "Lightning Bolt", treatments: expected_treatments }
+      get api_path("/cards/search"), params: { q: "Lightning Bolt", finishes: expected_treatments }
 
       # Restore original method
       CardSearchService.define_singleton_method(:new, original_new)

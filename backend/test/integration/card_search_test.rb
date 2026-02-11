@@ -91,7 +91,7 @@ class CardSearchIntegrationTest < ActionDispatch::IntegrationTest
 
     stub_scryfall("Opt", scryfall_response)
 
-    get api_path("/cards/search"), params: { q: "Opt", treatments: [ "borderless" ] }
+    get api_path("/cards/search"), params: { q: "Opt", finishes: [ "borderless" ] }
 
     assert_response :success
     body = JSON.parse(response.body)
@@ -143,7 +143,7 @@ class CardSearchIntegrationTest < ActionDispatch::IntegrationTest
 
     stub_scryfall("Thoughtseize", scryfall_response)
 
-    get api_path("/cards/search"), params: { q: "Thoughtseize", treatments: [ "borderless", "foil" ] }
+    get api_path("/cards/search"), params: { q: "Thoughtseize", finishes: [ "borderless", "foil" ] }
 
     assert_response :success
     body = JSON.parse(response.body)
@@ -177,7 +177,7 @@ class CardSearchIntegrationTest < ActionDispatch::IntegrationTest
 
     stub_scryfall("Giant Growth", scryfall_response)
 
-    get api_path("/cards/search"), params: { q: "Giant Growth", treatments: [ "borderless" ] }
+    get api_path("/cards/search"), params: { q: "Giant Growth", finishes: [ "borderless" ] }
 
     assert_response :success
     body = JSON.parse(response.body)

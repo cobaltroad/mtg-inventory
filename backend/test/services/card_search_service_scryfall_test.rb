@@ -29,7 +29,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
 
     stub_scryfall_success(query, scryfall_response_fixture)
 
-    service = CardSearchService.new(query: query, treatments: [])
+    service = CardSearchService.new(query: query, finishes: [])
     service.call
 
     assert_requested :get, expected_url, times: 1
@@ -40,7 +40,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
 
     stub_scryfall_success(query, scryfall_response_fixture)
 
-    service = CardSearchService.new(query: query, treatments: [])
+    service = CardSearchService.new(query: query, finishes: [])
     service.call
 
     assert_requested :get, /api\.scryfall\.com/, headers: {
@@ -71,7 +71,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
 
     stub_scryfall_success(query, scryfall_data)
 
-    service = CardSearchService.new(query: query, treatments: [])
+    service = CardSearchService.new(query: query, finishes: [])
     results = service.call
 
     assert_equal 1, results.size
@@ -94,7 +94,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
 
     stub_scryfall_success(query, scryfall_data)
 
-    service = CardSearchService.new(query: query, treatments: [])
+    service = CardSearchService.new(query: query, finishes: [])
     results = service.call
 
     assert_includes results.first[:treatments], "foil"
@@ -108,7 +108,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
 
     stub_scryfall_success(query, scryfall_data)
 
-    service = CardSearchService.new(query: query, treatments: [])
+    service = CardSearchService.new(query: query, finishes: [])
     results = service.call
 
     assert_includes results.first[:treatments], "etched"
@@ -122,7 +122,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
 
     stub_scryfall_success(query, scryfall_data)
 
-    service = CardSearchService.new(query: query, treatments: [])
+    service = CardSearchService.new(query: query, finishes: [])
     results = service.call
 
     assert_includes results.first[:treatments], "borderless"
@@ -136,7 +136,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
 
     stub_scryfall_success(query, scryfall_data)
 
-    service = CardSearchService.new(query: query, treatments: [])
+    service = CardSearchService.new(query: query, finishes: [])
     results = service.call
 
     assert_includes results.first[:treatments], "showcase"
@@ -150,7 +150,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
 
     stub_scryfall_success(query, scryfall_data)
 
-    service = CardSearchService.new(query: query, treatments: [])
+    service = CardSearchService.new(query: query, finishes: [])
     results = service.call
 
     assert_includes results.first[:treatments], "extended_art"
@@ -164,7 +164,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
 
     stub_scryfall_success(query, scryfall_data)
 
-    service = CardSearchService.new(query: query, treatments: [])
+    service = CardSearchService.new(query: query, finishes: [])
     results = service.call
 
     assert_includes results.first[:treatments], "full_art"
@@ -181,7 +181,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
 
     stub_scryfall_success(query, scryfall_data)
 
-    service = CardSearchService.new(query: query, treatments: [])
+    service = CardSearchService.new(query: query, finishes: [])
     results = service.call
 
     treatments = results.first[:treatments]
@@ -211,7 +211,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
 
     stub_scryfall_success(query, scryfall_data)
 
-    service = CardSearchService.new(query: query, treatments: [])
+    service = CardSearchService.new(query: query, finishes: [])
     results = service.call
 
     assert_nil results.first[:image_url]
@@ -223,7 +223,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
 
     stub_scryfall_success(query, scryfall_response_fixture)
 
-    service = CardSearchService.new(query: query, treatments: [])
+    service = CardSearchService.new(query: query, finishes: [])
     service.call
 
     # Verify no page parameter or page=1
@@ -241,7 +241,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
     stub_request(:get, /api\.scryfall\.com/)
       .to_return(status: 429, body: '{"object":"error","code":"rate_limit_exceeded"}')
 
-    service = CardSearchService.new(query: query, treatments: [])
+    service = CardSearchService.new(query: query, finishes: [])
 
     error = assert_raises(CardSearchService::RateLimitError) do
       service.call
@@ -256,7 +256,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
     stub_request(:get, /api\.scryfall\.com/)
       .to_raise(SocketError.new("Failed to open TCP connection"))
 
-    service = CardSearchService.new(query: query, treatments: [])
+    service = CardSearchService.new(query: query, finishes: [])
 
     error = assert_raises(CardSearchService::NetworkError) do
       service.call
@@ -271,7 +271,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
     stub_request(:get, /api\.scryfall\.com/)
       .to_timeout
 
-    service = CardSearchService.new(query: query, treatments: [])
+    service = CardSearchService.new(query: query, finishes: [])
 
     error = assert_raises(CardSearchService::TimeoutError) do
       service.call
@@ -289,7 +289,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
         body: '{"object":"error","code":"not_found","details":"No cards found"}'
       )
 
-    service = CardSearchService.new(query: query, treatments: [])
+    service = CardSearchService.new(query: query, finishes: [])
     results = service.call
 
     assert_empty results
@@ -301,7 +301,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
     stub_request(:get, /api\.scryfall\.com/)
       .to_return(status: 200, body: "Invalid JSON {{{")
 
-    service = CardSearchService.new(query: query, treatments: [])
+    service = CardSearchService.new(query: query, finishes: [])
 
     error = assert_raises(CardSearchService::InvalidResponseError) do
       service.call
@@ -319,11 +319,11 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
 
     stub_scryfall_success(query, scryfall_response_fixture)
 
-    service1 = CardSearchService.new(query: query, treatments: [])
+    service1 = CardSearchService.new(query: query, finishes: [])
     results1 = service1.call
 
     # Second call should use cache
-    service2 = CardSearchService.new(query: query, treatments: [])
+    service2 = CardSearchService.new(query: query, finishes: [])
     results2 = service2.call
 
     # Should only make one HTTP request
@@ -362,11 +362,11 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
     stub_scryfall_success(query, scryfall_data)
 
     # First call without filter
-    service1 = CardSearchService.new(query: query, treatments: [])
+    service1 = CardSearchService.new(query: query, finishes: [])
     results1 = service1.call
 
     # Second call with borderless filter should use cache
-    service2 = CardSearchService.new(query: query, treatments: ["borderless"])
+    service2 = CardSearchService.new(query: query, finishes: ["borderless"])
     results2 = service2.call
 
     assert_requested :get, /api\.scryfall\.com/, times: 1
