@@ -191,6 +191,211 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
   end
 
   # ---------------------------------------------------------------------------
+  # Image URL extraction tests - Issue #128: Two-sided cards
+  # ---------------------------------------------------------------------------
+  test "extracts image URL from card_faces for double-faced cards" do
+    card_id = "double-faced-card"
+    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+
+    # Stub card endpoint
+    card_response = {
+      "id" => card_id,
+      "prints_search_uri" => prints_search_uri
+    }
+    stub_scryfall_card_request(card_id, card_response)
+
+    # Stub prints search with double-faced card that has card_faces
+    response = {
+      "object" => "list",
+      "has_more" => false,
+      "data" => [
+        {
+          "id" => "dfc-id",
+          "name" => "Delver of Secrets // Insectile Aberration",
+          "set" => "isd",
+          "set_name" => "Innistrad",
+          "collector_number" => "51",
+          "released_at" => "2011-09-30",
+          "card_faces" => [
+            {
+              "name" => "Delver of Secrets",
+              "image_uris" => {
+                "small" => "https://example.com/delver-small.jpg",
+                "normal" => "https://example.com/delver-normal.jpg",
+                "large" => "https://example.com/delver-large.jpg"
+              }
+            },
+            {
+              "name" => "Insectile Aberration",
+              "image_uris" => {
+                "small" => "https://example.com/aberration-small.jpg",
+                "normal" => "https://example.com/aberration-normal.jpg",
+                "large" => "https://example.com/aberration-large.jpg"
+              }
+            }
+          ]
+          # No top-level image_uris
+        }
+      ]
+    }
+    stub_prints_search_request(prints_search_uri, response)
+
+    service = CardPrintingsService.new(card_id: card_id)
+    results = service.call
+
+    assert_equal 1, results.size
+    assert_equal "https://example.com/delver-normal.jpg", results.first[:image_url],
+      "Expected image URL from first card face"
+  end
+
+  test "extracts image URL from top-level image_uris for single-faced cards" do
+    card_id = "single-faced-card"
+    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+
+    stub_two_step_flow(card_id, prints_search_uri, [
+      {
+        id: "single-id",
+        name: "Lightning Bolt",
+        set: "lea",
+        set_name: "Alpha",
+        collector_number: "1",
+        image_url: "https://example.com/bolt.jpg",
+        released_at: "1993-08-05"
+      }
+    ])
+
+    service = CardPrintingsService.new(card_id: card_id)
+    results = service.call
+
+    assert_equal 1, results.size
+    assert_equal "https://example.com/bolt.jpg", results.first[:image_url]
+  end
+
+  test "card_faces takes precedence over top-level image_uris when both exist" do
+    card_id = "both-images-card"
+    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+
+    # Stub card endpoint
+    card_response = {
+      "id" => card_id,
+      "prints_search_uri" => prints_search_uri
+    }
+    stub_scryfall_card_request(card_id, card_response)
+
+    # Card with both card_faces and top-level image_uris
+    # (This shouldn't happen in real Scryfall data, but we test precedence)
+    response = {
+      "object" => "list",
+      "has_more" => false,
+      "data" => [
+        {
+          "id" => "both-id",
+          "name" => "Test Card",
+          "set" => "tst",
+          "set_name" => "Test Set",
+          "collector_number" => "1",
+          "released_at" => "2020-01-01",
+          "image_uris" => {
+            "normal" => "https://example.com/top-level.jpg"
+          },
+          "card_faces" => [
+            {
+              "name" => "Front Face",
+              "image_uris" => {
+                "normal" => "https://example.com/front-face.jpg"
+              }
+            }
+          ]
+        }
+      ]
+    }
+    stub_prints_search_request(prints_search_uri, response)
+
+    service = CardPrintingsService.new(card_id: card_id)
+    results = service.call
+
+    assert_equal 1, results.size
+    assert_equal "https://example.com/front-face.jpg", results.first[:image_url],
+      "Expected card_faces to take precedence over top-level image_uris"
+  end
+
+  test "handles empty card_faces array by falling back to top-level image_uris" do
+    card_id = "empty-faces-card"
+    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+
+    # Stub card endpoint
+    card_response = {
+      "id" => card_id,
+      "prints_search_uri" => prints_search_uri
+    }
+    stub_scryfall_card_request(card_id, card_response)
+
+    # Card with empty card_faces array but valid top-level image_uris
+    response = {
+      "object" => "list",
+      "has_more" => false,
+      "data" => [
+        {
+          "id" => "empty-faces-id",
+          "name" => "Test Card",
+          "set" => "tst",
+          "set_name" => "Test Set",
+          "collector_number" => "1",
+          "released_at" => "2020-01-01",
+          "image_uris" => {
+            "normal" => "https://example.com/fallback.jpg"
+          },
+          "card_faces" => []
+        }
+      ]
+    }
+    stub_prints_search_request(prints_search_uri, response)
+
+    service = CardPrintingsService.new(card_id: card_id)
+    results = service.call
+
+    assert_equal 1, results.size
+    assert_equal "https://example.com/fallback.jpg", results.first[:image_url],
+      "Expected fallback to top-level image_uris when card_faces is empty"
+  end
+
+  test "handles card with no image data at all" do
+    card_id = "no-images-card"
+    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+
+    # Stub card endpoint
+    card_response = {
+      "id" => card_id,
+      "prints_search_uri" => prints_search_uri
+    }
+    stub_scryfall_card_request(card_id, card_response)
+
+    # Card with neither card_faces nor image_uris
+    response = {
+      "object" => "list",
+      "has_more" => false,
+      "data" => [
+        {
+          "id" => "no-images-id",
+          "name" => "No Images Card",
+          "set" => "tst",
+          "set_name" => "Test Set",
+          "collector_number" => "1",
+          "released_at" => "2020-01-01"
+          # No card_faces, no image_uris
+        }
+      ]
+    }
+    stub_prints_search_request(prints_search_uri, response)
+
+    service = CardPrintingsService.new(card_id: card_id)
+    results = service.call
+
+    assert_equal 1, results.size
+    assert_nil results.first[:image_url]
+  end
+
+  # ---------------------------------------------------------------------------
   # Caching behavior tests
   # ---------------------------------------------------------------------------
   test "caches printings results for identical card_id" do

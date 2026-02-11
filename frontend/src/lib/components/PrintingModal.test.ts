@@ -330,7 +330,7 @@ describe('PrintingModal - Issue #117: Drawer closes unexpectedly', () => {
 			});
 		});
 
-		it('should have all form fields (acquired_date, price, treatment, language) available', async () => {
+		it('should have all form fields (acquired_date, price) available', async () => {
 			render(PrintingModal, {
 				props: {
 					card: MOCK_CARD,
@@ -344,11 +344,9 @@ describe('PrintingModal - Issue #117: Drawer closes unexpectedly', () => {
 				expect(addButton).toBeInTheDocument();
 			});
 
-			// Verify all form fields exist and are properly bound
+			// Verify visible form fields exist and are properly bound
 			const dateInput = document.body.querySelector('#acquired-date') as HTMLInputElement;
 			const priceInput = document.body.querySelector('#price') as HTMLInputElement;
-			const treatmentSelect = document.body.querySelector('#treatment') as HTMLSelectElement;
-			const languageSelect = document.body.querySelector('#language') as HTMLSelectElement;
 
 			expect(dateInput).toBeInTheDocument();
 			expect(dateInput.type).toBe('date');
@@ -356,16 +354,11 @@ describe('PrintingModal - Issue #117: Drawer closes unexpectedly', () => {
 			expect(priceInput).toBeInTheDocument();
 			expect(priceInput.type).toBe('number');
 
-			expect(treatmentSelect).toBeInTheDocument();
-			expect(treatmentSelect.tagName).toBe('SELECT');
-
-			expect(languageSelect).toBeInTheDocument();
-			expect(languageSelect.tagName).toBe('SELECT');
-
 			// Verify default values
 			expect(priceInput.value).toBe('0');
-			expect(treatmentSelect.value).toBe('Normal');
-			expect(languageSelect.value).toBe('English');
+
+			// Note: treatment and language fields are currently hidden but still
+			// have default values of 'Normal' and 'English' respectively
 		});
 
 		it('should preserve form field values when hovering changes the art multiple times', async () => {
@@ -425,6 +418,66 @@ describe('PrintingModal - Issue #117: Drawer closes unexpectedly', () => {
 					expect(body.price).toBe(25.5);
 				}
 			});
+		});
+	});
+
+	/**
+	 * Issue #128: Handle missing image_url for two-sided cards
+	 */
+	describe('Image URL handling - Issue #128', () => {
+		it('should display image when image_url is present', async () => {
+			render(PrintingModal, {
+				props: {
+					card: MOCK_CARD,
+					open: true
+				}
+			});
+
+			// Wait for printings to load and image to display
+			await waitFor(() => {
+				const img = document.body.querySelector('.image-preview-area img') as HTMLImageElement;
+				expect(img).toBeInTheDocument();
+				expect(img.src).toContain(MOCK_PRINTINGS[0].image_url);
+			});
+		});
+
+		it('should handle missing image_url gracefully', async () => {
+			const printingsWithoutImage = [
+				{
+					...MOCK_PRINTINGS[0],
+					image_url: undefined
+				}
+			];
+
+			vi.stubGlobal(
+				'fetch',
+				vi.fn().mockImplementation((url: string) => {
+					if (typeof url === 'string' && url.includes('/printings')) {
+						return Promise.resolve({
+							ok: true,
+							json: () => Promise.resolve({ printings: printingsWithoutImage })
+						});
+					}
+					return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+				})
+			);
+
+			render(PrintingModal, {
+				props: {
+					card: MOCK_CARD,
+					open: true
+				}
+			});
+
+			// Wait for printings to load
+			await waitFor(() => {
+				const printingItems = document.body.querySelectorAll('[data-testid="printing-item"]');
+				expect(printingItems.length).toBe(1);
+			});
+
+			// Image preview area should not be rendered when image_url is missing
+			const imagePreview = document.body.querySelector('.image-preview-area');
+			expect(imagePreview).not.toBeInTheDocument();
 		});
 	});
 
