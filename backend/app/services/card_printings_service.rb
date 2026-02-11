@@ -173,13 +173,9 @@ class CardPrintingsService
   # For double-faced cards (DFCs), Scryfall provides image_uris in card_faces array
   # For single-faced cards, image_uris is at the top level
   def extract_image_url(card)
-    # Check if card has card_faces with image data (double-faced cards)
-    if card["card_faces"].is_a?(Array) && card["card_faces"].any?
-      card.dig("card_faces", 0, "image_uris", "normal")
-    else
-      # Fall back to top-level image_uris (single-faced cards)
+    # Prefer card_faces image (for double-faced cards) over top-level image
+    card.dig("card_faces", 0, "image_uris", "normal") ||
       card.dig("image_uris", "normal")
-    end
   end
 
   # Sorts printings by release date, newest first
