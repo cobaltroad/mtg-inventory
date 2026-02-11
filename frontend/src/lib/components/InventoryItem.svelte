@@ -21,6 +21,10 @@
 		if (cents === null || cents === undefined) return 'N/A';
 		return `$${(cents / 100).toFixed(2)}`;
 	}
+
+	function capitalizeFirstLetter(text: string): string {
+		return text.charAt(0).toUpperCase() + text.slice(1);
+	}
 </script>
 
 <div class="inventory-item">
@@ -50,7 +54,7 @@
 		{#if item.finish || item.language}
 			<div class="enhanced-info">
 				{#if item.finish}
-					<span class="finish">{item.finish}</span>
+					<span class="finish">{capitalizeFirstLetter(item.finish)}</span>
 				{/if}
 				{#if item.language}
 					<span class="language">{item.language}</span>

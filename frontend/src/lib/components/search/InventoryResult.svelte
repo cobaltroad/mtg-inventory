@@ -15,6 +15,10 @@
 
 	// Fallback for missing image
 	const hasImage = $derived(!!result.image_url);
+
+	function capitalizeFirstLetter(text: string): string {
+		return text.charAt(0).toUpperCase() + text.slice(1);
+	}
 </script>
 
 <div class="inventory-result">
@@ -43,7 +47,7 @@
 		<div class="quantity-finish">
 			<span class="quantity">Qty: {result.quantity}</span>
 			{#if result.finish}
-				<span class="finish">{result.finish}</span>
+				<span class="finish">{capitalizeFirstLetter(result.finish)}</span>
 			{/if}
 		</div>
 

@@ -128,6 +128,10 @@
 	function dismissToast() {
 		toast = null;
 	}
+
+	function capitalizeFirstLetter(text: string): string {
+		return text.charAt(0).toUpperCase() + text.slice(1);
+	}
 </script>
 
 {#if loading}
@@ -197,7 +201,7 @@
 						<td>
 							<div class="details-cell">
 								{#if item.finish}
-									<span class="detail-badge">{item.finish}</span>
+									<span class="detail-badge">{capitalizeFirstLetter(item.finish)}</span>
 								{/if}
 								{#if item.language}
 									<span class="detail-badge">{item.language}</span>
