@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
-	import { Search } from 'lucide-svelte';
+	import { Search, ChevronLeft, ChevronRight } from 'lucide-svelte';
+	import { Pagination } from '@skeletonlabs/skeleton-svelte';
 	import InventoryTable from '$lib/components/InventoryTable.svelte';
 	import EmptyInventory from '$lib/components/EmptyInventory.svelte';
 	import FilterBar from '$lib/components/FilterBar.svelte';
@@ -35,10 +36,22 @@
 	let currentFilter = $state('');
 	let currentSort = $state<SortOption>('name-asc');
 
+	// Pagination state
+	let currentPage = $state(1);
+	let pageSize = $state(20);
+
 	// Apply filtering and sorting
 	let filteredItems = $derived(filterBySet(allItems, currentFilter));
-	let displayItems = $derived(sortInventory(filteredItems, currentSort));
+	let sortedItems = $derived(sortInventory(filteredItems, currentSort));
 	let stats = $derived(calculateStats(filteredItems));
+
+	// Apply pagination
+	let paginationStart = $derived((currentPage - 1) * pageSize);
+	let paginationEnd = $derived(paginationStart + pageSize);
+	let displayItems = $derived(sortedItems.slice(paginationStart, paginationEnd));
+
+	// Pagination visibility
+	let showPagination = $derived(filteredItems.length > pageSize);
 
 	// Count display
 	let itemCountText = $derived(() => {
@@ -48,11 +61,16 @@
 		return `${allItems.length} ${pluralize(allItems.length, 'card')}`;
 	});
 
-	// Load sort preference from localStorage
+	// Load preferences from localStorage
 	onMount(() => {
 		const savedSort = localStorage.getItem('inventory-sort');
 		if (savedSort) {
 			currentSort = savedSort as SortOption;
+		}
+
+		const savedPageSize = localStorage.getItem('inventory-page-size');
+		if (savedPageSize) {
+			pageSize = parseInt(savedPageSize, 10);
 		}
 	});
 
@@ -62,8 +80,25 @@
 		localStorage.setItem('inventory-sort', newSort);
 	}
 
+	// Handle filter change
 	function handleFilterChange(newFilter: string) {
 		currentFilter = newFilter;
+		// Reset to first page when filter changes
+		currentPage = 1;
+	}
+
+	// Handle page size change
+	function handlePageSizeChange(event: Event) {
+		const target = event.currentTarget as HTMLSelectElement;
+		pageSize = parseInt(target.value, 10);
+		localStorage.setItem('inventory-page-size', target.value);
+		// Reset to first page when page size changes
+		currentPage = 1;
+	}
+
+	// Handle page change
+	function handlePageChange(event: { page: number }) {
+		currentPage = event.page;
 	}
 </script>
 
@@ -111,6 +146,55 @@
 			</div>
 		{:else}
 			<InventoryTable items={displayItems} {loading} onItemsChange={handleItemsChange} />
+
+			{#if showPagination}
+				<div class="pagination-container">
+					<label class="page-size-label">
+						<span>Items per page:</span>
+						<select
+							class="page-size-select"
+							value={String(pageSize)}
+							onchange={handlePageSizeChange}
+							aria-label="Items per page"
+						>
+							<option value="20">20</option>
+							<option value="50">50</option>
+							<option value="100">100</option>
+						</select>
+					</label>
+
+					<nav class="pagination-nav" aria-label="Pagination navigation">
+						<Pagination
+							count={filteredItems.length}
+							{pageSize}
+							page={currentPage}
+							onPageChange={handlePageChange}
+						>
+							<Pagination.PrevTrigger>
+								<ChevronLeft class="h-4 w-4" />
+								<span>Previous</span>
+							</Pagination.PrevTrigger>
+							<Pagination.Context>
+								{#snippet children(pag)}
+									{#each pag().pages as pageItem, index (pageItem.value)}
+										{#if pageItem.type === 'page'}
+											<Pagination.Item {...pageItem}>
+												{pageItem.value}
+											</Pagination.Item>
+										{:else}
+											<Pagination.Ellipsis {index}>&#8230;</Pagination.Ellipsis>
+										{/if}
+									{/each}
+								{/snippet}
+							</Pagination.Context>
+							<Pagination.NextTrigger>
+								<span>Next</span>
+								<ChevronRight class="h-4 w-4" />
+							</Pagination.NextTrigger>
+						</Pagination>
+					</nav>
+				</div>
+			{/if}
 		{/if}
 	{/if}
 </div>
@@ -246,6 +330,69 @@
 		color: #fecaca;
 	}
 
+	.pagination-container {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-top: 2rem;
+		gap: 1rem;
+		flex-wrap: wrap;
+	}
+
+	.page-size-label {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.875rem;
+		color: #6b7280;
+	}
+
+	:global(.dark) .page-size-label {
+		color: #9ca3af;
+	}
+
+	.page-size-select {
+		padding: 0.5rem 2rem 0.5rem 0.75rem;
+		background: white;
+		border: 1px solid #d1d5db;
+		border-radius: 0.375rem;
+		font-size: 0.875rem;
+		cursor: pointer;
+		transition: all 0.2s;
+		appearance: none;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right 0.5rem center;
+		background-size: 1rem;
+	}
+
+	.page-size-select:hover {
+		border-color: #9ca3af;
+	}
+
+	.page-size-select:focus {
+		outline: 2px solid #3b82f6;
+		outline-offset: 2px;
+		border-color: #3b82f6;
+	}
+
+	:global(.dark) .page-size-select {
+		background: #1f2937;
+		border-color: #374151;
+		color: #f9fafb;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+	}
+
+	:global(.dark) .page-size-select:hover {
+		border-color: #6b7280;
+	}
+
+	.pagination-nav {
+		flex: 1;
+		display: flex;
+		justify-content: center;
+	}
+
 	@media (max-width: 768px) {
 		.controls-bar {
 			flex-direction: column;
@@ -259,6 +406,15 @@
 
 		.search-btn {
 			width: 100%;
+			justify-content: center;
+		}
+
+		.pagination-container {
+			flex-direction: column;
+			align-items: stretch;
+		}
+
+		.pagination-nav {
 			justify-content: center;
 		}
 	}
