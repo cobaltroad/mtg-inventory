@@ -1,4 +1,5 @@
 require "test_helper"
+require "webmock/minitest"
 
 class WishlistControllerTest < ActionDispatch::IntegrationTest
   # ---------------------------------------------------------------------------
@@ -10,10 +11,41 @@ class WishlistControllerTest < ActionDispatch::IntegrationTest
     User.delete_all
     load Rails.root.join("db", "seeds.rb")
     @user = User.find_by!(email: User::DEFAULT_EMAIL)
+    WebMock.reset!
   end
 
   def api_path(path)
     "#{ENV.fetch('PUBLIC_API_PATH', '/api')}#{path}"
+  end
+
+  # Stubs Scryfall API to validate a card ID
+  def stub_valid_card(card_id)
+    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+      .to_return(
+        status: 200,
+        body: { id: card_id, name: "Test Card" }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+  end
+
+  # Stubs Scryfall API to return card details
+  def stub_scryfall_card_details(card_id, name: "Black Lotus")
+    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+      .to_return(
+        status: 200,
+        body: {
+          id: card_id,
+          name: name,
+          set: "LEA",
+          set_name: "Limited Edition Alpha",
+          collector_number: "234",
+          released_at: "1993-08-05",
+          image_uris: {
+            normal: "https://cards.scryfall.io/normal/front/b/l/black-lotus.jpg"
+          }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
   end
 
   # ---------------------------------------------------------------------------
@@ -132,5 +164,141 @@ class WishlistControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :not_found
     assert_equal 1, CollectionItem.where(id: item.id).count
+  end
+
+  # ---------------------------------------------------------------------------
+  # #index with card details enrichment -- wishlist-specific behavior
+  # ---------------------------------------------------------------------------
+  test "GET /api/wishlist includes card details from Scryfall API" do
+    CollectionItem.create!(user: @user, card_id: "uuid-wish-123", collection_type: "wishlist", quantity: 3)
+
+    stub_scryfall_card_details("uuid-wish-123", name: "Wishlist Card")
+
+    get api_path("/wishlist")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    assert_equal 1, items.size
+
+    item = items.first
+    assert_equal "uuid-wish-123", item["card_id"]
+    assert_equal 3, item["quantity"]
+    assert_equal "Wishlist Card", item["card_name"]
+    assert_equal "LEA", item["set"]
+    assert_equal "Limited Edition Alpha", item["set_name"]
+    assert_equal "234", item["collector_number"]
+  end
+
+  test "GET /api/wishlist excludes acquired_date and acquired_price_cents fields" do
+    CollectionItem.create!(
+      user: @user,
+      card_id: "wish_no_acquire",
+      collection_type: "wishlist",
+      quantity: 2
+    )
+
+    stub_scryfall_card_details("wish_no_acquire", name: "Wish Card")
+
+    get api_path("/wishlist")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    assert_equal 1, items.size
+
+    item = items.first
+    assert_nil item["acquired_date"], "Wishlist items should not include acquired_date"
+    assert_nil item["acquired_price_cents"], "Wishlist items should not include acquired_price_cents"
+  end
+
+  test "GET /api/wishlist includes current market price" do
+    CollectionItem.create!(
+      user: @user,
+      card_id: "wish_priced",
+      collection_type: "wishlist",
+      quantity: 2
+    )
+
+    CardPrice.create!(
+      card_id: "wish_priced",
+      fetched_at: 1.hour.ago,
+      usd_cents: 500
+    )
+
+    stub_scryfall_card_details("wish_priced", name: "Priced Wish Card")
+
+    get api_path("/wishlist")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    assert_equal 1, items.size
+
+    item = items.first
+    assert_equal 500, item["unit_price_cents"]
+    assert_equal 1000, item["total_price_cents"]
+    assert_not_nil item["price_updated_at"]
+  end
+
+  test "GET /api/wishlist returns items sorted alphabetically by card name" do
+    CollectionItem.create!(user: @user, card_id: "uuid-zzz", collection_type: "wishlist", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "uuid-aaa", collection_type: "wishlist", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "uuid-mmm", collection_type: "wishlist", quantity: 1)
+
+    stub_scryfall_card_details("uuid-zzz", name: "Zombie Token")
+    stub_scryfall_card_details("uuid-aaa", name: "Ancient Tomb")
+    stub_scryfall_card_details("uuid-mmm", name: "Mox Pearl")
+
+    get api_path("/wishlist")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    assert_equal 3, items.size
+
+    # Verify alphabetical order
+    assert_equal "Ancient Tomb", items[0]["card_name"]
+    assert_equal "Mox Pearl", items[1]["card_name"]
+    assert_equal "Zombie Token", items[2]["card_name"]
+  end
+
+  test "GET /api/wishlist returns empty array when wishlist is empty" do
+    get api_path("/wishlist")
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    assert_equal 0, items.size
+  end
+
+  test "POST /api/wishlist allows same card in both inventory and wishlist" do
+    CollectionItem.create!(user: @user, card_id: "dual_card", collection_type: "inventory", quantity: 1)
+
+    stub_valid_card("dual_card")
+
+    post api_path("/wishlist"), params: { card_id: "dual_card", quantity: 2 }, as: :json
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "dual_card", body["card_id"]
+    assert_equal "wishlist", body["collection_type"]
+    assert_equal 2, body["quantity"]
+
+    # Both records should exist
+    assert_equal 1, CollectionItem.where(user: @user, card_id: "dual_card", collection_type: "inventory").count
+    assert_equal 1, CollectionItem.where(user: @user, card_id: "dual_card", collection_type: "wishlist").count
+  end
+
+  test "DELETE /api/wishlist/:id does not affect current user's inventory items" do
+    inventory_item = CollectionItem.create!(user: @user, card_id: "shared_card", collection_type: "inventory", quantity: 1)
+    wishlist_item = CollectionItem.create!(user: @user, card_id: "shared_card", collection_type: "wishlist", quantity: 2)
+
+    delete api_path("/wishlist/#{wishlist_item.id}")
+
+    assert_response :success
+
+    # Wishlist item should be deleted
+    assert_equal 0, CollectionItem.where(id: wishlist_item.id).count
+
+    # Inventory item should still exist
+    assert_equal 1, CollectionItem.where(id: inventory_item.id).count
+    inventory_item.reload
+    assert_equal 1, inventory_item.quantity
   end
 end
