@@ -70,7 +70,7 @@ class PriceAlertService
       old_price_cents: old_price,
       new_price_cents: new_price,
       percentage_change: percentage_change,
-      treatment: normalize_finish(item.finish)
+      finish: normalize_finish(item.finish)
     )
   end
 

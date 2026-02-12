@@ -79,7 +79,7 @@ module ActiveSupport
       parsed_logs = parse_json_logs(log_string)
 
       parsed_logs.select do |entry|
-        criteria.all? { |key, value| entry[key.to_s] == value.to_s }
+        criteria.all? { |key, value| entry[key.to_s].to_s == value.to_s }
       end
     end
 

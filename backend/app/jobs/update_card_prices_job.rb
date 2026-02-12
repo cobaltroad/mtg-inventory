@@ -262,10 +262,13 @@ class UpdateCardPricesJob < ApplicationJob
     today_start = Time.current.beginning_of_day
 
     # Get card_ids that already have a price record from today
+    # Note: reorder(nil) removes default scope ordering to avoid
+    # PostgreSQL error with SELECT DISTINCT + ORDER BY
     processed_today = CardPrice
       .where(card_id: card_ids)
       .where("fetched_at >= ?", today_start)
       .distinct
+      .reorder(nil)
       .pluck(:card_id)
 
     # Return cards that haven't been processed today
