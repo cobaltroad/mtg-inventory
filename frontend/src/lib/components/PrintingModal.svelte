@@ -87,6 +87,9 @@
 	let validationToastMessage = $state('');
 	let showValidationToast = $state(false);
 
+	// Collapsible optional fields state
+	let showOptionalFields = $state(false);
+
 	// Issue #138: Filter finish options based on available finishes for selected printing
 	// Derived value that returns available finishes for the selected printing
 	// Falls back to all options if finishes data is missing/empty
@@ -367,35 +370,8 @@
 									alt="{selectedPrinting.name} from {selectedPrinting.set_name}"
 								/>
 								<div class="inventory-actions">
-									<div class="form-field">
-										<label for="acquired-date">Acquired Date</label>
-										<input
-											id="acquired-date"
-											type="date"
-											bind:value={acquiredDate}
-											class="form-input {invalidField === 'acquired-date' ? 'invalid' : ''}"
-											oninput={() => clearValidationError('acquired-date')}
-											onclick={(e) => e.stopPropagation()}
-										/>
-									</div>
-
-									<div class="form-field">
-										<label for="price">Price</label>
-										<input
-											id="price"
-											type="number"
-											step="0.01"
-											min="0"
-											bind:value={price}
-											class="form-input {invalidField === 'price' ? 'invalid' : ''}"
-											oninput={() => clearValidationError('price')}
-											onclick={(e) => e.stopPropagation()}
-										/>
-									</div>
-
 									<!-- Finish Selection -->
 									<div class="form-group">
-										<label class="form-label">Finish</label>
 										<div class="finish-options" onclick={(e) => e.stopPropagation()}>
 											{#each availableFinishes as finishOption}
 												<label class="finish-option">
@@ -412,8 +388,61 @@
 										</div>
 									</div>
 
-									<!-- Language field hidden - defaulted to English for now -->
-									<!-- Future enhancement: Add language selection UI -->
+									<!-- Optional Fields Toggle -->
+									<button
+										type="button"
+										class="optional-fields-toggle"
+										onclick={(e) => {
+											e.stopPropagation();
+											showOptionalFields = !showOptionalFields;
+										}}
+									>
+										{showOptionalFields ? '▼' : '▶'} Additional Details
+									</button>
+
+									{#if showOptionalFields}
+										<div class="optional-fields">
+											<div class="form-field">
+												<label for="acquired-date">Acquired Date</label>
+												<input
+													id="acquired-date"
+													type="date"
+													bind:value={acquiredDate}
+													class="form-input {invalidField === 'acquired-date' ? 'invalid' : ''}"
+													oninput={() => clearValidationError('acquired-date')}
+													onclick={(e) => e.stopPropagation()}
+												/>
+											</div>
+
+											<div class="form-field">
+												<label for="price">Price</label>
+												<input
+													id="price"
+													type="number"
+													step="0.01"
+													min="0"
+													bind:value={price}
+													class="form-input {invalidField === 'price' ? 'invalid' : ''}"
+													oninput={() => clearValidationError('price')}
+													onclick={(e) => e.stopPropagation()}
+												/>
+											</div>
+
+											<div class="form-field">
+												<label for="language">Language</label>
+												<select
+													id="language"
+													bind:value={language}
+													class="form-select"
+													onclick={(e) => e.stopPropagation()}
+												>
+													{#each LANGUAGE_OPTIONS as lang}
+														<option value={lang}>{lang}</option>
+													{/each}
+												</select>
+											</div>
+										</div>
+									{/if}
 
 									<button
 										type="button"
@@ -650,6 +679,35 @@
 		cursor: pointer;
 	}
 
+	/* Optional Fields Toggle */
+	.optional-fields-toggle {
+		width: 100%;
+		padding: 0.5rem;
+		border: 1px solid #d1d5db;
+		border-radius: 4px;
+		background: white;
+		color: #6b7280;
+		font-size: 0.875rem;
+		font-weight: 500;
+		text-align: left;
+		cursor: pointer;
+		transition:
+			background 0.2s,
+			border-color 0.2s;
+	}
+
+	.optional-fields-toggle:hover {
+		background: #f9fafb;
+		border-color: #9ca3af;
+	}
+
+	.optional-fields {
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
 	/* Form Group Styles */
 	.form-group {
 		width: 100%;
@@ -766,6 +824,17 @@
 
 	:global(.dark) .finish-option input[type='radio']:checked + span {
 		color: white;
+	}
+
+	:global(.dark) .optional-fields-toggle {
+		background: #1f2937;
+		border-color: #4b5563;
+		color: #9ca3af;
+	}
+
+	:global(.dark) .optional-fields-toggle:hover {
+		background: #374151;
+		border-color: #6b7280;
 	}
 
 	@media (max-width: 768px) {
