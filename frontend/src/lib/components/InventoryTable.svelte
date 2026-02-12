@@ -16,11 +16,13 @@
 	let { items, loading = false, onItemsChange }: Props = $props();
 
 	// Optimistic updates state
-	let localItems = $state<InventoryItem[]>(items);
+	// Initialize with empty array to avoid capturing prop value at initialization
+	let localItems = $state<InventoryItem[]>([]);
 	let removingItemId = $state<number | null>(null);
 	let toast = $state<{ message: string; type: 'success' | 'error' } | null>(null);
 
 	// Update local items when props change
+	// This reads items in a reactive context, establishing proper tracking
 	$effect(() => {
 		localItems = items;
 	});

@@ -24,11 +24,13 @@
 	const openSearchDrawer = getContext<() => void>('openSearchDrawer');
 
 	// State management
-	let allItems = $state(data.items || []);
+	// Initialize with empty array to avoid capturing prop value at initialization
+	let allItems = $state<typeof data.items>([]);
 	let error = $derived(data.error || null);
 	let loading = $state(false);
 
-	// Update allItems when data changes
+	// Sync allItems with data.items using $effect
+	// This reads data.items in a reactive context, establishing proper tracking
 	$effect(() => {
 		allItems = data.items || [];
 	});
