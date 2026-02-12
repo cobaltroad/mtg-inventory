@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-02-12
+
+### Added
+- Production monitoring and safety features for scheduled jobs (#104)
+  - Duplicate job prevention with `.already_running?` checks
+  - Job failure alerting via email, Slack, and custom webhooks
+  - Enhanced job statistics with execution metrics (7-day and 30-day windows)
+  - Rake task for viewing job queue statistics (`jobs:stats`)
+- Finish segmented control to PrintingModal
+- Filter finish options based on available finishes for selected printing (#138)
+
+### Changed
+- **BREAKING:** Renamed "treatment" to "finish" terminology throughout API and UI (#127)
+  - Aligns with Scryfall terminology
+  - Affects API request/response parameters
+- CardPrice default scope to `fetched_at DESC` for improved performance
+- Safer scope handling using `reorder` instead of `unscoped`
+
+### Fixed
+- SegmentedControl rendering in PrintingModal (#136)
+- Price lookup in InventoryValueTimeline (#143)
+- Test environment configuration to always run in test mode (#146)
+- Test isolation by clearing records in setup (#145)
+- Logging test assertions to match JSON format (#144)
+- Jobs:stats test to ensure recurring tasks are set up (#151)
+- Card image height constraint to ensure form visibility
+- CardSearchController test parameter names
+- Various test fixes and improvements
+
 ## [0.3.3] - 2026-02-11
 
 ### Added
@@ -73,6 +102,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Earlier releases are not documented in this changelog.
 
+[0.4.0]: https://github.com/cobaltroad/mtg-inventory/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/cobaltroad/mtg-inventory/compare/v0.3.1...v0.3.3
 [0.1.0]: https://github.com/cobaltroad/mtg-inventory/compare/v0.0.3...v0.1.0
 [0.0.3]: https://github.com/cobaltroad/mtg-inventory/releases/tag/v0.0.3
