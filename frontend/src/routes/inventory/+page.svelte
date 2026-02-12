@@ -4,6 +4,7 @@
 	import { Pagination } from '@skeletonlabs/skeleton-svelte';
 	import InventoryTable from '$lib/components/InventoryTable.svelte';
 	import EmptyInventory from '$lib/components/EmptyInventory.svelte';
+	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import FilterBar from '$lib/components/FilterBar.svelte';
 	import SortDropdown from '$lib/components/SortDropdown.svelte';
 	import InventoryStats from '$lib/components/InventoryStats.svelte';
@@ -28,11 +29,14 @@
 	let allItems = $state<typeof data.items>([]);
 	let error = $derived(data.error || null);
 	let loading = $state(false);
+	let initialLoading = $state(true);
 
 	// Sync allItems with data.items using $effect
 	// This reads data.items in a reactive context, establishing proper tracking
 	$effect(() => {
 		allItems = data.items || [];
+		// Mark initial loading as complete once we've synced data
+		initialLoading = false;
 	});
 
 	// Handle items change from InventoryTable
@@ -167,7 +171,9 @@
 		</div>
 	{/if}
 
-	{#if !error && allItems.length === 0 && !loading}
+	{#if initialLoading}
+		<LoadingSpinner message="Loading your inventory..." />
+	{:else if !error && allItems.length === 0}
 		<EmptyInventory />
 	{:else if allItems.length > 0}
 		<InventoryStats {stats} />
