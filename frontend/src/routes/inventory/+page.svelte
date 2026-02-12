@@ -59,7 +59,24 @@
 
 	// Pagination state
 	let currentPage = $state(1);
-	let pageSize = $state(DEFAULT_PAGE_SIZE);
+
+	// Initialize pageSize from localStorage or use default
+	// This must happen before derived states are calculated
+	function getInitialPageSize(): number {
+		if (typeof window === 'undefined') return DEFAULT_PAGE_SIZE;
+
+		const savedPageSize = localStorage.getItem(STORAGE_KEY_PAGE_SIZE);
+		if (savedPageSize) {
+			const parsed = parseInt(savedPageSize, 10);
+			// Validate that the saved page size is a valid option
+			if (PAGE_SIZE_OPTIONS.includes(parsed as typeof PAGE_SIZE_OPTIONS[number])) {
+				return parsed;
+			}
+		}
+		return DEFAULT_PAGE_SIZE;
+	}
+
+	let pageSize = $state(getInitialPageSize());
 
 	// Apply filtering and sorting
 	let filteredItems = $derived(filterBySet(allItems, currentFilter));
@@ -82,20 +99,11 @@
 		return `${allItems.length} ${pluralize(allItems.length, 'card')}`;
 	});
 
-	// Load preferences from localStorage on mount
+	// Load sort preference from localStorage on mount
 	onMount(() => {
 		const savedSort = localStorage.getItem(STORAGE_KEY_SORT);
 		if (savedSort) {
 			currentSort = savedSort as SortOption;
-		}
-
-		const savedPageSize = localStorage.getItem(STORAGE_KEY_PAGE_SIZE);
-		if (savedPageSize) {
-			const parsed = parseInt(savedPageSize, 10);
-			// Validate that the saved page size is a valid option
-			if (PAGE_SIZE_OPTIONS.includes(parsed as typeof PAGE_SIZE_OPTIONS[number])) {
-				pageSize = parsed;
-			}
 		}
 	});
 
