@@ -568,7 +568,7 @@
 
 	.set-name {
 		font-weight: 600;
-		color: #111827;
+		color: #787b84;
 		flex: 1;
 	}
 
