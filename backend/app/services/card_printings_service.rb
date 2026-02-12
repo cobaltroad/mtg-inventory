@@ -165,7 +165,8 @@ class CardPrintingsService
       set_name: card["set_name"],
       collector_number: card["collector_number"],
       image_url: extract_image_url(card),
-      released_at: card["released_at"]
+      released_at: card["released_at"],
+      finishes: card["finishes"]
     }
   end
 

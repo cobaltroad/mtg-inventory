@@ -305,7 +305,7 @@ describe('PrintingModal - SegmentedControl for Finish Selection (Issue #136)', (
 	// Integration Tests: Selection Persistence
 	// ---------------------------------------------------------------------------
 	describe('Selection Persistence', () => {
-		it('should preserve finish selection when changing printings', async () => {
+		it('should reset finish selection to default when changing printings (Issue #138)', async () => {
 			const mockFetch = mockFetchForPrintings();
 			vi.stubGlobal('fetch', mockFetch);
 
@@ -337,13 +337,13 @@ describe('PrintingModal - SegmentedControl for Finish Selection (Issue #136)', (
 			// Change to second printing
 			await fireEvent.mouseEnter(printingItems[1]);
 
-			// Finish selection should still be foil
+			// Finish selection should reset to default (nonfoil) per Issue #138
 			await waitFor(() => {
 				const updatedRadios = screen.getAllByRole('radio');
-				const updatedFoilRadio = updatedRadios.find(
-					(radio) => (radio as HTMLInputElement).value === 'foil'
+				const updatedNonfoilRadio = updatedRadios.find(
+					(radio) => (radio as HTMLInputElement).value === 'nonfoil'
 				);
-				expect(updatedFoilRadio).toBeChecked();
+				expect(updatedNonfoilRadio).toBeChecked();
 			});
 		});
 
