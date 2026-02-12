@@ -32,7 +32,7 @@ class PriceAlertServiceTest < ActiveSupport::TestCase
       card_id: @card_id,
       collection_type: "inventory",
       quantity: 1,
-      finish: "Normal"
+      finish: "nonfoil"
     )
 
     # Run detection
@@ -46,7 +46,7 @@ class PriceAlertServiceTest < ActiveSupport::TestCase
     assert_equal 100, alert.old_price_cents
     assert_equal 120, alert.new_price_cents
     assert_equal 20.0, alert.percentage_change.to_f
-    assert_equal "normal", alert.treatment
+    assert_equal "nonfoil", alert.treatment
   end
 
   test "does not create alert for increase below 20% threshold" do
@@ -155,7 +155,7 @@ class PriceAlertServiceTest < ActiveSupport::TestCase
       card_id: @card_id,
       collection_type: "inventory",
       quantity: 1,
-      finish: "Foil"
+      finish: "foil"
     )
 
     alerts = @service.detect_price_changes
@@ -185,7 +185,7 @@ class PriceAlertServiceTest < ActiveSupport::TestCase
       card_id: @card_id,
       collection_type: "inventory",
       quantity: 1,
-      finish: "Etched"
+      finish: "etched"
     )
 
     alerts = @service.detect_price_changes

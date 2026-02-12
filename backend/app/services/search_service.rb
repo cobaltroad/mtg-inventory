@@ -141,7 +141,7 @@ class SearchService
       collector_number: card_details[:collector_number],
       quantity: item.quantity,
       image_url: card_details[:image_url],
-      treatment: item.treatment,
+      treatment: item.finish,
       unit_price_cents: unit_price,
       total_price_cents: total_price
     }
