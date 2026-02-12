@@ -11,11 +11,15 @@ class JobsRakeTest < ActiveSupport::TestCase
     # Clear any existing jobs
     SolidQueue::Job.where(class_name: "ScrapeEdhrecCommandersJob").delete_all
     SolidQueue::Job.where(class_name: "UpdateCardPricesJob").delete_all
+
+    # Clear any existing recurring tasks
+    SolidQueue::RecurringTask.delete_all
   end
 
   def teardown
     # Clean up
     SolidQueue::Job.delete_all
+    SolidQueue::RecurringTask.delete_all
   end
 
   # ============================================================================
@@ -61,6 +65,21 @@ class JobsRakeTest < ActiveSupport::TestCase
   end
 
   test "stats rake task shows enhanced information" do
+    # Create recurring tasks for testing (following pattern from job_monitoring_test.rb)
+    SolidQueue::RecurringTask.create!(
+      key: "weekly_commander_scrape",
+      schedule: "every sunday at 8am",
+      class_name: "ScrapeEdhrecCommandersJob",
+      queue_name: "default"
+    )
+
+    SolidQueue::RecurringTask.create!(
+      key: "daily_price_update",
+      schedule: "every day at 7am",
+      class_name: "UpdateCardPricesJob",
+      queue_name: "default"
+    )
+
     # Create some execution history
     ScraperExecution.create!(
       started_at: 1.day.ago,
