@@ -61,7 +61,9 @@ module CollectionItemActions
   end
 
   def collection_items
-    current_user.collection_items.where(collection_type: collection_type)
+    current_user.collection_items
+      .where(collection_type: collection_type)
+      .includes(cached_image_attachment: :blob)
   end
 
   def find_existing_item(card_id)
