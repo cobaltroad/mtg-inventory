@@ -99,7 +99,9 @@ class InventoryValueTimelineService
     # Calculate value for each inventory item
     inventory_items.each do |item|
       prices = @all_prices[item.card_id] || []
-      latest_price = prices.find { |p| p.fetched_at <= date.end_of_day }
+      # Find the most recent price on or before the given date
+      # Since prices are sorted by fetched_at ASC, we need to reverse to get latest
+      latest_price = prices.reverse.find { |p| p.fetched_at <= date.end_of_day }
       next unless latest_price
 
       unit_price = latest_price.price_for_finish(item.finish)
