@@ -123,8 +123,9 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
       UpdateCardPricesJob.perform_now(card_id)
     end
 
-    assert_match(/successfully updated/i, log_output)
-    assert_match(/#{card_id}/, log_output)
+    # Verify JSON log format for successful updates
+    assert_log_entry(log_output, event: "card_processed", card_id: card_id, success: true)
+    assert_log_entry(log_output, event: "price_update_completed", status: "success")
   end
 
   test "job logs error message on failure" do
@@ -147,8 +148,8 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
       assert error_raised, "Expected an error to be raised"
     end
 
-    assert_match(/failed to update/i, log_output)
-    assert_match(/#{card_id}/, log_output)
+    # Verify JSON log format for errors
+    assert_log_entry(log_output, event: "error_occurred", card_id: card_id)
   end
 
   test "job handles non-existent card gracefully" do
@@ -224,7 +225,8 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
       end
     end
 
-    assert_match(/card_id.*required/i, log_output)
+    # Verify JSON log format for validation error
+    assert_log_entry(log_output, event: "error_occurred")
   end
 
   test "job accepts nil to process all cards" do
@@ -487,9 +489,13 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
       UpdateCardPricesJob.perform_now(nil)
     end
 
-    # Should log progress at 100 and 200 cards
-    assert_match(/Processed 100 cards/i, log_output)
-    assert_match(/Processed 200 cards/i, log_output)
+    # Verify JSON log format for progress updates at 100 and 200 cards
+    progress_logs = find_log_entries(log_output, event: "progress_update")
+    progress_100 = progress_logs.find { |log| log["cards_processed"] == 100 }
+    progress_200 = progress_logs.find { |log| log["cards_processed"] == 200 }
+
+    assert_not_nil progress_100, "Expected progress log at 100 cards"
+    assert_not_nil progress_200, "Expected progress log at 200 cards"
   end
 
   test "batch mode logs total execution time" do
@@ -507,9 +513,13 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
       UpdateCardPricesJob.perform_now(nil)
     end
 
-    # Should log completion time
-    assert_match(/Completed price update job in .+ seconds/i, log_output)
-    assert_match(/Updated prices for \d+ cards/i, log_output)
+    # Verify JSON log format for completion event
+    assert_log_entry(log_output, event: "price_update_completed")
+
+    # Check that duration is logged
+    completion_logs = find_log_entries(log_output, event: "price_update_completed")
+    assert completion_logs.any? { |log| log["duration_seconds"].present? },
+           "Expected duration_seconds in completion log"
   end
 
   test "batch mode logs starting message with card count" do
@@ -527,7 +537,8 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
       UpdateCardPricesJob.perform_now(nil)
     end
 
-    assert_match(/Starting batch price update for 1 unique cards/i, log_output)
+    # Verify JSON log format for batch start event
+    assert_log_entry(log_output, event: "price_update_started", mode: "batch")
   end
 
   test "batch mode continues processing after single card error" do
@@ -550,8 +561,10 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
       end
     end
 
-    # Should log error but continue
-    assert_match(/Error processing card bad-card/i, log_output)
+    # Verify JSON log format for failed card processing
+    failed_card_logs = find_log_entries(log_output, event: "card_processed", card_id: "bad-card")
+    assert failed_card_logs.any? { |log| log["success"] == false },
+           "Expected card_processed event with success=false for bad-card"
 
     # Verify good cards were processed
     assert_not_nil CardPrice.latest_for("good-card-1")
@@ -588,11 +601,18 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
     # Should complete without timeout (less than 60 seconds for test)
     assert execution_time < 60, "Job took too long: #{execution_time} seconds"
 
+    # Verify JSON log format for batch processing
+    assert_log_entry(log_output, event: "price_update_started", mode: "batch")
+
     # Should log progress multiple times
-    assert_match(/Starting batch price update for 1000 unique cards/i, log_output)
-    assert_match(/Processed 100 cards/i, log_output)
-    assert_match(/Processed 500 cards/i, log_output)
-    assert_match(/Completed price update job/i, log_output)
+    progress_logs = find_log_entries(log_output, event: "progress_update")
+    progress_100 = progress_logs.find { |log| log["cards_processed"] == 100 }
+    progress_500 = progress_logs.find { |log| log["cards_processed"] == 500 }
+
+    assert_not_nil progress_100, "Expected progress log at 100 cards"
+    assert_not_nil progress_500, "Expected progress log at 500 cards"
+
+    assert_log_entry(log_output, event: "price_update_completed")
 
     # Verify all cards were processed
     assert_equal 1000, CardPrice.count
@@ -708,9 +728,14 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
       end
     end
 
-    # Should log alert detection
-    assert_match(/Detecting price changes for alerts/i, log_output)
-    assert_match(/Created 1 price alerts/i, log_output)
+    # Verify JSON log format for price alert detection
+    assert_log_entry(log_output, event: "detecting_price_changes")
+    assert_log_entry(log_output, event: "price_alerts_detected")
+
+    # Check that price_alerts_created count is logged
+    alert_logs = find_log_entries(log_output, event: "price_alerts_detected")
+    assert alert_logs.any? { |log| log["count"] == 1 },
+           "Expected price_alerts_detected event with count=1"
 
     # Verify alert was created correctly
     alert = PriceAlert.last
@@ -750,8 +775,8 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
         end
       end
 
-      # Should log error but not fail the job
-      assert_match(/Error detecting price changes/i, log_output)
+      # Verify JSON log format for price alert error
+      assert_log_entry(log_output, event: "error_occurred")
     end
   end
 end

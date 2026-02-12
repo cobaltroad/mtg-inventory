@@ -103,8 +103,9 @@ class CacheCardImageJobTest < ActiveJob::TestCase
 
     Rails.logger = old_logger
 
-    assert log_output.string.include?("Successfully cached"), "Should log success"
-    assert log_output.string.include?("test-card-uuid"), "Should include card ID"
+    # Verify JSON log format for successful image download
+    assert_log_entry(log_output.string, event: "image_downloaded", card_id: "test-card-uuid")
+    assert_log_entry(log_output.string, event: "cache_completed", status: "success")
   end
 
   test "job logs when image is already cached" do
@@ -122,7 +123,9 @@ class CacheCardImageJobTest < ActiveJob::TestCase
 
     Rails.logger = old_logger
 
-    assert log_output.string.include?("already cached"), "Should log that image is already cached"
+    # Verify JSON log format for already cached image
+    assert_log_entry(log_output.string, event: "already_cached", card_id: "test-card-uuid")
+    assert_log_entry(log_output.string, event: "cache_completed", status: "success")
   end
 
   test "job handles nil image URL gracefully" do
