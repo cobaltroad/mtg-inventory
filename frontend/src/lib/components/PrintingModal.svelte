@@ -20,6 +20,7 @@
 		collector_number: string;
 		image_url?: string;
 		released_at: string;
+		finishes?: string[];
 	}
 
 	interface Props {
@@ -85,6 +86,40 @@
 	let invalidField = $state<string | null>(null);
 	let validationToastMessage = $state('');
 	let showValidationToast = $state(false);
+
+	// Issue #138: Filter finish options based on available finishes for selected printing
+	// Derived value that returns available finishes for the selected printing
+	// Falls back to all options if finishes data is missing/empty
+	let availableFinishes = $derived.by(() => {
+		if (!selectedPrinting) return FINISH_OPTIONS;
+		if (!selectedPrinting.finishes || selectedPrinting.finishes.length === 0) {
+			return FINISH_OPTIONS;
+		}
+		return selectedPrinting.finishes;
+	});
+
+	// Helper function to get the default finish based on priority: nonfoil > foil > etched
+	function getDefaultFinish(finishes: string[]): string {
+		if (finishes.includes('nonfoil')) return 'nonfoil';
+		if (finishes.includes('foil')) return 'foil';
+		if (finishes.includes('etched')) return 'etched';
+		return 'nonfoil'; // Fallback
+	}
+
+	// Track previous printing to detect changes
+	let previousPrintingId: string | null = $state(null);
+
+	// Effect to reset finish selection when selected printing changes
+	$effect(() => {
+		if (selectedPrinting) {
+			// If printing changed (new printing selected)
+			if (previousPrintingId !== selectedPrinting.id) {
+				// Always reset to default finish when changing printings
+				finish = getDefaultFinish(availableFinishes);
+				previousPrintingId = selectedPrinting.id;
+			}
+		}
+	});
 
 	function isResponseSuccessful(response: Response): boolean {
 		// 304 Not Modified is considered successful - browser returns cached data automatically
@@ -362,36 +397,18 @@
 									<div class="form-group">
 										<label class="form-label">Finish</label>
 										<div class="finish-options" onclick={(e) => e.stopPropagation()}>
-											<label class="finish-option">
-												<input
-													type="radio"
-													name="finish"
-													value="nonfoil"
-													bind:group={finish}
-													checked={finish === 'nonfoil'}
-												/>
-												<span>Nonfoil</span>
-											</label>
-											<label class="finish-option">
-												<input
-													type="radio"
-													name="finish"
-													value="foil"
-													bind:group={finish}
-													checked={finish === 'foil'}
-												/>
-												<span>Foil</span>
-											</label>
-											<label class="finish-option">
-												<input
-													type="radio"
-													name="finish"
-													value="etched"
-													bind:group={finish}
-													checked={finish === 'etched'}
-												/>
-												<span>Etched</span>
-											</label>
+											{#each availableFinishes as finishOption}
+												<label class="finish-option">
+													<input
+														type="radio"
+														name="finish"
+														value={finishOption}
+														bind:group={finish}
+														checked={finish === finishOption}
+													/>
+													<span>{finishOption.charAt(0).toUpperCase() + finishOption.slice(1)}</span>
+												</label>
+											{/each}
 										</div>
 									</div>
 

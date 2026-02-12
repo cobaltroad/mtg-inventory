@@ -186,7 +186,7 @@ describe('PrintingModal - Form', () => {
 			expect(languageSelect).toHaveValue('Japanese');
 		});
 
-		it('preserves form field values when selecting a different printing', async () => {
+		it('preserves price but resets finish when selecting a different printing (Issue #138)', async () => {
 			const mockFetch = mockFetchForPrintings();
 			vi.stubGlobal('fetch', mockFetch);
 
@@ -220,15 +220,16 @@ describe('PrintingModal - Form', () => {
 			await fireEvent.mouseEnter(printingItems[1]);
 
 			await waitFor(() => {
-				// Values should be preserved (not reset)
+				// Price should be preserved
 				const updatedPriceInput = screen.getByLabelText(/price/i) as HTMLInputElement;
 				expect(updatedPriceInput).toHaveValue(25.5);
 
+				// Finish should reset to default (nonfoil) per Issue #138
 				const updatedRadios = screen.getAllByRole('radio');
-				const updatedFoilRadio = updatedRadios.find(
-					(r) => (r as HTMLInputElement).value === 'foil'
+				const updatedNonfoilRadio = updatedRadios.find(
+					(r) => (r as HTMLInputElement).value === 'nonfoil'
 				);
-				expect(updatedFoilRadio).toBeChecked();
+				expect(updatedNonfoilRadio).toBeChecked();
 			});
 		});
 	});

@@ -111,6 +111,109 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
     assert_equal "2020-09-25", result[:released_at]
   end
 
+  # ---------------------------------------------------------------------------
+  # Issue #138: Include finishes array from Scryfall API
+  # ---------------------------------------------------------------------------
+  test "includes finishes array in printing data when present" do
+    card_id = "test-card-id"
+    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+
+    # Stub card endpoint
+    card_response = {
+      "id" => card_id,
+      "prints_search_uri" => prints_search_uri
+    }
+    stub_scryfall_card_request(card_id, card_response)
+
+    # Stub prints search with cards that have finishes array
+    response = {
+      "object" => "list",
+      "has_more" => false,
+      "data" => [
+        {
+          "id" => "nonfoil-only",
+          "name" => "Test Card",
+          "set" => "znr",
+          "set_name" => "Zendikar Rising",
+          "collector_number" => "42",
+          "image_uris" => { "normal" => "https://example.com/nonfoil.jpg" },
+          "released_at" => "2020-09-25",
+          "finishes" => ["nonfoil"]
+        },
+        {
+          "id" => "both-finishes",
+          "name" => "Test Card",
+          "set" => "m21",
+          "set_name" => "Core Set 2021",
+          "collector_number" => "100",
+          "image_uris" => { "normal" => "https://example.com/both.jpg" },
+          "released_at" => "2020-07-03",
+          "finishes" => ["nonfoil", "foil"]
+        },
+        {
+          "id" => "all-finishes",
+          "name" => "Test Card",
+          "set" => "mh2",
+          "set_name" => "Modern Horizons 2",
+          "collector_number" => "200",
+          "image_uris" => { "normal" => "https://example.com/all.jpg" },
+          "released_at" => "2021-06-18",
+          "finishes" => ["nonfoil", "foil", "etched"]
+        }
+      ]
+    }
+    stub_prints_search_request(prints_search_uri, response)
+
+    service = CardPrintingsService.new(card_id: card_id)
+    results = service.call
+
+    assert_equal 3, results.size
+
+    # Results are sorted newest first (mh2, znr, m21)
+    assert_equal ["nonfoil", "foil", "etched"], results[0][:finishes]
+    assert_equal ["nonfoil"], results[1][:finishes]
+    assert_equal ["nonfoil", "foil"], results[2][:finishes]
+  end
+
+  test "handles missing finishes array gracefully" do
+    card_id = "no-finishes-card"
+    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+
+    # Stub card endpoint
+    card_response = {
+      "id" => card_id,
+      "prints_search_uri" => prints_search_uri
+    }
+    stub_scryfall_card_request(card_id, card_response)
+
+    # Card without finishes array (should default to empty array or nil)
+    response = {
+      "object" => "list",
+      "has_more" => false,
+      "data" => [
+        {
+          "id" => "no-finishes-id",
+          "name" => "Old Card",
+          "set" => "lea",
+          "set_name" => "Alpha",
+          "collector_number" => "1",
+          "image_uris" => { "normal" => "https://example.com/old.jpg" },
+          "released_at" => "1993-08-05"
+          # No finishes array
+        }
+      ]
+    }
+    stub_prints_search_request(prints_search_uri, response)
+
+    service = CardPrintingsService.new(card_id: card_id)
+    results = service.call
+
+    assert_equal 1, results.size
+    # When finishes is missing, it should be nil or empty array
+    assert results.first[:finishes].nil? || results.first[:finishes].empty?,
+      "Expected finishes to be nil or empty when not present in API response"
+  end
+
   test "sorts printings by release date, newest first" do
     card_id = "multi-printing-card"
     prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
