@@ -102,7 +102,7 @@ class PriceUpdateExecutionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET index filters by status parameter" do
-    get api_path("/admin/price_update_executions?status=success"
+    get api_path("/admin/price_update_executions?status=success")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -113,7 +113,7 @@ class PriceUpdateExecutionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET index filters by mode parameter" do
-    get api_path("/admin/price_update_executions?mode=single_card"
+    get api_path("/admin/price_update_executions?mode=single_card")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -126,7 +126,7 @@ class PriceUpdateExecutionsControllerTest < ActionDispatch::IntegrationTest
   test "GET index filters by start_date parameter" do
     start_date = 2.days.ago.to_date.to_s
 
-    get api_path("/admin/price_update_executions?start_date=#{start_date}"
+    get api_path("/admin/price_update_executions?start_date=#{start_date}")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -139,7 +139,7 @@ class PriceUpdateExecutionsControllerTest < ActionDispatch::IntegrationTest
   test "GET index filters by end_date parameter" do
     end_date = 2.days.ago.to_date.to_s
 
-    get api_path("/admin/price_update_executions?end_date=#{end_date}"
+    get api_path("/admin/price_update_executions?end_date=#{end_date}")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -153,7 +153,7 @@ class PriceUpdateExecutionsControllerTest < ActionDispatch::IntegrationTest
     start_date = 3.days.ago.to_date.to_s
     end_date = 1.day.ago.to_date.to_s
 
-    get api_path("/admin/price_update_executions?start_date=#{start_date}&end_date=#{end_date}"
+    get api_path("/admin/price_update_executions?start_date=#{start_date}&end_date=#{end_date}")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -163,7 +163,7 @@ class PriceUpdateExecutionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET index respects limit parameter" do
-    get api_path("/admin/price_update_executions?limit=2"
+    get api_path("/admin/price_update_executions?limit=2")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -172,7 +172,7 @@ class PriceUpdateExecutionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET index enforces maximum limit of 50" do
-    get api_path("/admin/price_update_executions?limit=200"
+    get api_path("/admin/price_update_executions?limit=200")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -215,7 +215,7 @@ class PriceUpdateExecutionsControllerTest < ActionDispatch::IntegrationTest
   # GET /api/admin/price_update_executions/:id - show
   # ---------------------------------------------------------------------------
   test "GET show returns single execution by id" do
-    get api_path("/admin/price_update_executions/#{@execution1.id}"
+    get api_path("/admin/price_update_executions/#{@execution1.id}")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -227,7 +227,7 @@ class PriceUpdateExecutionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET show returns 404 for non-existent execution" do
-    get api_path("/admin/price_update_executions/99999"
+    get api_path("/admin/price_update_executions/99999")
 
     assert_response :not_found
     json = JSON.parse(response.body)
@@ -236,7 +236,7 @@ class PriceUpdateExecutionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET show returns all execution fields" do
-    get api_path("/admin/price_update_executions/#{@execution4.id}"
+    get api_path("/admin/price_update_executions/#{@execution4.id}")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -252,7 +252,7 @@ class PriceUpdateExecutionsControllerTest < ActionDispatch::IntegrationTest
   # GET /api/admin/price_update_executions/stats - stats
   # ---------------------------------------------------------------------------
   test "GET stats returns aggregate statistics" do
-    get api_path("/admin/price_update_executions/stats"
+    get api_path("/admin/price_update_executions/stats")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -269,7 +269,7 @@ class PriceUpdateExecutionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET stats calculates totals correctly" do
-    get api_path("/admin/price_update_executions/stats"
+    get api_path("/admin/price_update_executions/stats")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -281,7 +281,7 @@ class PriceUpdateExecutionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET stats calculates overall success rate" do
-    get api_path("/admin/price_update_executions/stats"
+    get api_path("/admin/price_update_executions/stats")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -291,7 +291,7 @@ class PriceUpdateExecutionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET stats calculates last 24h success rate" do
-    get api_path("/admin/price_update_executions/stats"
+    get api_path("/admin/price_update_executions/stats")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -304,7 +304,7 @@ class PriceUpdateExecutionsControllerTest < ActionDispatch::IntegrationTest
   test "GET stats returns zero values when no executions exist" do
     PriceUpdateExecution.delete_all
 
-    get api_path("/admin/price_update_executions/stats"
+    get api_path("/admin/price_update_executions/stats")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -318,14 +318,14 @@ class PriceUpdateExecutionsControllerTest < ActionDispatch::IntegrationTest
   # Error handling
   # ---------------------------------------------------------------------------
   test "GET index handles invalid date format gracefully" do
-    get api_path("/admin/price_update_executions?start_date=invalid-date"
+    get api_path("/admin/price_update_executions?start_date=invalid-date")
 
     # Should return error or empty result, not crash
     assert_response :success # or :bad_request depending on implementation
   end
 
   test "GET index handles invalid status filter gracefully" do
-    get api_path("/admin/price_update_executions?status=invalid_status"
+    get api_path("/admin/price_update_executions?status=invalid_status")
 
     assert_response :success
     json = JSON.parse(response.body)
