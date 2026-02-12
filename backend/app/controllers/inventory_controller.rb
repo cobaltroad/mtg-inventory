@@ -12,6 +12,7 @@ class InventoryController < ApplicationController
   # Override index to include card details from Scryfall
   def index
     items = collection_items
+    preload_prices(items)
     items_with_details = enrich_with_card_details(items)
     sorted_items = sort_by_card_name(items_with_details)
     render json: sorted_items
@@ -120,6 +121,25 @@ class InventoryController < ApplicationController
 
   private
 
+  # Preloads CardPrice records for all items to prevent N+1 queries.
+  # Fetches the latest price for each unique card_id in a single query
+  # and caches them in memory for the request lifecycle.
+  def preload_prices(items)
+    return if items.empty?
+
+    card_ids = items.map(&:card_id).uniq
+
+    # Fetch the latest price for each card_id in a single query
+    # Group by card_id to get the most recent price for each card
+    latest_prices = CardPrice
+      .where(card_id: card_ids)
+      .group_by(&:card_id)
+      .transform_values { |prices| prices.max_by(&:fetched_at) }
+
+    # Memoize the prices in an instance variable for the request lifecycle
+    @preloaded_prices = latest_prices
+  end
+
   # Enriches collection items with card details from Scryfall API.
   # Uses CardDetailsService which implements caching to minimize API calls.
   # Filters out items where card details could not be retrieved.
@@ -149,10 +169,10 @@ class InventoryController < ApplicationController
     # Use cached image URL if available, otherwise fall back to Scryfall
     image_url, image_cached = resolve_image_url(item, card_details[:image_url])
 
-    # Get price data
-    latest_price = item.latest_price
-    unit_price = item.unit_price_cents
-    total_price = item.total_price_cents
+    # Get price data from preloaded cache if available, otherwise fetch from DB
+    latest_price = @preloaded_prices&.dig(item.card_id) || item.latest_price
+    unit_price = latest_price&.price_for_finish(item.finish)
+    total_price = unit_price ? unit_price * item.quantity : nil
     price_updated_at = latest_price&.fetched_at
 
     {

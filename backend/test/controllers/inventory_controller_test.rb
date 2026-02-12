@@ -1468,6 +1468,235 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     assert_in_delta fetched_time.to_i, parsed_time.to_i, 1
   end
 
+  # ---------------------------------------------------------------------------
+  # N+1 Query Optimization Tests (Issue #154)
+  # ---------------------------------------------------------------------------
+
+  test "GET /api/inventory uses eager loading to prevent N+1 queries" do
+    # Create 20 inventory items with cached images and price data
+    20.times do |i|
+      item = CollectionItem.create!(
+        user: @user,
+        card_id: "eager_card_#{i}",
+        collection_type: "inventory",
+        quantity: 1,
+        finish: "nonfoil"
+      )
+
+      # Attach cached image to each item
+      item.cached_image.attach(
+        io: StringIO.new("\xFF\xD8\xFF\xE0\x00\x10JFIF".b),
+        filename: "card_#{i}.jpg",
+        content_type: "image/jpeg"
+      )
+
+      # Create price data for each card
+      CardPrice.create!(
+        card_id: "eager_card_#{i}",
+        fetched_at: 1.hour.ago,
+        usd_cents: 100 + i
+      )
+
+      # Stub Scryfall API for each card
+      stub_scryfall_card_details("eager_card_#{i}", name: "Test Card #{i}")
+    end
+
+    # Count queries during the request
+    queries = track_queries do
+      get api_path("/inventory")
+    end
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    assert_equal 20, items.size
+
+    # With eager loading, we should have:
+    # 1. SELECT collection_items with includes
+    # 2. SELECT active_storage_attachments (eager loaded)
+    # 3. SELECT active_storage_blobs (eager loaded)
+    # 4-23. SELECT card details from Scryfall cache (one per card - external API, not DB)
+    # Total DB queries should be <= 10 (accounting for schema queries, etc.)
+
+    db_queries = queries.select { |q| q.match?(/SELECT.*FROM/i) && !q.match?(/sqlite_master|PRAGMA/) }
+
+    # With N+1, this would be 60+ queries (20 items × 3 queries each)
+    # With eager loading, should be < 10 queries
+    assert db_queries.size < 10,
+           "Expected fewer than 10 DB queries with eager loading, but got #{db_queries.size}.\nQueries:\n#{db_queries.join("\n")}"
+  end
+
+  test "GET /api/inventory query count remains constant regardless of inventory size" do
+    # Test with 5 items
+    5.times do |i|
+      item = CollectionItem.create!(
+        user: @user,
+        card_id: "size_test_5_#{i}",
+        collection_type: "inventory",
+        quantity: 1
+      )
+      item.cached_image.attach(
+        io: StringIO.new("\xFF\xD8\xFF\xE0\x00\x10JFIF".b),
+        filename: "card_#{i}.jpg",
+        content_type: "image/jpeg"
+      )
+      CardPrice.create!(card_id: "size_test_5_#{i}", fetched_at: 1.hour.ago, usd_cents: 100)
+      stub_scryfall_card_details("size_test_5_#{i}", name: "Card #{i}")
+    end
+
+    queries_5 = track_queries do
+      get api_path("/inventory")
+    end
+    db_queries_5 = queries_5.select { |q| q.match?(/SELECT.*FROM/i) && !q.match?(/sqlite_master|PRAGMA/) }.size
+
+    # Clean up and test with 50 items
+    CollectionItem.delete_all
+    50.times do |i|
+      item = CollectionItem.create!(
+        user: @user,
+        card_id: "size_test_50_#{i}",
+        collection_type: "inventory",
+        quantity: 1
+      )
+      item.cached_image.attach(
+        io: StringIO.new("\xFF\xD8\xFF\xE0\x00\x10JFIF".b),
+        filename: "card_#{i}.jpg",
+        content_type: "image/jpeg"
+      )
+      CardPrice.create!(card_id: "size_test_50_#{i}", fetched_at: 1.hour.ago, usd_cents: 100)
+      stub_scryfall_card_details("size_test_50_#{i}", name: "Card #{i}")
+    end
+
+    queries_50 = track_queries do
+      get api_path("/inventory")
+    end
+    db_queries_50 = queries_50.select { |q| q.match?(/SELECT.*FROM/i) && !q.match?(/sqlite_master|PRAGMA/) }.size
+
+    # Query count should be the same (O(1)) regardless of collection size
+    # Allow small variance for potential caching differences
+    assert_in_delta db_queries_5, db_queries_50, 2,
+           "Query count should remain constant. 5 items: #{db_queries_5}, 50 items: #{db_queries_50}"
+  end
+
+  test "GET /api/inventory eager loading works with empty inventory" do
+    # Ensure no errors when inventory is empty
+    queries = track_queries do
+      get api_path("/inventory")
+    end
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    assert_equal 0, items.size
+
+    # Should still use eager loading query structure even with no results
+    db_queries = queries.select { |q| q.match?(/SELECT.*FROM/i) && !q.match?(/sqlite_master|PRAGMA/) }
+    assert db_queries.size < 5,
+           "Empty inventory should require minimal queries, got #{db_queries.size}"
+  end
+
+  test "GET /api/inventory eager loads cached_image attachments and blobs" do
+    # Create items with and without cached images
+    item_with_cache = CollectionItem.create!(
+      user: @user,
+      card_id: "cached_test",
+      collection_type: "inventory",
+      quantity: 1
+    )
+    item_with_cache.cached_image.attach(
+      io: StringIO.new("\xFF\xD8\xFF\xE0\x00\x10JFIF".b),
+      filename: "cached.jpg",
+      content_type: "image/jpeg"
+    )
+
+    item_without_cache = CollectionItem.create!(
+      user: @user,
+      card_id: "uncached_test",
+      collection_type: "inventory",
+      quantity: 1
+    )
+
+    stub_scryfall_card_details("cached_test", name: "Cached Card")
+    stub_scryfall_card_details("uncached_test", name: "Uncached Card")
+
+    queries = track_queries do
+      get api_path("/inventory")
+    end
+
+    assert_response :success
+    items = JSON.parse(response.body)
+    assert_equal 2, items.size
+
+    # Verify that ActiveStorage associations were eager loaded
+    # Should not see individual SELECT queries for attachments or blobs per item
+    attachment_queries = queries.select { |q| q.match?(/SELECT.*active_storage_attachments/i) }
+    blob_queries = queries.select { |q| q.match?(/SELECT.*active_storage_blobs/i) }
+
+    # With eager loading, should have at most 1 query for attachments and 1 for blobs
+    assert attachment_queries.size <= 1,
+           "Expected at most 1 query for attachments, got #{attachment_queries.size}"
+    assert blob_queries.size <= 1,
+           "Expected at most 1 query for blobs, got #{blob_queries.size}"
+  end
+
+  test "GET /api/inventory achieves 60% query reduction compared to N+1 pattern" do
+    # Baseline: Create 20 items to establish expected query count
+    20.times do |i|
+      item = CollectionItem.create!(
+        user: @user,
+        card_id: "baseline_#{i}",
+        collection_type: "inventory",
+        quantity: 1
+      )
+      item.cached_image.attach(
+        io: StringIO.new("\xFF\xD8\xFF\xE0\x00\x10JFIF".b),
+        filename: "card_#{i}.jpg",
+        content_type: "image/jpeg"
+      )
+      CardPrice.create!(card_id: "baseline_#{i}", fetched_at: 1.hour.ago, usd_cents: 100)
+      stub_scryfall_card_details("baseline_#{i}", name: "Card #{i}")
+    end
+
+    queries = track_queries do
+      get api_path("/inventory")
+    end
+
+    assert_response :success
+
+    db_queries = queries.select { |q| q.match?(/SELECT.*FROM/i) && !q.match?(/sqlite_master|PRAGMA/) }
+
+    # N+1 pattern would produce approximately:
+    # - 1 query for collection_items
+    # - 20 queries for active_storage_attachments (1 per item)
+    # - 20 queries for active_storage_blobs (1 per item)
+    # Total: ~41 queries
+    #
+    # With eager loading, we should have ~4 queries (60% reduction target):
+    # - 1 for collection_items with includes
+    # - 1 for active_storage_attachments
+    # - 1 for active_storage_blobs
+    # - A few for internal Rails queries
+
+    n_plus_1_expected = 41
+    target_query_count = n_plus_1_expected * 0.4  # 60% reduction = 40% remaining
+
+    assert db_queries.size <= target_query_count,
+           "Expected #{target_query_count} or fewer queries (60% reduction from #{n_plus_1_expected}), " \
+           "but got #{db_queries.size} queries"
+  end
+
   private
+
+  # Helper method to track SQL queries during a block
+  def track_queries
+    queries = []
+    query_subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |_name, _start, _finish, _id, payload|
+      queries << payload[:sql] unless payload[:name] == "SCHEMA"
+    end
+
+    yield
+
+    queries
+  ensure
+    ActiveSupport::Notifications.unsubscribe(query_subscriber) if query_subscriber
+  end
 
 end
