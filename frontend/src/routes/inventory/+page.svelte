@@ -36,8 +36,21 @@
 	});
 
 	// Handle items change from InventoryTable
+	// IMPORTANT: displayItems is a paginated subset, so we can't just replace allItems
+	// Instead, merge changes by ID to preserve items on other pages
 	function handleItemsChange(updatedItems: typeof allItems) {
-		allItems = updatedItems;
+		// Create a map of updated items for O(1) lookup
+		const updatedMap = new Map(updatedItems.map((item) => [item.id, item]));
+
+		// Update existing items or remove deleted ones
+		allItems = allItems
+			.map((item) => updatedMap.get(item.id) || item)
+			.filter((item) => {
+				// If item was in displayItems but not in updatedItems, it was deleted
+				const wasDisplayed = displayItems.some((d) => d.id === item.id);
+				const stillExists = updatedMap.has(item.id);
+				return !wasDisplayed || stillExists;
+			});
 	}
 
 	// Filtering and sorting state
