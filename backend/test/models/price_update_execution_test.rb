@@ -1,6 +1,11 @@
 require "test_helper"
 
 class PriceUpdateExecutionTest < ActiveSupport::TestCase
+  def setup
+    # Clear all records to ensure test isolation
+    PriceUpdateExecution.delete_all
+  end
+
   # ---------------------------------------------------------------------------
   # Presence validations
   # ---------------------------------------------------------------------------
