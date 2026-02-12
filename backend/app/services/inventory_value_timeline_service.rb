@@ -43,10 +43,9 @@ class InventoryValueTimelineService
     card_ids = inventory_items.pluck(:card_id).uniq
 
     @all_prices = CardPrice
-      .unscoped  # Remove default DESC ordering
       .where(card_id: card_ids)
       .where("fetched_at BETWEEN ? AND ?", start_date.beginning_of_day, end_date.end_of_day)
-      .order(:card_id, fetched_at: :desc)  # DESC order so most recent prices are first for efficient lookup
+      .reorder(:card_id, fetched_at: :desc)  # Override default ordering - DESC order so most recent prices are first for efficient lookup
       .group_by(&:card_id)  # { card_id => [prices sorted by fetched_at DESC] }
 
     # Calculate value for each day in the time period
