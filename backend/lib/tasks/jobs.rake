@@ -20,6 +20,18 @@ namespace :jobs do
       puts "Started at: #{Time.current}"
       puts "-" * 80
 
+      # Check for duplicate execution
+      if ScrapeEdhrecCommandersJob.already_running?
+        info = ScrapeEdhrecCommandersJob.running_job_info
+        puts "\n⚠️  SKIPPING: ScrapeEdhrecCommandersJob is already running"
+        puts "   Job ID: #{info[:id]}"
+        puts "   Started: #{info[:created_at]}"
+        puts "   Queue: #{info[:queue_name]}"
+        puts "\nPlease wait for the current job to complete before running again."
+        puts "=" * 80
+        exit 0
+      end
+
       # Configure logger to also output to STDOUT for interactive progress
       console_logger = Logger.new($stdout)
       console_logger.level = Logger::INFO
@@ -54,6 +66,18 @@ namespace :jobs do
       puts "Started at: #{Time.current}"
       puts "-" * 80
 
+      # Check for duplicate execution
+      if UpdateCardPricesJob.already_running?
+        info = UpdateCardPricesJob.running_job_info
+        puts "\n⚠️  SKIPPING: UpdateCardPricesJob is already running"
+        puts "   Job ID: #{info[:id]}"
+        puts "   Started: #{info[:created_at]}"
+        puts "   Queue: #{info[:queue_name]}"
+        puts "\nPlease wait for the current job to complete before running again."
+        puts "=" * 80
+        exit 0
+      end
+
       # Configure logger to also output to STDOUT for interactive progress
       console_logger = Logger.new($stdout)
       console_logger.level = Logger::INFO
@@ -77,7 +101,7 @@ namespace :jobs do
     end
 
     desc "Update price for a single card by Scryfall ID"
-    task :update_card, [:card_id] => :environment do |_t, args|
+    task :update_card, [ :card_id ] => :environment do |_t, args|
       if args[:card_id].blank?
         puts "ERROR: card_id is required"
         puts "Usage: rails jobs:prices:update_card[SCRYFALL_CARD_ID]"
@@ -114,7 +138,7 @@ namespace :jobs do
 
   namespace :cache do
     desc "Cache card image for a collection item"
-    task :image, [:collection_item_id, :image_url] => :environment do |_t, args|
+    task :image, [ :collection_item_id, :image_url ] => :environment do |_t, args|
       if args[:collection_item_id].blank? || args[:image_url].blank?
         puts "ERROR: collection_item_id and image_url are required"
         puts "Usage: rails jobs:cache:image[ITEM_ID,IMAGE_URL]"
@@ -161,21 +185,61 @@ namespace :jobs do
 
     desc "Show job queue statistics"
     task stats: :environment do
+      stats_service = JobStats.new
+
       puts "=" * 80
       puts "SOLID QUEUE JOB STATISTICS"
       puts "=" * 80
-      puts "Pending jobs:    #{SolidQueue::Job.pending.count}"
-      puts "Running jobs:    #{SolidQueue::Job.running.count}"
-      puts "Finished jobs:   #{SolidQueue::Job.finished.count}"
-      puts "Failed jobs:     #{SolidQueue::Job.failed.count}"
+      puts "Pending jobs:    #{SolidQueue::ReadyExecution.count}"
+      puts "Running jobs:    #{SolidQueue::ClaimedExecution.count}"
+      puts "Finished jobs:   #{SolidQueue::Job.where.not(finished_at: nil).count}"
+      puts "Failed jobs:     #{SolidQueue::FailedExecution.count}"
       puts "-" * 80
 
-      # Show recurring tasks
+      # Show recurring tasks with enhanced information
       puts "\nRECURRING TASKS:"
-      SolidQueue::RecurringTask.all.each do |task|
-        puts "  #{task.key.ljust(30)} - #{task.schedule}"
+      puts "-" * 80
+
+      stats_service.all_recurring_tasks.each do |task|
+        puts "\n#{task[:key]}"
+        puts "  Schedule:     #{task[:schedule]}"
+        puts "  Job Class:    #{task[:class_name]}"
+        puts "  Queue:        #{task[:queue_name]}"
+
+        if task[:next_run]
+          puts "  Next Run:     #{task[:next_run].strftime('%Y-%m-%d %H:%M %Z')} (#{stats_service.format_relative_time(task[:next_run])})"
+        else
+          puts "  Next Run:     Unable to calculate"
+        end
+
+        # Get job class to show execution stats
+        begin
+          job_class = task[:class_name].constantize
+          last_exec = stats_service.last_execution_status(job_class)
+
+          if last_exec
+            puts "  Last Run:     #{last_exec[:started_at]&.strftime('%Y-%m-%d %H:%M %Z')} - #{last_exec[:status].to_s.upcase}"
+            puts "  Duration:     #{stats_service.format_duration(last_exec[:duration_seconds])}"
+          else
+            puts "  Last Run:     No executions found"
+          end
+
+          # Show execution counts
+          count_7d = stats_service.execution_count(job_class, days: 7)
+          count_30d = stats_service.execution_count(job_class, days: 30)
+          puts "  Executions:   #{count_7d} (7d) / #{count_30d} (30d)"
+
+          # Show average duration
+          avg_duration = stats_service.average_execution_duration(job_class, days: 30)
+          if avg_duration
+            puts "  Avg Duration: #{stats_service.format_duration(avg_duration)} (30d average)"
+          end
+        rescue NameError
+          # Job class not found - skip stats
+        end
       end
-      puts "=" * 80
+
+      puts "\n" + "=" * 80
     end
   end
 

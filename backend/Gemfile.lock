@@ -160,6 +160,8 @@ GEM
     mini_mime (1.1.5)
     minitest (6.0.1)
       prism (~> 1.5)
+    mocha (3.0.1)
+      ruby2_keywords (>= 0.0.5)
     msgpack (1.8.0)
     net-imap (0.6.2)
       date
@@ -296,6 +298,7 @@ GEM
     ruby-vips (2.3.0)
       ffi (~> 1.12)
       logger
+    ruby2_keywords (0.0.5)
     securerandom (0.4.1)
     solid_cable (3.0.12)
       actioncable (>= 7.2)
@@ -363,8 +366,10 @@ DEPENDENCIES
   brakeman
   bundler-audit
   debug
+  fugit
   image_processing (~> 1.2)
   kamal
+  mocha
   nokogiri
   pg (~> 1.1)
   puma (>= 5.0)

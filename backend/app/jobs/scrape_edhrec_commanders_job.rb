@@ -1,5 +1,6 @@
 class ScrapeEdhrecCommandersJob < ApplicationJob
   include StructuredLogging
+  include DuplicatePrevention
 
   queue_as :default
 
