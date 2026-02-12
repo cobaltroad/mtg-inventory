@@ -27,7 +27,7 @@ Rails.application.routes.draw do
     get "cards/:card_id/price_history", to: "card_price_history#show"
 
     # Manual price update endpoint
-    post "prices/update", to: "prices#update"
+    post "prices/update", to: "prices#update", as: :api_prices_update
 
     # Price alerts
     resources :price_alerts, only: [ :index ] do

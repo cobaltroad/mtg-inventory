@@ -51,7 +51,7 @@ class CardSearchControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_equal "Lightning Bolt", received[:query]
-    assert_equal expected_treatments, received[:treatments]
+    assert_equal expected_treatments, received[:finishes]
   end
 
   # ---------------------------------------------------------------------------

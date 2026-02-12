@@ -22,7 +22,7 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
       old_price_cents: 100,
       new_price_cents: 130,
       percentage_change: 30.0,
-      finish: "normal",
+      finish: "nonfoil",
       created_at: 1.hour.ago
     )
 

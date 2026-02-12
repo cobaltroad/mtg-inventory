@@ -1,6 +1,12 @@
 require "test_helper"
 
 class CommandersControllerTest < ActionDispatch::IntegrationTest
+  def setup
+    # Clear existing data to ensure test isolation
+    Decklist.delete_all
+    Commander.delete_all
+  end
+
   def api_path(path)
     "#{ENV.fetch('PUBLIC_API_PATH', '/api')}#{path}"
   end

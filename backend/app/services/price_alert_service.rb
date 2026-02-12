@@ -21,7 +21,7 @@ class PriceAlertService
 
     # Get all unique card_ids from inventory items
     inventory_cards = CollectionItem.where(collection_type: "inventory")
-                                    .select(:card_id, :user_id, :treatment)
+                                    .select(:card_id, :user_id, :finish)
                                     .distinct
 
     inventory_cards.each do |item|
@@ -44,9 +44,9 @@ class PriceAlertService
 
     return nil unless latest_price && previous_price
 
-    # Get the appropriate price based on treatment
-    old_price = price_for_treatment(previous_price, item.treatment)
-    new_price = price_for_treatment(latest_price, item.treatment)
+    # Get the appropriate price based on finish
+    old_price = price_for_finish(previous_price, item.finish)
+    new_price = price_for_finish(latest_price, item.finish)
 
     return nil unless old_price && new_price && old_price > 0
 
@@ -70,7 +70,7 @@ class PriceAlertService
       old_price_cents: old_price,
       new_price_cents: new_price,
       percentage_change: percentage_change,
-      treatment: normalize_treatment(item.treatment)
+      treatment: normalize_finish(item.finish)
     )
   end
 
@@ -88,13 +88,13 @@ class PriceAlertService
     [prices[0], prices[1]]
   end
 
-  # Gets the appropriate price cents value based on card treatment.
+  # Gets the appropriate price cents value based on card finish.
   #
   # @param price [CardPrice] The price record
-  # @param treatment [String, nil] The card treatment
+  # @param finish [String, nil] The card finish
   # @return [Integer, nil] Price in cents or nil
-  def price_for_treatment(price, treatment)
-    case treatment&.downcase
+  def price_for_finish(price, finish)
+    case finish&.downcase
     when "foil"
       price.usd_foil_cents || price.usd_cents
     when "etched"
@@ -126,11 +126,11 @@ class PriceAlertService
     )
   end
 
-  # Normalizes treatment string to lowercase.
+  # Normalizes finish string to lowercase.
   #
-  # @param treatment [String, nil] The treatment value
-  # @return [String, nil] Normalized treatment or nil
-  def normalize_treatment(treatment)
-    treatment&.downcase
+  # @param finish [String, nil] The finish value
+  # @return [String, nil] Normalized finish or nil
+  def normalize_finish(finish)
+    finish&.downcase
   end
 end

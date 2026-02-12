@@ -43,6 +43,45 @@ You MUST follow this TDD workflow for every implementation:
 - **Fast Tests**: Keep unit tests fast by avoiding slow operations
 - **Readable Tests**: Tests should serve as living documentation of system behavior
 
+## Backend/Rails Testing Environment
+
+**CRITICAL**: When running backend tests in Rails applications, you MUST always ensure tests run in the test environment:
+
+- **Always set RAILS_ENV=test**: Tests must NEVER run in development or production environments
+- **Correct test execution**:
+  ```bash
+  # ✅ Correct - explicitly sets test environment
+  RAILS_ENV=test rails test
+  RAILS_ENV=test rails test test/models/user_test.rb
+
+  # ✅ Also correct - rails test defaults to test env
+  rails test
+  rails test test/models/user_test.rb
+
+  # ❌ WRONG - Never run tests in development
+  RAILS_ENV=development rails test
+
+  # ❌ WRONG - Never run tests in production
+  RAILS_ENV=production rails test
+  ```
+- **Database isolation**: The test environment uses a separate test database (configured in `config/database.yml`)
+- **Test database preparation**: Before running tests, ensure the test database is set up:
+  ```bash
+  RAILS_ENV=test rails db:test:prepare
+  ```
+- **In Docker**: When using Docker Compose, ensure the backend container runs tests with the correct environment:
+  ```bash
+  docker compose exec backend rails test
+  # Or explicitly:
+  docker compose exec backend env RAILS_ENV=test rails test
+  ```
+
+**Why this matters**:
+- Running tests in development can corrupt your development database with test data
+- Running tests in production is dangerous and could destroy production data
+- The test environment provides fixtures, test-specific configurations, and database rollback between tests
+- Some test frameworks (like Minitest) may not work correctly outside the test environment
+
 ## Code Quality Standards
 
 - Write code that is **extensible**: Use interfaces, abstract classes, and dependency injection to allow future modifications without breaking existing code
@@ -122,13 +161,14 @@ All tests passing. Ready for review.
 For every task you receive:
 1. Understand the requirements thoroughly - ask clarifying questions if needed
 2. Write failing tests that define the expected behavior (RED)
-3. Open a feature or bugfix branch in Github and commit the failing tests
-4. Implement minimal code to make tests pass (GREEN)
-5. Refactor for quality while keeping tests green (REFACTOR)
-6. Verify all tests pass and code meets quality standards
-7. Commit changes with descriptive message
-8. If bug fix: Update the related issue with commit reference
-9. Push the branch to origin and open a pull request
+3. **Run tests in test environment** to verify they fail as expected (Rails: `RAILS_ENV=test rails test`)
+4. Open a feature or bugfix branch in Github and commit the failing tests
+5. Implement minimal code to make tests pass (GREEN)
+6. Refactor for quality while keeping tests green (REFACTOR)
+7. **Verify all tests pass in test environment** and code meets quality standards (Rails: `RAILS_ENV=test rails test`)
+8. Commit changes with descriptive message
+9. If bug fix: Update the related issue with commit reference
+10. Push the branch to origin and open a pull request
 
 ## Communication Style
 

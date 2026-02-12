@@ -1,5 +1,5 @@
 # Service class that calculates the total market value of a user's inventory.
-# Handles treatment-based pricing (foil, etched, normal) and tracks cards
+# Handles finish-based pricing (foil, etched, nonfoil) and tracks cards
 # without price data separately.
 #
 # Usage:

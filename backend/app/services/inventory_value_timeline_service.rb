@@ -102,7 +102,7 @@ class InventoryValueTimelineService
       latest_price = prices.find { |p| p.fetched_at <= date.end_of_day }
       next unless latest_price
 
-      unit_price = latest_price.price_for_treatment(item.treatment)
+      unit_price = latest_price.price_for_finish(item.finish)
       next unless unit_price
 
       total_value += unit_price * item.quantity
