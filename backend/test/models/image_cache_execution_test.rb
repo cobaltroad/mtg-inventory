@@ -1,6 +1,11 @@
 require "test_helper"
 
 class ImageCacheExecutionTest < ActiveSupport::TestCase
+  def setup
+    # Clear all records to ensure test isolation
+    ImageCacheExecution.delete_all
+  end
+
   # ---------------------------------------------------------------------------
   # Presence validations
   # ---------------------------------------------------------------------------
