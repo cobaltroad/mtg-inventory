@@ -1,4 +1,10 @@
-ENV["RAILS_ENV"] ||= "test"
+ENV["RAILS_ENV"] = "test"
+
+# CRITICAL: Clear DATABASE_URL to prevent tests from using development database
+# DATABASE_URL has higher priority than database.yml, so we must unset it
+# to ensure tests use the test database configured in database.yml
+ENV.delete("DATABASE_URL")
+
 require_relative "../config/environment"
 require "rails/test_help"
 require "mocha/minitest"
