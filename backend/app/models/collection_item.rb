@@ -21,6 +21,9 @@ class CollectionItem < ApplicationRecord
   validates :collection_type, presence: true, inclusion: { in: COLLECTION_TYPES }
   validates :quantity, presence: true, numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: 999 }
 
+  # Prevent test/debug card IDs in non-test environments
+  validate :card_id_must_not_contain_test_keywords, unless: -> { Rails.env.test? }
+
   # Enhanced tracking field validations (optional fields)
   validates :acquired_price_cents,
             numericality: { only_integer: true, greater_than_or_equal_to: 0 },
@@ -69,5 +72,16 @@ class CollectionItem < ApplicationRecord
     return if acquired_date.blank?
 
     errors.add(:acquired_date, "cannot be in the future") if acquired_date > Date.today
+  end
+
+  def card_id_must_not_contain_test_keywords
+    return if card_id.blank?
+
+    test_keywords = %w[test debug mock fixture sample dummy]
+    card_id_lower = card_id.downcase
+
+    if test_keywords.any? { |keyword| card_id_lower.include?(keyword) }
+      errors.add(:card_id, "cannot contain test-related keywords (test, debug, mock, fixture, sample, dummy)")
+    end
   end
 end

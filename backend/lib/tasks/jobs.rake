@@ -183,6 +183,57 @@ namespace :jobs do
       puts "=" * 80
     end
 
+    namespace :cleanup do
+      desc "Remove test/debug/mock card data from database"
+      task test_data: :environment do
+        puts "=" * 80
+        puts "CLEANING UP TEST DATA"
+        puts "=" * 80
+        puts "Started at: #{Time.current}"
+        puts "-" * 80
+
+        # Define test-related keywords to search for
+        test_keywords = %w[test debug mock fixture sample dummy]
+
+        # Build SQL pattern for case-insensitive matching
+        # PostgreSQL uses ILIKE for case-insensitive pattern matching
+        conditions = test_keywords.map { |keyword| "card_id ILIKE '%#{keyword}%'" }.join(" OR ")
+
+        # Count records before cleanup
+        items_before = CollectionItem.where(conditions).count
+        prices_before = CardPrice.where(conditions).count
+
+        puts "Found #{items_before} collection items with test card IDs"
+        puts "Found #{prices_before} card prices with test card IDs"
+        puts ""
+
+        if items_before.zero? && prices_before.zero?
+          puts "No test data found. Database is clean!"
+        else
+          puts "Removing test data..."
+
+          # Delete collection items with test card IDs
+          if items_before > 0
+            deleted_items = CollectionItem.where(conditions).delete_all
+            puts "Deleted #{deleted_items} collection items"
+          end
+
+          # Delete card prices with test card IDs
+          if prices_before > 0
+            deleted_prices = CardPrice.where(conditions).delete_all
+            puts "Deleted #{deleted_prices} card prices"
+          end
+
+          puts ""
+          puts "Cleanup completed successfully!"
+        end
+
+        puts "-" * 80
+        puts "Completed at: #{Time.current}"
+        puts "=" * 80
+      end
+    end
+
     desc "Show job queue statistics"
     task stats: :environment do
       stats_service = JobStats.new

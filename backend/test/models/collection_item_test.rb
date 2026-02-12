@@ -622,4 +622,135 @@ class CollectionItemTest < ActiveSupport::TestCase
 
     assert_equal 350, item.total_price_cents
   end
+
+  # ---------------------------------------------------------------------------
+  # Test card ID validation (prevent test data in production/development)
+  # ---------------------------------------------------------------------------
+  test "is invalid when card_id contains 'test' in non-test environment" do
+    # Temporarily simulate non-test environment
+    Rails.env.stub(:test?, false) do
+      item = CollectionItem.new(
+        user: @user,
+        card_id: "test-card-123",
+        collection_type: "inventory",
+        quantity: 1
+      )
+      assert item.invalid?
+      assert_includes item.errors[:card_id], "cannot contain test-related keywords (test, debug, mock, fixture, sample, dummy)"
+    end
+  end
+
+  test "is invalid when card_id contains 'debug' in non-test environment" do
+    Rails.env.stub(:test?, false) do
+      item = CollectionItem.new(
+        user: @user,
+        card_id: "debug-card-456",
+        collection_type: "inventory",
+        quantity: 1
+      )
+      assert item.invalid?
+      assert_includes item.errors[:card_id], "cannot contain test-related keywords (test, debug, mock, fixture, sample, dummy)"
+    end
+  end
+
+  test "is invalid when card_id contains 'mock' in non-test environment" do
+    Rails.env.stub(:test?, false) do
+      item = CollectionItem.new(
+        user: @user,
+        card_id: "mock-card-789",
+        collection_type: "inventory",
+        quantity: 1
+      )
+      assert item.invalid?
+      assert_includes item.errors[:card_id], "cannot contain test-related keywords (test, debug, mock, fixture, sample, dummy)"
+    end
+  end
+
+  test "is invalid when card_id contains 'fixture' in non-test environment" do
+    Rails.env.stub(:test?, false) do
+      item = CollectionItem.new(
+        user: @user,
+        card_id: "fixture-card-abc",
+        collection_type: "inventory",
+        quantity: 1
+      )
+      assert item.invalid?
+      assert_includes item.errors[:card_id], "cannot contain test-related keywords (test, debug, mock, fixture, sample, dummy)"
+    end
+  end
+
+  test "is invalid when card_id contains 'sample' in non-test environment" do
+    Rails.env.stub(:test?, false) do
+      item = CollectionItem.new(
+        user: @user,
+        card_id: "sample-card-def",
+        collection_type: "inventory",
+        quantity: 1
+      )
+      assert item.invalid?
+      assert_includes item.errors[:card_id], "cannot contain test-related keywords (test, debug, mock, fixture, sample, dummy)"
+    end
+  end
+
+  test "is invalid when card_id contains 'dummy' in non-test environment" do
+    Rails.env.stub(:test?, false) do
+      item = CollectionItem.new(
+        user: @user,
+        card_id: "dummy-card-ghi",
+        collection_type: "inventory",
+        quantity: 1
+      )
+      assert item.invalid?
+      assert_includes item.errors[:card_id], "cannot contain test-related keywords (test, debug, mock, fixture, sample, dummy)"
+    end
+  end
+
+  test "validation is case-insensitive for test keywords in non-test environment" do
+    Rails.env.stub(:test?, false) do
+      [ "TEST-card", "Debug-Card", "MOCK-card", "FiXtUrE-card" ].each do |card_id|
+        item = CollectionItem.new(
+          user: @user,
+          card_id: card_id,
+          collection_type: "inventory",
+          quantity: 1
+        )
+        assert item.invalid?, "#{card_id} should be invalid"
+        assert_includes item.errors[:card_id], "cannot contain test-related keywords (test, debug, mock, fixture, sample, dummy)"
+      end
+    end
+  end
+
+  test "allows card_ids without test keywords in non-test environment" do
+    Rails.env.stub(:test?, false) do
+      # These are valid card IDs that should pass validation
+      valid_ids = [
+        "abc123-real-card",
+        "xyz789-production-card",
+        "def456-legitimate-card",
+        "8f671896-394e-4a3b-9a7e-3e8c9f0f1234" # UUID format
+      ]
+
+      valid_ids.each do |card_id|
+        item = CollectionItem.new(
+          user: @user,
+          card_id: card_id,
+          collection_type: "inventory",
+          quantity: 1
+        )
+        assert item.valid?, "#{card_id} should be valid but got: #{item.errors.full_messages.inspect}"
+      end
+    end
+  end
+
+  test "validation is skipped in test environment allowing test card IDs" do
+    # In test environment, we should be able to create items with test card IDs
+    # This allows test fixtures and test data to work properly
+    item = CollectionItem.new(
+      user: @user,
+      card_id: "test-card-in-test-env",
+      collection_type: "inventory",
+      quantity: 1
+    )
+    assert item.valid?, "Test card IDs should be allowed in test environment"
+  end
 end

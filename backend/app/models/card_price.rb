@@ -33,6 +33,9 @@ class CardPrice < ApplicationRecord
       allow_nil: true
     }
 
+  # Prevent test/debug card IDs in non-test environments
+  validate :card_id_must_not_contain_test_keywords, unless: -> { Rails.env.test? }
+
   # ---------------------------------------------------------------------------
   # Scopes and Class Methods
   # ---------------------------------------------------------------------------
@@ -83,6 +86,19 @@ class CardPrice < ApplicationRecord
       usd_etched_cents || usd_cents
     else
       usd_cents
+    end
+  end
+
+  private
+
+  def card_id_must_not_contain_test_keywords
+    return if card_id.blank?
+
+    test_keywords = %w[test debug mock fixture sample dummy]
+    card_id_lower = card_id.downcase
+
+    if test_keywords.any? { |keyword| card_id_lower.include?(keyword) }
+      errors.add(:card_id, "cannot contain test-related keywords (test, debug, mock, fixture, sample, dummy)")
     end
   end
 end

@@ -322,4 +322,83 @@ class CardPriceTest < ActiveSupport::TestCase
     assert_includes results, boundary_start
     assert_includes results, boundary_end
   end
+
+  # ---------------------------------------------------------------------------
+  # Test card ID validation (prevent test data in production/development)
+  # ---------------------------------------------------------------------------
+  test "is invalid when card_id contains 'test' in non-test environment" do
+    Rails.env.stub(:test?, false) do
+      card_price = CardPrice.new(
+        card_id: "test-card-123",
+        fetched_at: Time.current
+      )
+      assert card_price.invalid?
+      assert_includes card_price.errors[:card_id], "cannot contain test-related keywords (test, debug, mock, fixture, sample, dummy)"
+    end
+  end
+
+  test "is invalid when card_id contains 'debug' in non-test environment" do
+    Rails.env.stub(:test?, false) do
+      card_price = CardPrice.new(
+        card_id: "debug-card-456",
+        fetched_at: Time.current
+      )
+      assert card_price.invalid?
+      assert_includes card_price.errors[:card_id], "cannot contain test-related keywords (test, debug, mock, fixture, sample, dummy)"
+    end
+  end
+
+  test "is invalid when card_id contains 'mock' in non-test environment" do
+    Rails.env.stub(:test?, false) do
+      card_price = CardPrice.new(
+        card_id: "mock-card-789",
+        fetched_at: Time.current
+      )
+      assert card_price.invalid?
+      assert_includes card_price.errors[:card_id], "cannot contain test-related keywords (test, debug, mock, fixture, sample, dummy)"
+    end
+  end
+
+  test "is invalid when card_id contains test keyword case-insensitively in non-test environment" do
+    Rails.env.stub(:test?, false) do
+      [ "TEST-card", "Debug-Card", "MOCK-card", "FiXtUrE-card" ].each do |card_id|
+        card_price = CardPrice.new(
+          card_id: card_id,
+          fetched_at: Time.current
+        )
+        assert card_price.invalid?, "#{card_id} should be invalid"
+        assert_includes card_price.errors[:card_id], "cannot contain test-related keywords (test, debug, mock, fixture, sample, dummy)"
+      end
+    end
+  end
+
+  test "allows card_ids without test keywords in non-test environment" do
+    Rails.env.stub(:test?, false) do
+      # These are valid card IDs that should pass validation
+      valid_ids = [
+        "abc123-real-card",
+        "xyz789-production-card",
+        "8f671896-394e-4a3b-9a7e-3e8c9f0f1234", # UUID format
+        "legitimate-card-id"
+      ]
+
+      valid_ids.each do |card_id|
+        card_price = CardPrice.new(
+          card_id: card_id,
+          fetched_at: Time.current
+        )
+        assert card_price.valid?, "#{card_id} should be valid but got: #{card_price.errors.full_messages.inspect}"
+      end
+    end
+  end
+
+  test "validation is skipped in test environment allowing test card IDs" do
+    # In test environment, we should be able to create prices with test card IDs
+    # This allows test fixtures and test data to work properly
+    card_price = CardPrice.new(
+      card_id: "test-card-in-test-env",
+      fetched_at: Time.current
+    )
+    assert card_price.valid?, "Test card IDs should be allowed in test environment"
+  end
 end
