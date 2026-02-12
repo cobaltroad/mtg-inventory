@@ -17,7 +17,7 @@ class InventoryValueTimelineServiceTest < ActiveSupport::TestCase
       card_id: card_id,
       collection_type: "inventory",
       quantity: 2,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     # Create price history for the last 30 days
@@ -64,7 +64,7 @@ class InventoryValueTimelineServiceTest < ActiveSupport::TestCase
       card_id: card_id,
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     # Only create price data for 15 days ago
@@ -98,7 +98,7 @@ class InventoryValueTimelineServiceTest < ActiveSupport::TestCase
       card_id: card1_id,
       collection_type: "inventory",
       quantity: 2,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     CollectionItem.create!(
@@ -106,7 +106,7 @@ class InventoryValueTimelineServiceTest < ActiveSupport::TestCase
       card_id: card2_id,
       collection_type: "inventory",
       quantity: 3,
-      treatment: "Foil"
+      finish: "foil"
     )
 
     # Create price data
@@ -141,7 +141,7 @@ class InventoryValueTimelineServiceTest < ActiveSupport::TestCase
       card_id: normal_card_id,
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     CollectionItem.create!(
@@ -149,7 +149,7 @@ class InventoryValueTimelineServiceTest < ActiveSupport::TestCase
       card_id: foil_card_id,
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Foil"
+      finish: "foil"
     )
 
     CollectionItem.create!(
@@ -157,7 +157,7 @@ class InventoryValueTimelineServiceTest < ActiveSupport::TestCase
       card_id: etched_card_id,
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Etched"
+      finish: "etched"
     )
 
     # Create price data for each card
@@ -196,7 +196,7 @@ class InventoryValueTimelineServiceTest < ActiveSupport::TestCase
       card_id: card_id,
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     # Create wishlist item (should be excluded)
@@ -205,7 +205,7 @@ class InventoryValueTimelineServiceTest < ActiveSupport::TestCase
       card_id: card_id,
       collection_type: "wishlist",
       quantity: 10,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     CardPrice.create!(
@@ -229,7 +229,7 @@ class InventoryValueTimelineServiceTest < ActiveSupport::TestCase
       card_id: card_id,
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     # Create price data showing value increase
@@ -267,7 +267,7 @@ class InventoryValueTimelineServiceTest < ActiveSupport::TestCase
       card_id: card_id,
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     CardPrice.create!(
@@ -289,7 +289,7 @@ class InventoryValueTimelineServiceTest < ActiveSupport::TestCase
       card_id: card_id,
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     CardPrice.create!(
@@ -311,7 +311,7 @@ class InventoryValueTimelineServiceTest < ActiveSupport::TestCase
       card_id: card_id,
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     # No price data initially, then add price

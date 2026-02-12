@@ -2,7 +2,9 @@ require "test_helper"
 
 class PricesControllerTest < ActionDispatch::IntegrationTest
   setup do
-    @user = users(:one)
+    CollectionItem.delete_all
+    User.delete_all
+    @user = User.create!(email: "test@example.com", name: "Test User")
   end
 
   test "should trigger price update when cards exist" do

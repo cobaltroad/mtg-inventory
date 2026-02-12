@@ -1,6 +1,11 @@
 require "test_helper"
 
 class SearchControllerTest < ActionDispatch::IntegrationTest
+  setup do
+    User.delete_all
+    load Rails.root.join("db", "seeds.rb")
+  end
+
   def api_path(path)
     "#{ENV.fetch('PUBLIC_API_PATH', '/api')}#{path}"
   end
@@ -130,7 +135,7 @@ class SearchControllerTest < ActionDispatch::IntegrationTest
           collector_number: "161",
           quantity: 4,
           image_url: "https://cards.scryfall.io/normal/test.jpg",
-          treatment: "foil",
+          finish: "foil",
           unit_price_cents: 500,
           total_price_cents: 2000
         }

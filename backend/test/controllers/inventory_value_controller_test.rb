@@ -42,7 +42,7 @@ class InventoryValueControllerTest < ActionDispatch::IntegrationTest
       card_id: "card1",
       collection_type: "inventory",
       quantity: 2,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     CardPrice.create!(
@@ -67,14 +67,14 @@ class InventoryValueControllerTest < ActionDispatch::IntegrationTest
       card_id: "card1",
       collection_type: "inventory",
       quantity: 3,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
     CollectionItem.create!(
       user: @user,
       card_id: "card2",
       collection_type: "inventory",
       quantity: 2,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     CardPrice.create!(card_id: "card1", fetched_at: 1.hour.ago, usd_cents: 100)
@@ -99,7 +99,7 @@ class InventoryValueControllerTest < ActionDispatch::IntegrationTest
       card_id: "foil_card",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Foil"
+      finish: "foil"
     )
 
     CardPrice.create!(
@@ -122,7 +122,7 @@ class InventoryValueControllerTest < ActionDispatch::IntegrationTest
       card_id: "etched_card",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Etched"
+      finish: "etched"
     )
 
     CardPrice.create!(
@@ -145,7 +145,7 @@ class InventoryValueControllerTest < ActionDispatch::IntegrationTest
       card_id: "foil_fallback",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Foil"
+      finish: "foil"
     )
 
     CardPrice.create!(
@@ -168,7 +168,7 @@ class InventoryValueControllerTest < ActionDispatch::IntegrationTest
       card_id: "etched_fallback",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Etched"
+      finish: "etched"
     )
 
     CardPrice.create!(
@@ -195,14 +195,14 @@ class InventoryValueControllerTest < ActionDispatch::IntegrationTest
       card_id: "priced_card",
       collection_type: "inventory",
       quantity: 2,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
     CollectionItem.create!(
       user: @user,
       card_id: "unpriced_card",
       collection_type: "inventory",
       quantity: 3,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     CardPrice.create!(card_id: "priced_card", fetched_at: 1.hour.ago, usd_cents: 500)
@@ -224,7 +224,7 @@ class InventoryValueControllerTest < ActionDispatch::IntegrationTest
       card_id: "all_nil_card",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     CardPrice.create!(
@@ -255,14 +255,14 @@ class InventoryValueControllerTest < ActionDispatch::IntegrationTest
       card_id: "inventory_card",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
     CollectionItem.create!(
       user: @user,
       card_id: "wishlist_card",
       collection_type: "wishlist",
       quantity: 1,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     CardPrice.create!(card_id: "inventory_card", fetched_at: 1.hour.ago, usd_cents: 300)
@@ -288,14 +288,14 @@ class InventoryValueControllerTest < ActionDispatch::IntegrationTest
       card_id: "my_card",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
     CollectionItem.create!(
       user: other_user,
       card_id: "their_card",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     CardPrice.create!(card_id: "my_card", fetched_at: 1.hour.ago, usd_cents: 200)
@@ -319,7 +319,7 @@ class InventoryValueControllerTest < ActionDispatch::IntegrationTest
       card_id: "card1",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     fetched_time = 2.hours.ago
@@ -391,7 +391,7 @@ class InventoryValueControllerTest < ActionDispatch::IntegrationTest
       card_id: "card1",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     CardPrice.create!(card_id: "card1", fetched_at: 1.hour.ago, usd_cents: 100)
@@ -408,7 +408,7 @@ class InventoryValueControllerTest < ActionDispatch::IntegrationTest
       card_id: "card2",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
     CardPrice.create!(card_id: "card2", fetched_at: 1.hour.ago, usd_cents: 200)
 
@@ -426,7 +426,7 @@ class InventoryValueControllerTest < ActionDispatch::IntegrationTest
       card_id: "card1",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     CardPrice.create!(card_id: "card1", fetched_at: 1.hour.ago, usd_cents: 100)
@@ -441,7 +441,7 @@ class InventoryValueControllerTest < ActionDispatch::IntegrationTest
       card_id: "card2",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
     CardPrice.create!(card_id: "card2", fetched_at: 1.hour.ago, usd_cents: 200)
 
@@ -464,7 +464,7 @@ class InventoryValueControllerTest < ActionDispatch::IntegrationTest
       card_id: "card1",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
     CardPrice.create!(card_id: "card1", fetched_at: 1.hour.ago, usd_cents: 100)
 
@@ -474,7 +474,7 @@ class InventoryValueControllerTest < ActionDispatch::IntegrationTest
       card_id: "card2",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
     CardPrice.create!(card_id: "card2", fetched_at: 1.hour.ago, usd_cents: 500)
 
@@ -498,21 +498,21 @@ class InventoryValueControllerTest < ActionDispatch::IntegrationTest
       card_id: "card1",
       collection_type: "inventory",
       quantity: 2,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
     CollectionItem.create!(
       user: @user,
       card_id: "card1_foil",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Foil"
+      finish: "foil"
     )
     CollectionItem.create!(
       user: @user,
       card_id: "card2",
       collection_type: "inventory",
       quantity: 3,
-      treatment: "Etched"
+      finish: "etched"
     )
 
     CardPrice.create!(
@@ -550,21 +550,21 @@ class InventoryValueControllerTest < ActionDispatch::IntegrationTest
       card_id: "priced1",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
     CollectionItem.create!(
       user: @user,
       card_id: "unpriced",
       collection_type: "inventory",
       quantity: 2,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
     CollectionItem.create!(
       user: @user,
       card_id: "priced2",
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Foil"
+      finish: "foil"
     )
 
     CardPrice.create!(card_id: "priced1", fetched_at: 1.hour.ago, usd_cents: 100)

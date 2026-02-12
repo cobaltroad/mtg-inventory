@@ -22,7 +22,7 @@ class InventoryValueTimelineControllerTest < ActionDispatch::IntegrationTest
       card_id: @card_id,
       collection_type: "inventory",
       quantity: 2,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     # Create price history data spanning 90 days
@@ -179,7 +179,7 @@ class InventoryValueTimelineControllerTest < ActionDispatch::IntegrationTest
       card_id: wishlist_card_id,
       collection_type: "wishlist",
       quantity: 100,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     CardPrice.create!(
@@ -243,7 +243,7 @@ class InventoryValueTimelineControllerTest < ActionDispatch::IntegrationTest
       card_id: new_card_id,
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     # Only add price for today (no historical prices)
@@ -276,7 +276,7 @@ class InventoryValueTimelineControllerTest < ActionDispatch::IntegrationTest
       card_id: foil_card_id,
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Foil"
+      finish: "foil"
     )
 
     CardPrice.create!(
@@ -310,7 +310,7 @@ class InventoryValueTimelineControllerTest < ActionDispatch::IntegrationTest
       card_id: no_price_card_id,
       collection_type: "inventory",
       quantity: 5,
-      treatment: "Normal"
+      finish: "nonfoil"
     )
 
     get api_path("/inventory/value_timeline"), params: { time_period: 7 }
@@ -366,7 +366,7 @@ class InventoryValueTimelineControllerTest < ActionDispatch::IntegrationTest
         card_id: card_id,
         collection_type: "inventory",
         quantity: rand(1..10),
-        treatment: "Normal"
+        finish: "nonfoil"
       )
 
       # Add some price history
