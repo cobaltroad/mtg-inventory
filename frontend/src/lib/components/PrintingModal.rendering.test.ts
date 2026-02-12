@@ -210,15 +210,18 @@ describe('PrintingModal - Rendering', () => {
 				expect(priceInput).toBeInTheDocument();
 				expect(priceInput).toHaveValue(0);
 
-				// Finish dropdown with "nonfoil"
-				const finishSelect = screen.getByLabelText(/finish/i);
-				expect(finishSelect).toBeInTheDocument();
-				expect(finishSelect).toHaveValue('nonfoil');
+				// Finish radio buttons with "nonfoil" selected
+				const finishLabel = screen.getByText('Finish');
+				expect(finishLabel).toBeInTheDocument();
 
-				// Language dropdown with "English"
-				const languageSelect = screen.getByLabelText(/language/i);
-				expect(languageSelect).toBeInTheDocument();
-				expect(languageSelect).toHaveValue('English');
+				const radios = screen.getAllByRole('radio');
+				expect(radios.length).toBe(3);
+
+				const nonfoilRadio = radios.find((r) => (r as HTMLInputElement).value === 'nonfoil');
+				expect(nonfoilRadio).toBeChecked();
+
+				// Language field is currently hidden (future enhancement)
+				// So we don't test for it here
 			});
 		});
 
