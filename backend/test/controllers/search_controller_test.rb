@@ -1,6 +1,11 @@
 require "test_helper"
 
 class SearchControllerTest < ActionDispatch::IntegrationTest
+  setup do
+    User.delete_all
+    load Rails.root.join("db", "seeds.rb")
+  end
+
   def api_path(path)
     "#{ENV.fetch('PUBLIC_API_PATH', '/api')}#{path}"
   end
