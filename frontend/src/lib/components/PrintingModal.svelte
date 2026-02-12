@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { base } from '$app/paths';
 	import { invalidate } from '$app/navigation';
-	import { Dialog, Portal, SegmentedControl } from '@skeletonlabs/skeleton-svelte';
+	import { Dialog, Portal } from '@skeletonlabs/skeleton-svelte';
 	import { X } from 'lucide-svelte';
 	import Toast from './Toast.svelte';
 
@@ -360,16 +360,39 @@
 
 									<!-- Finish Selection -->
 									<div class="form-group">
-										<label for="finish" class="form-label">Finish</label>
-										<SegmentedControl.Root
-											bind:value={finish}
-											onclick={(e) => e.stopPropagation()}
-											class="segmented-control-horizontal"
-										>
-											<SegmentedControl.Item value="nonfoil">Nonfoil</SegmentedControl.Item>
-											<SegmentedControl.Item value="foil">Foil</SegmentedControl.Item>
-											<SegmentedControl.Item value="etched">Etched</SegmentedControl.Item>
-										</SegmentedControl.Root>
+										<label class="form-label">Finish</label>
+										<div class="finish-options" onclick={(e) => e.stopPropagation()}>
+											<label class="finish-option">
+												<input
+													type="radio"
+													name="finish"
+													value="nonfoil"
+													bind:group={finish}
+													checked={finish === 'nonfoil'}
+												/>
+												<span>Nonfoil</span>
+											</label>
+											<label class="finish-option">
+												<input
+													type="radio"
+													name="finish"
+													value="foil"
+													bind:group={finish}
+													checked={finish === 'foil'}
+												/>
+												<span>Foil</span>
+											</label>
+											<label class="finish-option">
+												<input
+													type="radio"
+													name="finish"
+													value="etched"
+													bind:group={finish}
+													checked={finish === 'etched'}
+												/>
+												<span>Etched</span>
+											</label>
+										</div>
 									</div>
 
 									<!-- Language field hidden - defaulted to English for now -->
@@ -624,9 +647,62 @@
 		color: #374151;
 	}
 
-	/* Horizontal orientation for segmented control */
-	:global(.segmented-control-horizontal) {
-		flex-direction: row;
+	/* Finish Options (Radio Group styled as Segmented Control) */
+	.finish-options {
+		display: flex;
+		gap: 0.5rem;
+		width: 100%;
+	}
+
+	.finish-option {
+		flex: 1;
+		position: relative;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.5rem 1rem;
+		border: 1px solid #d1d5db;
+		border-radius: 4px;
+		background: white;
+		transition:
+			background 0.2s,
+			border-color 0.2s,
+			color 0.2s;
+	}
+
+	.finish-option input[type='radio'] {
+		position: absolute;
+		opacity: 0;
+		width: 0;
+		height: 0;
+	}
+
+	.finish-option span {
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: #374151;
+		user-select: none;
+	}
+
+	.finish-option:hover {
+		background: #f9fafb;
+		border-color: #3b82f6;
+	}
+
+	.finish-option input[type='radio']:checked + span {
+		color: white;
+	}
+
+	.finish-option:has(input[type='radio']:checked) {
+		background: #3b82f6;
+		border-color: #3b82f6;
+	}
+
+	.finish-option input[type='radio']:focus + span {
+		outline: 2px solid #3b82f6;
+		outline-offset: 2px;
+		border-radius: 4px;
 	}
 
 	:global(.dark) .drawer-header {
@@ -650,6 +726,29 @@
 
 	:global(.dark) .form-label {
 		color: #d1d5db;
+	}
+
+	:global(.dark) .finish-option {
+		background: #1f2937;
+		border-color: #4b5563;
+	}
+
+	:global(.dark) .finish-option span {
+		color: #d1d5db;
+	}
+
+	:global(.dark) .finish-option:hover {
+		background: #374151;
+		border-color: #3b82f6;
+	}
+
+	:global(.dark) .finish-option:has(input[type='radio']:checked) {
+		background: #3b82f6;
+		border-color: #3b82f6;
+	}
+
+	:global(.dark) .finish-option input[type='radio']:checked + span {
+		color: white;
 	}
 
 	@media (max-width: 768px) {
