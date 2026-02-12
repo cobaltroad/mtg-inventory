@@ -37,20 +37,22 @@ class CardPrice < ApplicationRecord
   # Scopes and Class Methods
   # ---------------------------------------------------------------------------
 
+  # Default ordering: most recent prices first
+  default_scope { order(fetched_at: :desc) }
+
   # Returns the most recent price record for a given card_id.
   # Uses the composite index (card_id, fetched_at DESC) for efficient lookup.
+  # Inherits default scope ordering (fetched_at DESC).
   #
   # @param card_id [String] The Scryfall card UUID
   # @return [CardPrice, nil] The latest price record, or nil if none exist
   def self.latest_for(card_id)
-    where(card_id: card_id)
-      .order(fetched_at: :desc)
-      .first
+    where(card_id: card_id).first
   end
 
   # Returns price records for a card within a specified date range.
   # Uses the composite index (card_id, fetched_at DESC) for efficient lookup.
-  # Results are ordered by fetched_at DESC (most recent first).
+  # Inherits default scope ordering (fetched_at DESC, most recent first).
   #
   # @param card_id [String] The Scryfall card UUID
   # @param start_date [Time, Date] Start of date range (inclusive)
@@ -59,7 +61,6 @@ class CardPrice < ApplicationRecord
   def self.for_date_range(card_id, start_date, end_date)
     where(card_id: card_id)
       .where(fetched_at: start_date..end_date)
-      .order(fetched_at: :desc)
   end
 
   # ---------------------------------------------------------------------------

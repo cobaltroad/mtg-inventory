@@ -43,10 +43,11 @@ class InventoryValueTimelineService
     card_ids = inventory_items.pluck(:card_id).uniq
 
     @all_prices = CardPrice
+      .unscoped  # Remove default DESC ordering
       .where(card_id: card_ids)
       .where("fetched_at BETWEEN ? AND ?", start_date.beginning_of_day, end_date.end_of_day)
-      .order(:card_id, :fetched_at)
-      .group_by(&:card_id)  # { card_id => [prices sorted by fetched_at] }
+      .order(:card_id, :fetched_at)  # ASC order for efficient lookup
+      .group_by(&:card_id)  # { card_id => [prices sorted by fetched_at ASC] }
 
     # Calculate value for each day in the time period
     timeline = calculate_timeline(inventory_items)
@@ -100,7 +101,7 @@ class InventoryValueTimelineService
     inventory_items.each do |item|
       prices = @all_prices[item.card_id] || []
       # Find the most recent price on or before the given date
-      # Since prices are sorted by fetched_at ASC, we need to reverse to get latest
+      # Prices are sorted by fetched_at ASC, so we reverse to get most recent first
       latest_price = prices.reverse.find { |p| p.fetched_at <= date.end_of_day }
       next unless latest_price
 

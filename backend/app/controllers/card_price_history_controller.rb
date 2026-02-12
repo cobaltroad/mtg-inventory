@@ -92,8 +92,8 @@ class CardPriceHistoryController < ApplicationController
       query = query.where("fetched_at >= ?", start_date)
     end
 
-    # Order ASC for chart display (left to right: old to new)
-    query.order(fetched_at: :asc)
+    # Use reorder to override default scope (DESC) with ASC for chart display
+    query.reorder(fetched_at: :asc)
   end
 
   # Serializes price records to JSON-friendly format
