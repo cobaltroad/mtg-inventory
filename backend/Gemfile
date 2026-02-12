@@ -35,6 +35,9 @@ gem "image_processing", "~> 1.2"
 # HTML parsing for web scraping
 gem "nokogiri"
 
+# Cron schedule parsing for job scheduling
+gem "fugit"
+
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin Ajax possible
 # gem "rack-cors"
 
@@ -56,4 +59,7 @@ group :development, :test do
 
   # Record and replay HTTP interactions for tests
   gem "vcr", require: false
+
+  # Mocking and stubbing for tests
+  gem "mocha", require: false
 end

@@ -175,16 +175,68 @@ docker compose exec backend rails console
 
 ### Monitoring Jobs
 
+The application includes comprehensive monitoring and safety features for background jobs:
+
+#### Job Queue Statistics
+
 ```bash
+# Enhanced statistics with execution metrics
+docker compose exec backend rails jobs:stats
+
+# Shows for each scheduled job:
+# - Next scheduled execution time (absolute and relative)
+# - Last execution status and duration
+# - Execution counts (7-day and 30-day windows)
+# - Average execution duration
+
 # Watch job logs in real-time
 docker compose logs -f jobs
-
-# Check job status and queue
-docker compose exec backend rails jobs:stats
 
 # Access Solid Queue mission control (if enabled)
 # Visit: http://localhost:3000/solid_queue
 ```
+
+#### Duplicate Job Prevention
+
+All scheduled jobs automatically prevent duplicate executions:
+
+- `ScrapeEdhrecCommandersJob.already_running?` - Check if job is currently running
+- `UpdateCardPricesJob.already_running?` - Check if price update is in progress
+- Rake tasks automatically skip execution if a job is already running
+- Running job details include Job ID, start time, and queue name
+
+Example:
+```bash
+# Will skip if already running and show job details
+docker compose exec backend rails jobs:scrape_commanders
+# ⚠️  SKIPPING: ScrapeEdhrecCommandersJob is already running
+#    Job ID: 123
+#    Started: 2026-02-12 08:00:00 UTC
+#    Queue: default
+```
+
+#### Failure Alerting
+
+Configure job failure notifications via environment variables in `.env`:
+
+```bash
+# Email alerts (requires ActionMailer configuration)
+ADMIN_EMAIL=admin@example.com
+
+# Slack webhook alerts
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+
+# Custom webhook (PagerDuty, Opsgenie, etc.)
+JOB_FAILURE_WEBHOOK_URL=https://your-monitoring-service.com/webhook
+```
+
+When a job fails after all retries are exhausted, alerts include:
+- Job name and ID
+- Failure timestamp
+- Error message and stack trace
+- Links to logs and monitoring dashboard
+
+All failures are also logged to structured logs for integration with monitoring systems (Datadog, New Relic, etc.).
 
 **Note:** The `CacheCardImageJob` is not scheduled—it's triggered automatically when cards are added to inventory to pre-cache images for faster page loads.
 

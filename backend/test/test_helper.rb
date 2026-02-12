@@ -1,6 +1,7 @@
 ENV["RAILS_ENV"] ||= "test"
 require_relative "../config/environment"
 require "rails/test_help"
+require "mocha/minitest"
 
 # Load VCR setup if present
 vcr_setup = File.expand_path("support/vcr_setup.rb", __dir__)

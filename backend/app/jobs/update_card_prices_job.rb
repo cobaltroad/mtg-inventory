@@ -8,6 +8,7 @@
 # Scheduled to run daily at 2 AM UTC using Solid Queue for historical price tracking.
 class UpdateCardPricesJob < ApplicationJob
   include StructuredLogging
+  include DuplicatePrevention
 
   queue_as :default
 
