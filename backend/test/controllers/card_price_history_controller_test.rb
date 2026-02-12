@@ -223,10 +223,10 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
     summary = json_response["summary"]
 
     # From 1000 cents to 2000 cents = 100% increase
-    assert_equal 100.0, summary["normal"]["percentage_change"]
-    assert_equal "up", summary["normal"]["direction"]
-    assert_equal 1000, summary["normal"]["start_price_cents"]
-    assert_equal 2000, summary["normal"]["end_price_cents"]
+    assert_equal 100.0, summary["nonfoil"]["percentage_change"]
+    assert_equal "up", summary["nonfoil"]["direction"]
+    assert_equal 1000, summary["nonfoil"]["start_price_cents"]
+    assert_equal 2000, summary["nonfoil"]["end_price_cents"]
   end
 
   test "should calculate percentage change for foil treatment" do
@@ -267,8 +267,8 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
     summary = json_response["summary"]
 
     # From 3000 to 2000 = -33.33% decrease
-    assert_in_delta(-33.33, summary["normal"]["percentage_change"], 0.01)
-    assert_equal "down", summary["normal"]["direction"]
+    assert_in_delta(-33.33, summary["nonfoil"]["percentage_change"], 0.01)
+    assert_equal "down", summary["nonfoil"]["direction"]
   end
 
   test "should detect no change in price" do
@@ -282,8 +282,8 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
     json_response = JSON.parse(response.body)
     summary = json_response["summary"]
 
-    assert_equal 0.0, summary["normal"]["percentage_change"]
-    assert_equal "stable", summary["normal"]["direction"]
+    assert_equal 0.0, summary["nonfoil"]["percentage_change"]
+    assert_equal "stable", summary["nonfoil"]["direction"]
   end
 
   test "should handle treatment with no data in summary" do
@@ -307,7 +307,7 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
     json_response = JSON.parse(response.body)
     summary = json_response["summary"]
 
-    assert_not_nil summary["normal"]
+    assert_not_nil summary["nonfoil"]
     assert_nil summary["foil"]
     assert_nil summary["etched"]
   end
@@ -343,8 +343,8 @@ class CardPriceHistoryControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal 1, json_response["prices"].length
     # With single record, no change can be calculated
-    assert_equal 0.0, json_response["summary"]["normal"]["percentage_change"]
-    assert_equal "stable", json_response["summary"]["normal"]["direction"]
+    assert_equal 0.0, json_response["summary"]["nonfoil"]["percentage_change"]
+    assert_equal "stable", json_response["summary"]["nonfoil"]["direction"]
   end
 
   test "should handle sparse data with gaps" do

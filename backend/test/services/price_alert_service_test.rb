@@ -32,7 +32,7 @@ class PriceAlertServiceTest < ActiveSupport::TestCase
       card_id: @card_id,
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Normal"
+      finish: "Normal"
     )
 
     # Run detection
@@ -155,7 +155,7 @@ class PriceAlertServiceTest < ActiveSupport::TestCase
       card_id: @card_id,
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Foil"
+      finish: "Foil"
     )
 
     alerts = @service.detect_price_changes
@@ -185,7 +185,7 @@ class PriceAlertServiceTest < ActiveSupport::TestCase
       card_id: @card_id,
       collection_type: "inventory",
       quantity: 1,
-      treatment: "Etched"
+      finish: "Etched"
     )
 
     alerts = @service.detect_price_changes

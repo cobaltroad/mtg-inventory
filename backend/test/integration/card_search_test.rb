@@ -56,7 +56,7 @@ class CardSearchIntegrationTest < ActionDispatch::IntegrationTest
     assert_equal "Limited Edition Alpha", first["set_name"]
     assert_equal "157", first["collector_number"]
     assert_equal "https://example.com/bolt1.jpg", first["image_url"]
-    assert_equal [], first["treatments"]
+    assert_equal ["nonfoil"], first["treatments"]
   end
 
   # ---------------------------------------------------------------------------

@@ -130,7 +130,7 @@ class SearchControllerTest < ActionDispatch::IntegrationTest
           collector_number: "161",
           quantity: 4,
           image_url: "https://cards.scryfall.io/normal/test.jpg",
-          treatment: "foil",
+          finish: "foil",
           unit_price_cents: 500,
           total_price_cents: 2000
         }

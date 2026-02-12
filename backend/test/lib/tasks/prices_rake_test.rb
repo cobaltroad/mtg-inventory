@@ -3,6 +3,11 @@ require "rake"
 
 class PricesRakeTest < ActiveSupport::TestCase
   setup do
+    CollectionItem.delete_all
+    User.delete_all
+    @user = User.create!(email: "test@example.com", name: "Test User")
+
+
     # Load rake tasks
     Rails.application.load_tasks if Rake::Task.tasks.empty?
 
@@ -22,9 +27,8 @@ class PricesRakeTest < ActiveSupport::TestCase
 
   test "prices:update enqueues job when cards exist" do
     # Create a collection item
-    user = users(:one)
     CollectionItem.create!(
-      user: user,
+      user: @user,
       card_id: "test-card-123",
       quantity: 1,
       collection_type: "inventory"

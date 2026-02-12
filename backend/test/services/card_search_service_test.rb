@@ -231,7 +231,7 @@ class CardSearchServiceTest < ActiveSupport::TestCase
     assert_equal "Limited Edition Alpha", result[:set_name]
     assert_equal "157", result[:collector_number]
     assert_equal "https://example.com/bolt.jpg", result[:image_url]
-    assert_equal [], result[:treatments]
+    assert_equal ["nonfoil"], result[:treatments]
   end
 
   test "derives borderless treatment correctly" do

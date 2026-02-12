@@ -22,7 +22,7 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
       old_price_cents: 100,
       new_price_cents: 130,
       percentage_change: 30.0,
-      treatment: "normal",
+      finish: "normal",
       created_at: 1.hour.ago
     )
 
@@ -33,7 +33,7 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
       old_price_cents: 200,
       new_price_cents: 140,
       percentage_change: -30.0,
-      treatment: "foil",
+      finish: "foil",
       created_at: 2.hours.ago
     )
 
@@ -59,7 +59,7 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 100, json[0]["old_price_cents"]
     assert_equal 130, json[0]["new_price_cents"]
     assert_equal "30.0", json[0]["percentage_change"]
-    assert_equal "normal", json[0]["treatment"]
+    assert_equal "nonfoil", json[0]["finish"]
     assert json[0].key?("created_at")
   end
 
