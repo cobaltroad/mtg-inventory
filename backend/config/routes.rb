@@ -14,6 +14,8 @@ Rails.application.routes.draw do
 
     resources :inventory, only: [ :index, :create, :update, :destroy ] do
       collection do
+        # Spike #156: Paginated endpoint for backend pagination evaluation
+        get :paginated, action: :index_paginated
         post :move_from_wishlist
         get :value
         get :value_timeline

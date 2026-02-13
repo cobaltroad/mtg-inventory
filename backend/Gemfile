@@ -38,6 +38,9 @@ gem "nokogiri"
 # Cron schedule parsing for job scheduling
 gem "fugit"
 
+# Lightweight pagination library for backend pagination evaluation (Spike #156)
+gem "pagy", "~> 9.4"
+
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin Ajax possible
 # gem "rack-cors"
 

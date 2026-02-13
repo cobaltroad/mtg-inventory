@@ -195,6 +195,7 @@ GEM
     nokogiri (1.19.0-x86_64-linux-musl)
       racc (~> 1.4)
     ostruct (0.6.3)
+    pagy (9.4.0)
     parallel (1.27.0)
     parser (3.3.10.1)
       ast (~> 2.4.1)
@@ -371,6 +372,7 @@ DEPENDENCIES
   kamal
   mocha
   nokogiri
+  pagy (~> 9.4)
   pg (~> 1.1)
   puma (>= 5.0)
   rails (~> 8.1.2)

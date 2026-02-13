@@ -1,5 +1,6 @@
 class InventoryController < ApplicationController
   include CollectionItemActions
+  include Pagy::Backend
 
   before_action :validate_card_with_sdk, only: [ :create ]
 
@@ -16,6 +17,52 @@ class InventoryController < ApplicationController
     items_with_details = enrich_with_card_details(items)
     sorted_items = sort_by_card_name(items_with_details)
     render json: sorted_items
+  end
+
+  # Paginated version of index for backend pagination evaluation (Spike #156).
+  # Returns inventory items with pagination metadata.
+  #
+  # Query Parameters:
+  #   page - Page number (default: 1)
+  #   per_page - Items per page (default: 20, max: 100)
+  #
+  # Returns JSON with:
+  #   items: array of inventory items with card details
+  #   page: current page number
+  #   per_page: items per page
+  #   total_count: total number of items
+  #   total_pages: total number of pages
+  def index_paginated
+    # Get base collection scoped to current user and inventory type
+    base_items = current_user.collection_items
+                             .where(collection_type: "inventory")
+                             .includes(cached_image_attachment: :blob)
+
+    # Apply pagination with Pagy
+    # Default to 20 items per page, max 100
+    requested_per_page = params[:per_page].to_i
+    per_page = if requested_per_page > 0
+                 [ requested_per_page, 100 ].min
+               else
+                 20
+               end
+
+    # Pagy expects vars as a hash with 'limit' key (not 'items')
+    pagy_vars = { page: params[:page] || 1, limit: per_page }
+    pagy, paginated_items = pagy(base_items, **pagy_vars)
+
+    # Preload prices and enrich with card details (same as non-paginated index)
+    preload_prices(paginated_items)
+    items_with_details = enrich_with_card_details(paginated_items)
+    sorted_items = sort_by_card_name(items_with_details)
+
+    render json: {
+      items: sorted_items,
+      page: pagy.page,
+      per_page: pagy.limit,
+      total_count: pagy.count,
+      total_pages: pagy.pages
+    }
   end
 
   # Override update to return enriched item with card details
