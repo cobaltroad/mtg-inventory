@@ -27,6 +27,18 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     "#{ENV.fetch('PUBLIC_API_PATH', '/api')}#{path}"
   end
 
+  # Helper to extract items array from paginated response
+  def parse_inventory_response
+    body = JSON.parse(response.body)
+    # If response has pagination metadata, extract items array
+    if body.is_a?(Hash) && body.key?("items")
+      body["items"]
+    else
+      # Fallback for non-paginated responses (shouldn't happen after refactor)
+      body
+    end
+  end
+
   # Stubs Scryfall API to validate a card ID
   def stub_valid_card(card_id)
     stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
@@ -76,7 +88,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     get api_path("/inventory")
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
     assert_equal 1, items.size
     assert_equal "my_card", items.first["card_id"]
   end
@@ -90,7 +102,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     get api_path("/inventory")
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
     assert_equal 1, items.size
     assert_equal "inv_card", items.first["card_id"]
   end
@@ -106,7 +118,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     get api_path("/inventory")
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
     assert_equal 1, items.size
 
     item = items.first
@@ -131,7 +143,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     get api_path("/inventory")
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
     assert_equal 3, items.size
 
     # Verify alphabetical order
@@ -151,7 +163,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     get api_path("/inventory")
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
 
     # Should only return items with valid card data
     assert_equal 1, items.size
@@ -176,7 +188,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     get api_path("/inventory")
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
     assert_equal 1, items.size
 
     item = items.first
@@ -193,7 +205,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     get api_path("/inventory")
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
     assert_equal 0, items.size
   end
 
@@ -1110,7 +1122,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     get api_path("/inventory")
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
     assert_equal 1, items.size
 
     # Should return local storage URL, not Scryfall URL
@@ -1149,7 +1161,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     get api_path("/inventory")
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
     assert_equal 1, items.size
 
     # Should return Scryfall URL as fallback
@@ -1186,7 +1198,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     get api_path("/inventory")
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
     assert_equal 2, items.size
 
     cached_item_response = items.find { |i| i["card_id"] == cached_card_id }
@@ -1222,7 +1234,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     get api_path("/inventory")
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
     assert_equal 1, items.size
 
     item = items.first
@@ -1253,7 +1265,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     get api_path("/inventory")
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
     assert_equal 2, items.size
 
     # Verify both items have created_at timestamps
@@ -1300,7 +1312,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     get api_path("/inventory")
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
     assert_equal 1, items.size
 
     item = items.first
@@ -1346,7 +1358,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     get api_path("/inventory")
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
     assert_equal 1, items.size
 
     item = items.first
@@ -1376,7 +1388,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     get api_path("/inventory")
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
     item = items.first
 
     assert_equal 800, item["unit_price_cents"]
@@ -1404,7 +1416,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     get api_path("/inventory")
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
     item = items.first
 
     assert_equal 150, item["unit_price_cents"]
@@ -1432,7 +1444,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     get api_path("/inventory")
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
     item = items.first
 
     assert_equal 450, item["unit_price_cents"]
@@ -1460,7 +1472,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     get api_path("/inventory")
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
     item = items.first
 
     assert_equal 180, item["unit_price_cents"]
@@ -1480,7 +1492,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     get api_path("/inventory")
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
     item = items.first
 
     assert_nil item["unit_price_cents"]
@@ -1508,7 +1520,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     get api_path("/inventory")
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
     item = items.first
 
     assert_equal 125, item["unit_price_cents"]
@@ -1542,7 +1554,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     get api_path("/inventory")
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
     item = items.first
 
     assert_equal 175, item["unit_price_cents"]
@@ -1568,7 +1580,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     get api_path("/inventory")
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
     item = items.first
 
     assert_not_nil item["price_updated_at"]
@@ -1616,7 +1628,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
     assert_equal 20, items.size
 
     # With eager loading, we should have:
@@ -1693,7 +1705,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
     assert_equal 0, items.size
 
     # Should still use eager loading query structure even with no results
@@ -1731,7 +1743,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :success
-    items = JSON.parse(response.body)
+    items = parse_inventory_response
     assert_equal 2, items.size
 
     # Verify that ActiveStorage associations were eager loaded
