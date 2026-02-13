@@ -6,6 +6,7 @@
 	interface PriceAlert {
 		id: number;
 		card_id: string;
+		card_name: string | null;
 		alert_type: 'price_increase' | 'price_decrease';
 		old_price_cents: number;
 		new_price_cents: number;
@@ -107,7 +108,12 @@
 					<div class="min-w-0 flex-grow">
 						<div class="flex items-start justify-between gap-2">
 							<div class="flex-grow">
-								<p class="text-sm font-medium">
+								{#if alert.card_name}
+									<p class="text-sm font-semibold">
+										{alert.card_name}
+									</p>
+								{/if}
+								<p class="text-sm font-medium" class:mt-1={alert.card_name}>
 									{#if alert.alert_type === 'price_increase'}
 										Price Increase
 									{:else}

@@ -1,4 +1,5 @@
 require "test_helper"
+require "webmock/minitest"
 
 class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
   def setup
@@ -7,6 +8,35 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
     User.delete_all
     # Create the default user that current_user will resolve to
     @user = User.create!(email: User::DEFAULT_EMAIL, name: "Default User")
+    WebMock.reset!
+
+    # Use memory store for cache testing instead of null store
+    @original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+  end
+
+  def teardown
+    # Restore original cache
+    Rails.cache = @original_cache
+  end
+
+  # Stubs Scryfall API to return card details
+  def stub_scryfall_card_details(card_id, name: "Test Card")
+    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+      .to_return(
+        status: 200,
+        body: {
+          id: card_id,
+          name: name,
+          set: "TST",
+          set_name: "Test Set",
+          collector_number: "1",
+          image_uris: {
+            normal: "https://example.com/image.jpg"
+          }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
   end
 
   # ---------------------------------------------------------------------------
@@ -14,6 +44,10 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
   # ---------------------------------------------------------------------------
 
   test "index returns active price alerts for user" do
+    # Stub Scryfall API for card details
+    stub_scryfall_card_details("card-1", name: "Lightning Bolt")
+    stub_scryfall_card_details("card-2", name: "Counterspell")
+
     # Create some alerts
     alert1 = PriceAlert.create!(
       user: @user,
@@ -55,6 +89,7 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal 2, json.length
     assert_equal "card-1", json[0]["card_id"]
+    assert_equal "Lightning Bolt", json[0]["card_name"]
     assert_equal "price_increase", json[0]["alert_type"]
     assert_equal 100, json[0]["old_price_cents"]
     assert_equal 130, json[0]["new_price_cents"]
@@ -155,6 +190,8 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
   # ---------------------------------------------------------------------------
 
   test "dismiss marks alert as dismissed" do
+    stub_scryfall_card_details("card-1", name: "Test Card")
+
     alert = PriceAlert.create!(
       user: @user,
       card_id: "card-1",
@@ -179,6 +216,7 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "dismiss returns 403 when alert belongs to different user" do
+    stub_scryfall_card_details("card-1", name: "Test Card")
     other_user = User.create!(email: "other@example.com", name: "Other User")
 
     alert = PriceAlert.create!(
