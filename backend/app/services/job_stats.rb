@@ -115,6 +115,26 @@ class JobStats
     end
   end
 
+  # Get all scheduled one-time jobs (non-recurring)
+  #
+  # @return [Array<Hash>] Array of scheduled job information sorted by scheduled_at
+  def scheduled_one_time_jobs
+    # Query scheduled executions that are in the future
+    # Join with jobs table to get class name and other details
+    scheduled = SolidQueue::ScheduledExecution
+      .joins(:job)
+      .where("solid_queue_scheduled_executions.scheduled_at > ?", Time.current)
+      .order("solid_queue_scheduled_executions.scheduled_at ASC")
+
+    scheduled.map do |execution|
+      {
+        class_name: execution.job.class_name,
+        scheduled_at: execution.scheduled_at,
+        queue_name: execution.queue_name
+      }
+    end
+  end
+
   # Detect recurring tasks that are configured in recurring.yml but missing
   # from the SolidQueue::RecurringTask registry.
   #

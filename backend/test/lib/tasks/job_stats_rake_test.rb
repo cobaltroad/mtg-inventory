@@ -49,4 +49,79 @@ class JobStatsRakeTest < ActiveSupport::TestCase
     assert_empty missing,
       "No tasks should be missing when all are registered"
   end
+
+  test "jobs:stats displays scheduled one-time jobs section when jobs exist" do
+    # GIVEN scheduled one-time jobs exist
+    create_scheduled_job("UpdateCardPricesJob", 1.hour.from_now)
+    create_scheduled_job("ScrapeCommanderDecklistJob", 2.hours.from_now)
+
+    # WHEN we retrieve scheduled jobs
+    stats_service = JobStats.new
+    scheduled_jobs = stats_service.scheduled_one_time_jobs
+
+    # THEN it should include both jobs
+    assert_equal 2, scheduled_jobs.length,
+      "Should return both scheduled jobs"
+
+    class_names = scheduled_jobs.map { |j| j[:class_name] }
+    assert_includes class_names, "UpdateCardPricesJob",
+      "Should include UpdateCardPricesJob"
+    assert_includes class_names, "ScrapeCommanderDecklistJob",
+      "Should include ScrapeCommanderDecklistJob"
+  end
+
+  test "jobs:stats does not display scheduled jobs section when no jobs exist" do
+    # GIVEN no scheduled jobs
+    SolidQueue::ScheduledExecution.delete_all
+
+    # WHEN we retrieve scheduled jobs
+    stats_service = JobStats.new
+    scheduled_jobs = stats_service.scheduled_one_time_jobs
+
+    # THEN it should return empty array
+    assert_empty scheduled_jobs,
+      "Should return empty array when no scheduled jobs exist"
+  end
+
+  test "jobs:stats groups multiple scheduled jobs by class name" do
+    # GIVEN multiple jobs of the same class
+    3.times do |i|
+      create_scheduled_job("UpdateCardPricesJob", (i + 1).hours.from_now)
+    end
+    create_scheduled_job("ScrapeCommanderDecklistJob", 4.hours.from_now)
+
+    # WHEN we retrieve and group scheduled jobs
+    stats_service = JobStats.new
+    scheduled_jobs = stats_service.scheduled_one_time_jobs
+    jobs_by_class = scheduled_jobs.group_by { |job| job[:class_name] }
+
+    # THEN jobs should be properly grouped
+    assert_equal 2, jobs_by_class.keys.length,
+      "Should have 2 different job classes"
+    assert_equal 3, jobs_by_class["UpdateCardPricesJob"].length,
+      "Should have 3 UpdateCardPricesJob jobs"
+    assert_equal 1, jobs_by_class["ScrapeCommanderDecklistJob"].length,
+      "Should have 1 ScrapeCommanderDecklistJob job"
+  end
+
+  private
+
+  # Helper to create a scheduled job for testing
+  def create_scheduled_job(class_name, scheduled_at, queue: "default")
+    job = SolidQueue::Job.create!(
+      queue_name: queue,
+      class_name: class_name,
+      arguments: [].to_json,
+      scheduled_at: scheduled_at
+    )
+
+    existing = SolidQueue::ScheduledExecution.find_by(job_id: job.id)
+    return existing if existing
+
+    SolidQueue::ScheduledExecution.create!(
+      job_id: job.id,
+      queue_name: queue,
+      scheduled_at: scheduled_at
+    )
+  end
 end

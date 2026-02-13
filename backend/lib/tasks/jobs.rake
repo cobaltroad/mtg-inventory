@@ -312,6 +312,32 @@ namespace :jobs do
         end
       end
 
+      # Show scheduled one-time jobs if any exist
+      scheduled_jobs = stats_service.scheduled_one_time_jobs
+      if scheduled_jobs.any?
+        puts "\n" + "-" * 80
+        puts "\nSCHEDULED JOBS (One-Time):"
+        puts "-" * 80
+
+        # Group jobs by class name
+        jobs_by_class = scheduled_jobs.group_by { |job| job[:class_name] }
+
+        jobs_by_class.each do |class_name, jobs|
+          puts "\n#{class_name} (#{jobs.count} scheduled):"
+
+          # Show up to 3 jobs per class
+          jobs.take(3).each do |job|
+            relative_time = stats_service.format_relative_time(job[:scheduled_at])
+            puts "  #{job[:scheduled_at].strftime('%Y-%m-%d %H:%M:%S %Z')} (#{relative_time}) - Queue: #{job[:queue_name]}"
+          end
+
+          # Show count of remaining jobs if more than 3
+          if jobs.count > 3
+            puts "  ... and #{jobs.count - 3} more"
+          end
+        end
+      end
+
       puts "\n" + "=" * 80
     end
 
