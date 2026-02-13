@@ -306,7 +306,7 @@
 							</Pagination.PrevTrigger>
 							<Pagination.Context>
 								{#snippet children(pag)}
-									{#each pag().pages as pageItem, index (pageItem.value)}
+									{#each pag().pages as pageItem, index (pageItem.value ?? `ellipsis-${index}`)}
 										{#if pageItem.type === 'page'}
 											<Pagination.Item {...pageItem}>
 												{pageItem.value}
