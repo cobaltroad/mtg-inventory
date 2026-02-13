@@ -378,8 +378,9 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
   test "batch mode processes cards in batches with delays" do
     user = @user_one
 
-    # Create 55 cards (to ensure multiple batches with BATCH_SIZE = 50)
-    card_ids = (1..55).map { |i| "batch-card-#{i}" }
+    # Note: MAX_CARDS_PER_EXECUTION = 20, so only first 20 cards will be processed
+    # Creating 25 cards to verify batching limit is respected
+    card_ids = (1..25).map { |i| "batch-card-#{i}" }
 
     card_ids.each do |card_id|
       CollectionItem.create!(
@@ -391,20 +392,13 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
       stub_scryfall_price_request(card_id, { usd: "1.00" })
     end
 
-    # Measure execution time to verify delays are being added
-    start_time = Time.current
+    # Should process exactly MAX_CARDS_PER_EXECUTION (20) cards
+    assert_difference "CardPrice.count", 20 do
+      UpdateCardPricesJob.perform_now(nil)
+    end
 
-    UpdateCardPricesJob.perform_now(nil)
-
-    execution_time = Time.current - start_time
-
-    # Verify all cards were processed
-    assert_equal 55, CardPrice.count
-
-    # With BATCH_SIZE=50 and BATCH_DELAY=0.1, we expect at least 0.1 seconds
-    # for the 1 delay between batch 1 (50 cards) and batch 2 (5 cards)
-    # Adding some buffer for test execution time
-    assert execution_time >= 0.09, "Expected at least 0.09s execution time for batch delays, got #{execution_time}s"
+    # Verify that remaining cards were not processed
+    assert_equal 20, CardPrice.count
   end
 
   test "batch mode skips already processed cards for idempotency" do
@@ -469,11 +463,11 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
     assert_equal 600, latest.usd_cents
   end
 
-  test "batch mode logs progress every 100 cards" do
+  test "batch mode respects MAX_CARDS_PER_EXECUTION limit and schedules next batch" do
     user = @user_one
 
-    # Create 250 cards to trigger multiple progress logs
-    card_ids = (1..250).map { |i| "progress-card-#{i}" }
+    # Create more cards than MAX_CARDS_PER_EXECUTION to verify batching
+    card_ids = (1..25).map { |i| "progress-card-#{i}" }
 
     card_ids.each do |card_id|
       CollectionItem.create!(
@@ -486,16 +480,20 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
     end
 
     log_output = capture_log do
-      UpdateCardPricesJob.perform_now(nil)
+      # First execution should process exactly MAX_CARDS_PER_EXECUTION (20) cards
+      assert_difference "CardPrice.count", 20 do
+        UpdateCardPricesJob.perform_now(nil)
+      end
     end
 
-    # Verify JSON log format for progress updates at 100 and 200 cards
-    progress_logs = find_log_entries(log_output, event: "progress_update")
-    progress_100 = progress_logs.find { |log| log["cards_processed"] == 100 }
-    progress_200 = progress_logs.find { |log| log["cards_processed"] == 200 }
+    # Verify batch execution plan was logged
+    assert_log_entry(log_output, event: "batch_execution_plan")
 
-    assert_not_nil progress_100, "Expected progress log at 100 cards"
-    assert_not_nil progress_200, "Expected progress log at 200 cards"
+    # Verify rescheduling was logged
+    assert_log_entry(log_output, event: "rescheduling_next_batch")
+
+    # Verify completion was logged
+    assert_log_entry(log_output, event: "price_update_completed")
   end
 
   test "batch mode logs total execution time" do
@@ -572,11 +570,11 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
     assert_nil CardPrice.latest_for("bad-card")
   end
 
-  test "batch mode with large dataset handles 1000 cards" do
+  test "batch mode with large dataset processes first batch and reschedules" do
     user = @user_one
 
-    # Create 1000 cards
-    card_ids = (1..1000).map { |i| format("large-card-%04d", i) }
+    # Create 100 cards to simulate a large dataset
+    card_ids = (1..100).map { |i| format("large-card-%04d", i) }
 
     card_ids.each do |card_id|
       CollectionItem.create!(
@@ -591,31 +589,36 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
     start_time = Time.current
 
     log_output = capture_log do
-      assert_difference "CardPrice.count", 1000 do
+      # First execution processes MAX_CARDS_PER_EXECUTION (20) cards
+      assert_difference "CardPrice.count", 20 do
         UpdateCardPricesJob.perform_now(nil)
       end
     end
 
     execution_time = Time.current - start_time
 
-    # Should complete without timeout (less than 60 seconds for test)
-    assert execution_time < 60, "Job took too long: #{execution_time} seconds"
+    # Should complete quickly (less than 10 seconds for 20 cards)
+    assert execution_time < 10, "Job took too long: #{execution_time} seconds"
 
     # Verify JSON log format for batch processing
     assert_log_entry(log_output, event: "price_update_started", mode: "batch")
 
-    # Should log progress multiple times
-    progress_logs = find_log_entries(log_output, event: "progress_update")
-    progress_100 = progress_logs.find { |log| log["cards_processed"] == 100 }
-    progress_500 = progress_logs.find { |log| log["cards_processed"] == 500 }
+    # Verify batch execution plan shows remaining cards
+    batch_plan_logs = find_log_entries(log_output, event: "batch_execution_plan")
+    batch_plan = batch_plan_logs.first
+    assert_not_nil batch_plan, "Expected batch_execution_plan event"
+    assert_equal 20, batch_plan["cards_this_run"]
+    assert_equal 80, batch_plan["cards_remaining"]
+    assert_equal true, batch_plan["will_reschedule"]
 
-    assert_not_nil progress_100, "Expected progress log at 100 cards"
-    assert_not_nil progress_500, "Expected progress log at 500 cards"
+    # Verify rescheduling happened
+    assert_log_entry(log_output, event: "rescheduling_next_batch")
+    assert_log_entry(log_output, event: "next_batch_scheduled")
 
     assert_log_entry(log_output, event: "price_update_completed")
 
-    # Verify all cards were processed
-    assert_equal 1000, CardPrice.count
+    # Verify only first 20 cards were processed
+    assert_equal 20, CardPrice.count
   end
 
   test "batch mode reraises rate limit error for job retry" do
@@ -638,9 +641,10 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
     end
   end
 
-  test "batch mode reraises network error for job retry" do
+  test "batch mode handles network error gracefully and continues processing" do
     user = @user_one
 
+    # Create two cards: one that will fail with network error, one that succeeds
     CollectionItem.create!(
       user: user,
       card_id: "network-error-batch",
@@ -648,21 +652,45 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
       quantity: 1
     )
 
+    CollectionItem.create!(
+      user: user,
+      card_id: "success-card",
+      collection_type: "inventory",
+      quantity: 1
+    )
+
+    # First card fails with network error after all service retries
     stub_request(:get, "https://api.scryfall.com/cards/network-error-batch")
       .to_raise(SocketError.new("Connection failed")).times(3)
 
-    # In test mode, the retry mechanism raises RuntimeError about exponential delay
-    # This is expected behavior - we just want to confirm the error propagates
-    assert_raises(RuntimeError, CardPriceService::NetworkError) do
-      UpdateCardPricesJob.perform_now(nil)
+    # Second card succeeds
+    stub_scryfall_price_request("success-card", { usd: "5.00" })
+
+    log_output = capture_log do
+      # Job should complete successfully, processing the good card
+      assert_difference "CardPrice.count", 1 do
+        UpdateCardPricesJob.perform_now(nil)
+      end
     end
+
+    # Verify the failed card was logged with error details
+    failed_logs = find_log_entries(log_output, event: "card_processed", card_id: "network-error-batch")
+    assert failed_logs.any? { |log| log["success"] == false && log["error_type"] == "NetworkError" },
+           "Expected card_processed event with success=false and error_type=NetworkError"
+
+    # Verify no price record for failed card
+    assert_nil CardPrice.latest_for("network-error-batch")
+
+    # Verify price record for successful card
+    assert_not_nil CardPrice.latest_for("success-card")
+    assert_equal 500, CardPrice.latest_for("success-card").usd_cents
   end
 
   test "batch mode resumes from last successful batch after failure" do
     user = @user_one
 
-    # Create 55 cards (batch 1: 50 cards, batch 2: 5 cards)
-    card_ids = (1..55).map { |i| "resume-card-#{i}" }
+    # Create 25 cards
+    card_ids = (1..25).map { |i| "resume-card-#{i}" }
 
     card_ids.each do |card_id|
       CollectionItem.create!(
@@ -674,8 +702,8 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
       stub_scryfall_price_request(card_id, { usd: "1.00" })
     end
 
-    # First run: process batch 1 successfully
-    first_batch_cards = card_ids[0..49]
+    # First run: process first 15 cards successfully (simulate partial completion)
+    first_batch_cards = card_ids[0..14]
     first_batch_cards.each do |card_id|
       CardPrice.create!(
         card_id: card_id,
@@ -684,13 +712,13 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
       )
     end
 
-    # Second run: should only process remaining 5 cards
-    assert_difference "CardPrice.count", 5 do
+    # Second run: should skip already processed cards and process remaining 10
+    assert_difference "CardPrice.count", 10 do
       UpdateCardPricesJob.perform_now(nil)
     end
 
-    # Verify total is now 55
-    assert_equal 55, CardPrice.count
+    # Verify total is now 25
+    assert_equal 25, CardPrice.count
   end
 
   # ---------------------------------------------------------------------------

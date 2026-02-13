@@ -166,10 +166,18 @@ class UpdateCardPricesJob < ApplicationJob
           # Log rate limit and re-raise to trigger retry
           log_rate_limit(service: "Scryfall", retry_after: e.try(:retry_after))
           raise
-        rescue CardPriceService::NetworkError, CardPriceService::RateLimitError => e
-          # Re-raise to trigger retry - idempotency ensures we resume correctly
-          log_error(error: e, card_id: card_id, context: "batch_processing")
-          raise
+        rescue CardPriceService::NetworkError => e
+          # Network errors (DNS, connection failures) are often transient
+          # Log and continue to ensure batch rescheduling happens
+          total_failed += 1
+          log_event(
+            level: :warn,
+            event: "card_processed",
+            card_id: card_id,
+            success: false,
+            error_type: "NetworkError",
+            error_message: e.message
+          )
         rescue StandardError => e
           # Log but continue processing other cards
           total_failed += 1

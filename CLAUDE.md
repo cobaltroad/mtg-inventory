@@ -181,6 +181,10 @@ docker compose exec backend rails jobs:prices:update_card[SCRYFALL_CARD_ID]
 # View job queue statistics
 docker compose exec backend rails jobs:stats
 
+# Diagnostic and cleanup commands for stuck jobs
+docker compose exec backend rails jobs:show_stuck    # Show stuck jobs blocking execution
+docker compose exec backend rails jobs:clear_stuck   # Remove stuck jobs (CAUTION!)
+
 # Using Rails console for more control (logs to file only)
 docker compose exec backend rails console
 > ScrapeEdhrecCommandersJob.perform_now         # Discovery phase (schedules decklist jobs)

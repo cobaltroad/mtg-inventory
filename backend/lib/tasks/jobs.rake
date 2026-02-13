@@ -353,7 +353,7 @@ namespace :jobs do
       if failures.empty?
         puts "\n✓ No failed jobs found in the last 7 days!"
         puts "\n" + "=" * 80
-        return
+        next
       end
 
       puts "Found #{failures.count} failed #{'execution'.pluralize(failures.count)}\n"
@@ -393,6 +393,103 @@ namespace :jobs do
       puts "=" * 80
     end
 
+    desc "Show stuck jobs (jobs with finished_at = NULL that are blocking new executions)"
+    task show_stuck: :environment do
+      puts "=" * 80
+      puts "STUCK JOBS ANALYSIS"
+      puts "=" * 80
+
+      # Find all jobs with finished_at = nil
+      stuck_jobs = SolidQueue::Job.where(finished_at: nil)
+
+      if stuck_jobs.empty?
+        puts "\n✓ No stuck jobs found"
+        puts "\n" + "=" * 80
+        next
+      end
+
+      puts "Found #{stuck_jobs.count} job(s) with finished_at = NULL"
+      puts "-" * 80
+
+      stuck_jobs.each do |job|
+        puts "\nJob ID:       #{job.id}"
+        puts "Class:        #{job.class_name}"
+        puts "Queue:        #{job.queue_name}"
+        puts "Created:      #{job.created_at}"
+        puts "Finished:     #{job.finished_at || 'NULL (STUCK)'}"
+        puts "Active Job ID: #{job.active_job_id}"
+
+        # Check if it's in different execution states
+        if SolidQueue::ClaimedExecution.exists?(job_id: job.id)
+          puts "State:        CLAIMED (currently running)"
+        elsif SolidQueue::FailedExecution.exists?(job_id: job.id)
+          failed = SolidQueue::FailedExecution.find_by(job_id: job.id)
+          puts "State:        FAILED"
+          puts "Error:        #{failed.error}"
+        elsif SolidQueue::ReadyExecution.exists?(job_id: job.id)
+          puts "State:        READY (waiting to run)"
+        else
+          puts "State:        UNKNOWN (orphaned?)"
+        end
+      end
+
+      puts "\n" + "=" * 80
+      puts "TIP: Use 'rails jobs:maintenance:clear_stuck' to remove these jobs"
+      puts "=" * 80
+    end
+
+    desc "Clear stuck jobs (CAUTION: removes jobs with finished_at = NULL)"
+    task clear_stuck: :environment do
+      puts "=" * 80
+      puts "CLEARING STUCK JOBS"
+      puts "=" * 80
+
+      # Find all jobs with finished_at = nil
+      stuck_jobs = SolidQueue::Job.where(finished_at: nil)
+
+      if stuck_jobs.empty?
+        puts "\n✓ No stuck jobs to clear"
+        puts "\n" + "=" * 80
+        next
+      end
+
+      puts "Found #{stuck_jobs.count} stuck job(s)"
+      puts "-" * 80
+
+      stuck_jobs.each do |job|
+        puts "\nClearing:"
+        puts "  Job ID: #{job.id}"
+        puts "  Class:  #{job.class_name}"
+        puts "  Created: #{job.created_at}"
+
+        # Remove from failed executions if present
+        if SolidQueue::FailedExecution.exists?(job_id: job.id)
+          SolidQueue::FailedExecution.where(job_id: job.id).delete_all
+          puts "  Removed from FailedExecution table"
+        end
+
+        # Remove from claimed executions if present
+        if SolidQueue::ClaimedExecution.exists?(job_id: job.id)
+          SolidQueue::ClaimedExecution.where(job_id: job.id).delete_all
+          puts "  Removed from ClaimedExecution table"
+        end
+
+        # Remove from ready executions if present
+        if SolidQueue::ReadyExecution.exists?(job_id: job.id)
+          SolidQueue::ReadyExecution.where(job_id: job.id).delete_all
+          puts "  Removed from ReadyExecution table"
+        end
+
+        # Finally delete the job record itself
+        job.destroy
+        puts "  ✓ Job record deleted"
+      end
+
+      puts "\n" + "-" * 80
+      puts "✓ Cleared #{stuck_jobs.count} stuck job(s)"
+      puts "=" * 80
+    end
+
     desc "Clean up old rotated log files"
     task clean_logs: :environment do
       puts "=" * 80
@@ -405,7 +502,7 @@ namespace :jobs do
       if old_logs.empty?
         puts "\n✓ No old log files to clean"
         puts "\n" + "=" * 80
-        return
+        next
       end
 
       total_size = old_logs.sum { |f| File.size(f) }
@@ -433,4 +530,6 @@ namespace :jobs do
   task stats: "maintenance:stats"
   task failures: "maintenance:failures"
   task clean_logs: "maintenance:clean_logs"
+  task show_stuck: "maintenance:show_stuck"
+  task clear_stuck: "maintenance:clear_stuck"
 end
