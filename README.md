@@ -55,7 +55,7 @@ Jobs are configured in `backend/config/recurring.yml`:
 |-----|----------|-------------|
 | **ScrapeEdhrecCommandersJob** | Every Saturday 8am (dev)<br>Every Sunday 8am (prod) | **Discovery Phase**: Fetches top 20 EDH commanders from EDHREC. Schedules individual decklist jobs 1 hour apart. |
 | **ScrapeCommanderDecklistJob** | Dynamically scheduled<br>(1 hour apart) | **Decklist Phase**: Scrapes an individual commander's decklist and imports cards. |
-| **UpdateCardPricesJob** | Every 2 days at 7am (dev)<br>Every day at 7am (prod) | Updates market prices for all cards from Scryfall |
+| **UpdateCardPricesJob** | Every 2 days at 7am | **Batched Price Updates**: Processes 20 cards per run, automatically reschedules for next batch 15 minutes later. Spreads load over ~4 hours for typical collections. |
 | **clear_solid_queue_finished_jobs** | Every hour at :12 (prod) | Cleans up completed job records older than 1 day |
 
 ### Distributed Scraping Architecture

@@ -127,7 +127,7 @@ Jobs are configured in `backend/config/recurring.yml` and run automatically:
 |-----|----------|-------------|
 | **ScrapeEdhrecCommandersJob** | Every Saturday 8am (dev)<br>Every Sunday 8am (prod) | **Discovery Phase**: Fetches top 20 EDH commanders from EDHREC (list only, no decklists). Schedules individual `ScrapeCommanderDecklistJob` jobs 1 hour apart. |
 | **ScrapeCommanderDecklistJob** | Dynamically scheduled<br>(1 hour apart per commander) | **Decklist Phase**: Scrapes an individual commander's decklist from EDHREC and imports cards. Scheduled automatically by the discovery job to distribute load over ~20 hours. |
-| **UpdateCardPricesJob** | Every day at 7am (prod) | Updates market prices for all cards in collections from Scryfall |
+| **UpdateCardPricesJob** | Every 2 days at 7am | **Batched Price Updates**: Processes 20 cards per execution, then reschedules itself 15 minutes later if more cards remain. This spreads the load over time to respect Scryfall API rate limits. |
 | **clear_solid_queue_finished_jobs** | Every hour at :12 (prod) | Cleans up completed job records older than 1 day |
 
 ### Distributed Scraping Architecture
@@ -143,6 +143,23 @@ The commander scraping system uses a **two-phase distributed approach** to respe
 - 429 responses: exponential backoff with retries
 
 This architecture reduces peak request rate from ~20 commanders/minute to 1 commander/hour while maintaining reliability through isolated job execution.
+
+### Auto-Batching Price Updates
+
+The `UpdateCardPricesJob` uses an **auto-rescheduling pattern** to process large card collections without overwhelming the Scryfall API:
+
+1. **Initial Trigger** (every 2 days at 7am) - Job starts processing cards
+2. **Batched Processing** - Processes 20 cards per execution with rate limiting
+3. **Auto-Reschedule** - If more cards remain, schedules next batch for 15 minutes later
+4. **Idempotency** - Skips cards already processed today, allowing safe retries
+
+**Example:** For a collection of 300 cards:
+- Execution 1: Processes cards 1-20, schedules next batch
+- Execution 2 (15 min later): Processes cards 21-40, schedules next batch
+- ...continues until all cards are processed
+- Total time: ~4 hours (15 executions × 15 minutes)
+
+This ensures compliance with API rate limits while still processing the entire collection within a reasonable timeframe.
 
 ### Manual Job Triggers
 

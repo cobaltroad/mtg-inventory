@@ -1,11 +1,15 @@
 # Background job to fetch and store current market prices for Magic: The Gathering cards.
 # Uses CardPriceService to retrieve prices from Scryfall API and creates CardPrice records.
 #
-# When called without arguments, processes all unique cards across all user collections
-# in batches of 50 with rate limiting. When called with a card_id argument, processes
-# a single card (legacy behavior for backward compatibility).
+# When called without arguments, processes cards in batches with automatic rescheduling:
+# - Processes up to MAX_CARDS_PER_EXECUTION (20) cards per run
+# - Automatically reschedules itself 15 minutes later if more cards remain
+# - Filters out cards already processed today for idempotency
+# - Creates price alerts for significant price changes
 #
-# Scheduled to run daily at 2 AM UTC using Solid Queue for historical price tracking.
+# When called with a card_id argument, processes a single card (legacy behavior).
+#
+# Scheduled to run every 2 days at 7 AM using Solid Queue for historical price tracking.
 class UpdateCardPricesJob < ApplicationJob
   include StructuredLogging
   include DuplicatePrevention
@@ -13,9 +17,11 @@ class UpdateCardPricesJob < ApplicationJob
   queue_as :default
 
   # Batch processing configuration
-  BATCH_SIZE = 50
-  BATCH_DELAY = 0.1 # 100ms delay between batches
-  PROGRESS_LOG_INTERVAL = 100 # Log progress every N cards
+  BATCH_SIZE = 20                   # Cards per internal batch
+  BATCH_DELAY = 0.1                 # 100ms delay between batches
+  PROGRESS_LOG_INTERVAL = 100       # Log progress every N cards
+  MAX_CARDS_PER_EXECUTION = 20      # Maximum cards per job execution
+  RESCHEDULE_DELAY = 15.minutes     # Delay before processing next batch
 
   # Retry on rate limit errors with exponential backoff
   retry_on CardPriceService::RateLimitError,
@@ -118,13 +124,26 @@ class UpdateCardPricesJob < ApplicationJob
       return
     end
 
+    # Limit to MAX_CARDS_PER_EXECUTION to avoid rate limiting
+    total_remaining = card_ids_to_process.count
+    card_ids_for_this_run = card_ids_to_process.take(MAX_CARDS_PER_EXECUTION)
+    remaining_for_next_run = total_remaining - card_ids_for_this_run.count
+
+    log_event(
+      level: :info,
+      event: "batch_execution_plan",
+      cards_this_run: card_ids_for_this_run.count,
+      cards_remaining: remaining_for_next_run,
+      will_reschedule: remaining_for_next_run > 0
+    )
+
     # Initialize counters
     total_processed = 0
     total_successful = 0
     total_failed = 0
 
     # Process cards in batches
-    card_ids_to_process.each_slice(BATCH_SIZE).with_index do |batch, batch_index|
+    card_ids_for_this_run.each_slice(BATCH_SIZE).with_index do |batch, batch_index|
       log_event(
         level: :info,
         event: "batch_started",
@@ -186,7 +205,7 @@ class UpdateCardPricesJob < ApplicationJob
       )
 
       # Add delay between batches (except after last batch)
-      unless batch_index == (card_ids_to_process.length / BATCH_SIZE.to_f).ceil - 1
+      unless batch_index == (card_ids_for_this_run.length / BATCH_SIZE.to_f).ceil - 1
         sleep_between_batches
       end
     end
@@ -202,6 +221,33 @@ class UpdateCardPricesJob < ApplicationJob
       cards_skipped: cards_skipped,
       price_alerts_created: alerts_count
     )
+
+    # Reschedule for next batch if there are remaining cards
+    if remaining_for_next_run > 0
+      log_event(
+        level: :info,
+        event: "rescheduling_next_batch",
+        cards_remaining: remaining_for_next_run,
+        scheduled_delay_minutes: RESCHEDULE_DELAY.in_minutes
+      )
+
+      # Schedule next execution
+      UpdateCardPricesJob.set(wait: RESCHEDULE_DELAY).perform_later
+
+      log_event(
+        level: :info,
+        event: "next_batch_scheduled",
+        next_run_at: Time.current + RESCHEDULE_DELAY
+      )
+    else
+      log_event(
+        level: :info,
+        event: "all_cards_processed_for_today",
+        total_cards: all_card_ids.count,
+        cards_processed: total_processed,
+        cards_skipped: cards_skipped
+      )
+    end
   end
 
   # Process a single card (legacy single-card mode)
