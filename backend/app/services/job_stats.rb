@@ -115,6 +115,32 @@ class JobStats
     end
   end
 
+  # Detect recurring tasks that are configured in recurring.yml but missing
+  # from the SolidQueue::RecurringTask registry.
+  #
+  # This helps diagnose configuration issues where Solid Queue hasn't loaded
+  # the recurring tasks from recurring.yml, possibly due to:
+  # - Solid Queue process not restarted after configuration changes
+  # - Configuration file syntax errors
+  # - Database initialization issues
+  #
+  # @return [Array<String>] Array of task keys that are configured but not registered
+  def missing_recurring_tasks
+    # Load expected tasks from recurring.yml
+    recurring_config_path = Rails.root.join("config/recurring.yml")
+    return [] unless File.exist?(recurring_config_path)
+
+    recurring_config = YAML.load_file(recurring_config_path)
+    env_config = recurring_config[Rails.env.to_s] || {}
+    configured_keys = env_config.keys
+
+    # Get actually registered task keys
+    registered_keys = SolidQueue::RecurringTask.pluck(:key)
+
+    # Return tasks that are configured but not registered
+    configured_keys - registered_keys
+  end
+
   # Format duration in human-readable form
   #
   # @param seconds [Float, nil] Duration in seconds

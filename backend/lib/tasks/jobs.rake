@@ -247,6 +247,25 @@ namespace :jobs do
       puts "Failed jobs:     #{SolidQueue::FailedExecution.count}"
       puts "-" * 80
 
+      # Check for missing recurring tasks and warn
+      missing_tasks = stats_service.missing_recurring_tasks
+      if missing_tasks.any?
+        puts "\n⚠️  WARNING: Missing Recurring Tasks"
+        puts "-" * 80
+        puts "The following tasks are configured in recurring.yml but not registered"
+        puts "in the SolidQueue::RecurringTask table. This may indicate:"
+        puts "  - Solid Queue process needs to be restarted"
+        puts "  - Configuration file syntax errors"
+        puts "  - Database initialization issues"
+        puts ""
+        puts "Missing tasks:"
+        missing_tasks.each do |task_key|
+          puts "  - #{task_key}"
+        end
+        puts "-" * 80
+        puts ""
+      end
+
       # Show recurring tasks with enhanced information
       puts "\nRECURRING TASKS:"
       puts "-" * 80

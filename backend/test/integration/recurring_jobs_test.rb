@@ -17,8 +17,8 @@ class RecurringJobsTest < ActiveSupport::TestCase
       "Job class should be UpdateCardPricesJob"
     assert_equal "default", job_config["queue"],
       "Job should use default queue"
-    assert_equal "every day at 2am", job_config["schedule"],
-      "Job should run daily at 2am"
+    assert_equal "every day at 7am", job_config["schedule"],
+      "Job should run daily at 7am"
     assert_equal [], job_config["args"],
       "Job should be called without arguments for batch mode"
   end

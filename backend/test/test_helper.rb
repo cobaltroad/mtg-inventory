@@ -14,6 +14,9 @@ require "json"
 vcr_setup = File.expand_path("support/vcr_setup.rb", __dir__)
 require vcr_setup if File.exist?(vcr_setup)
 
+# Load recurring task helper for tests
+require_relative "support/recurring_task_helper"
+
 # ---------------------------------------------------------------------------
 # Minitest 6 removed Object#stub (it was extracted to a separate gem that
 # treats any value responding to :call as a factory, which breaks stubs on
@@ -34,6 +37,9 @@ end
 
 module ActiveSupport
   class TestCase
+    # Include recurring task helper
+    include RecurringTaskHelper
+
     # Run tests in parallel with specified workers
     parallelize(workers: :number_of_processors)
 
