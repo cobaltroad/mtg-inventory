@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { page, navigating } from '$app/stores';
 	import { Search, ChevronLeft, ChevronRight } from 'lucide-svelte';
 	import { Pagination } from '@skeletonlabs/skeleton-svelte';
 	import InventoryTable from '$lib/components/InventoryTable.svelte';
@@ -31,10 +33,41 @@
 	let loading = $state(false);
 	let initialLoading = $state(true);
 
-	// Sync allItems with data.items using $effect
-	// This reads data.items in a reactive context, establishing proper tracking
+	// Detect navigation loading state for backend pagination
+	let isNavigating = $derived($navigating !== null);
+
+	// Backend pagination metadata - initialize without referencing data
+	let backendPage = $state(1);
+	let backendPerPage = $state(0); // 0 = not set, don't override local pageSize
+	let backendTotalCount = $state(0);
+	let backendTotalPages = $state(0);
+
+	// Sync allItems and pagination metadata with data using $effect
+	// This reads data in a reactive context, establishing proper tracking
 	$effect(() => {
 		allItems = data.items || [];
+		const newPage = data.page || 1;
+		const newPerPage = data.per_page || 0;
+		const newTotalCount = data.total_count || 0;
+		const newTotalPages = data.total_pages || 0;
+
+		// Only update if values have changed (avoid unnecessary reactivity)
+		if (newPage !== backendPage) backendPage = newPage;
+		if (newPerPage !== backendPerPage) {
+			backendPerPage = newPerPage;
+			// When backend per_page changes, sync to local pageSize if valid and initialized
+			if (
+				pageSizeInitialized &&
+				newPerPage > 0 &&
+				newPerPage !== pageSize &&
+				PAGE_SIZE_OPTIONS.includes(newPerPage as typeof PAGE_SIZE_OPTIONS[number])
+			) {
+				pageSize = newPerPage;
+			}
+		}
+		if (newTotalCount !== backendTotalCount) backendTotalCount = newTotalCount;
+		if (newTotalPages !== backendTotalPages) backendTotalPages = newTotalPages;
+
 		// Mark initial loading as complete once we've synced data
 		initialLoading = false;
 	});
@@ -61,46 +94,77 @@
 	let currentFilter = $state('');
 	let currentSort = $state<SortOption>('name-asc');
 
-	// Pagination state
+	// Pagination state - sync with backend page when available
 	let currentPage = $state(1);
 
 	// Initialize pageSize from localStorage or use default
-	// This must happen before derived states are calculated
-	function getInitialPageSize(): number {
-		if (typeof window === 'undefined') return DEFAULT_PAGE_SIZE;
+	// Must be reactive to work properly in tests
+	let pageSize = $state(DEFAULT_PAGE_SIZE);
+	let pageSizeInitialized = $state(false); // Track if pageSize has been initialized
 
-		const savedPageSize = localStorage.getItem(STORAGE_KEY_PAGE_SIZE);
-		if (savedPageSize) {
-			const parsed = parseInt(savedPageSize, 10);
-			// Validate that the saved page size is a valid option
-			if (PAGE_SIZE_OPTIONS.includes(parsed as typeof PAGE_SIZE_OPTIONS[number])) {
-				return parsed;
+	// Initialize pageSize from localStorage on mount
+	$effect(() => {
+		if (!pageSizeInitialized && typeof window !== 'undefined') {
+			const savedPageSize = localStorage.getItem(STORAGE_KEY_PAGE_SIZE);
+			if (savedPageSize) {
+				const parsed = parseInt(savedPageSize, 10);
+				// Validate that the saved page size is a valid option
+				if (PAGE_SIZE_OPTIONS.includes(parsed as typeof PAGE_SIZE_OPTIONS[number])) {
+					pageSize = parsed;
+				}
 			}
+			pageSizeInitialized = true;
 		}
-		return DEFAULT_PAGE_SIZE;
-	}
+	});
 
-	let pageSize = $state(getInitialPageSize());
+	// Sync currentPage with backend state ONLY when backend page changes
+	// Track last synced value to avoid fighting with user interactions
+	let lastSyncedBackendPage = $state(0);
+	$effect(() => {
+		if (backendPage > 0 && backendPage !== lastSyncedBackendPage) {
+			currentPage = backendPage;
+			lastSyncedBackendPage = backendPage;
+		}
+	});
 
 	// Apply filtering and sorting
 	let filteredItems = $derived(filterBySet(allItems, currentFilter));
 	let sortedItems = $derived(sortInventory(filteredItems, currentSort));
 	let stats = $derived(calculateStats(filteredItems));
 
+	// Check if we're using backend pagination
+	// Backend pagination: we have metadata AND we don't have all items locally
+	// (total_count > items we have, indicating there are more items on the server)
+	let isBackendPaginated = $derived(
+		backendTotalCount > 0 &&
+			!currentFilter &&
+			backendTotalCount > allItems.length
+	);
+
 	// Apply pagination
+	// When using backend pagination, items are already paginated - don't slice again
+	// When using client-side pagination (all items loaded locally or with filters), apply slicing
 	let paginationStart = $derived((currentPage - 1) * pageSize);
 	let paginationEnd = $derived(paginationStart + pageSize);
-	let displayItems = $derived(sortedItems.slice(paginationStart, paginationEnd));
+	let displayItems = $derived(
+		isBackendPaginated ? sortedItems : sortedItems.slice(paginationStart, paginationEnd)
+	);
 
-	// Pagination visibility
-	let showPagination = $derived(filteredItems.length > pageSize);
+	// Pagination visibility and total count
+	// Use backend total when using backend pagination
+	// Otherwise use local filtered count for client-side pagination
+	let effectiveTotalCount = $derived(
+		isBackendPaginated ? backendTotalCount : filteredItems.length
+	);
+	let showPagination = $derived(effectiveTotalCount > pageSize);
 
-	// Count display
+	// Count display - use backend total count when available, fallback to local count
 	let itemCountText = $derived(() => {
+		const totalCount = backendTotalCount > 0 ? backendTotalCount : allItems.length;
 		if (currentFilter && filteredItems.length !== allItems.length) {
-			return `Showing ${filteredItems.length} of ${allItems.length} ${pluralize(allItems.length, 'card')}`;
+			return `Showing ${filteredItems.length} of ${totalCount} ${pluralize(totalCount, 'card')}`;
 		}
-		return `${allItems.length} ${pluralize(allItems.length, 'card')}`;
+		return `${totalCount} ${pluralize(totalCount, 'card')}`;
 	});
 
 	// Load sort preference from localStorage on mount
@@ -136,6 +200,14 @@
 		pageSize = newSize;
 		localStorage.setItem(STORAGE_KEY_PAGE_SIZE, target.value);
 		currentPage = 1; // Reset to first page when page size changes
+
+		// Update URL for backend pagination (when no filter is applied)
+		if (isBackendPaginated) {
+			const url = new URL($page.url);
+			url.searchParams.set('page', '1');
+			url.searchParams.set('per_page', String(newSize));
+			goto(url.toString(), { keepFocus: true, noScroll: true });
+		}
 	}
 
 	/**
@@ -143,6 +215,14 @@
 	 */
 	function handlePageChange(event: { page: number }) {
 		currentPage = event.page;
+
+		// Update URL for backend pagination (when no filter is applied)
+		if (isBackendPaginated) {
+			const url = new URL($page.url);
+			url.searchParams.set('page', String(event.page));
+			url.searchParams.set('per_page', String(pageSize));
+			goto(url.toString(), { keepFocus: true, noScroll: true });
+		}
 	}
 </script>
 
@@ -191,7 +271,11 @@
 				</button>
 			</div>
 		{:else}
-			<InventoryTable items={displayItems} {loading} onItemsChange={handleItemsChange} />
+			<InventoryTable
+				items={displayItems}
+				loading={loading || isNavigating}
+				onItemsChange={handleItemsChange}
+			/>
 
 			{#if showPagination}
 				<div class="pagination-container">
@@ -211,7 +295,7 @@
 
 					<nav class="pagination-nav" aria-label="Pagination navigation">
 						<Pagination
-							count={filteredItems.length}
+							count={effectiveTotalCount}
 							{pageSize}
 							page={currentPage}
 							onPageChange={handlePageChange}
