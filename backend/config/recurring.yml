@@ -9,6 +9,20 @@
 #     priority: 2
 #     schedule: at 5am every day
 
+test:
+  # Same configuration as development for test coverage
+  weekly_commander_scrape:
+    class: ScrapeEdhrecCommandersJob
+    queue: default
+    schedule: every saturday at 8am
+    args: []
+
+  card_price_update:
+    class: UpdateCardPricesJob
+    queue: default
+    schedule: every 2 days at 7am
+    args: []
+
 development:
   # Run commander scrape weekly on Saturday at 8am in development
   weekly_commander_scrape:

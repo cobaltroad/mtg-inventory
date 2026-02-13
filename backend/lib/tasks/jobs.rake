@@ -247,6 +247,25 @@ namespace :jobs do
       puts "Failed jobs:     #{SolidQueue::FailedExecution.count}"
       puts "-" * 80
 
+      # Check for missing recurring tasks and warn
+      missing_tasks = stats_service.missing_recurring_tasks
+      if missing_tasks.any?
+        puts "\n⚠️  WARNING: Missing Recurring Tasks"
+        puts "-" * 80
+        puts "The following tasks are configured in recurring.yml but not registered"
+        puts "in the SolidQueue::RecurringTask table. This may indicate:"
+        puts "  - Solid Queue process needs to be restarted"
+        puts "  - Configuration file syntax errors"
+        puts "  - Database initialization issues"
+        puts ""
+        puts "Missing tasks:"
+        missing_tasks.each do |task_key|
+          puts "  - #{task_key}"
+        end
+        puts "-" * 80
+        puts ""
+      end
+
       # Show recurring tasks with enhanced information
       puts "\nRECURRING TASKS:"
       puts "-" * 80
@@ -290,6 +309,32 @@ namespace :jobs do
           end
         rescue NameError
           # Job class not found - skip stats
+        end
+      end
+
+      # Show scheduled one-time jobs if any exist
+      scheduled_jobs = stats_service.scheduled_one_time_jobs
+      if scheduled_jobs.any?
+        puts "\n" + "-" * 80
+        puts "\nSCHEDULED JOBS (One-Time):"
+        puts "-" * 80
+
+        # Group jobs by class name
+        jobs_by_class = scheduled_jobs.group_by { |job| job[:class_name] }
+
+        jobs_by_class.each do |class_name, jobs|
+          puts "\n#{class_name} (#{jobs.count} scheduled):"
+
+          # Show up to 3 jobs per class
+          jobs.take(3).each do |job|
+            relative_time = stats_service.format_relative_time(job[:scheduled_at])
+            puts "  #{job[:scheduled_at].strftime('%Y-%m-%d %H:%M:%S %Z')} (#{relative_time}) - Queue: #{job[:queue_name]}"
+          end
+
+          # Show count of remaining jobs if more than 3
+          if jobs.count > 3
+            puts "  ... and #{jobs.count - 3} more"
+          end
         end
       end
 
