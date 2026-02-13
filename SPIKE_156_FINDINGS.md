@@ -132,9 +132,9 @@ This spike evaluated backend pagination for the inventory API to determine if it
 - **Total: 5-9 hours**
 
 **Breaking Changes:**
-- ✅ None! New endpoint (`/api/inventory/paginated`) leaves existing endpoint intact
-- Can migrate frontend incrementally
-- Can A/B test both approaches
+- ⚠️ **Response format changed** from JSON array to object with pagination metadata
+- Frontend must be updated to handle new response structure
+- All existing API consumers need to extract `items` from response
 
 **Finding:** Implementation is straightforward with **minimal complexity**. The spike has already proven the backend implementation works. Frontend changes are localized to pagination logic.
 
@@ -158,7 +158,7 @@ const page2 = items.slice(20, 40);
 **Proposed Frontend (Backend Pagination):**
 ```typescript
 // Fetches only requested page
-const response = await fetch('/api/inventory/paginated?page=1&per_page=20');
+const response = await fetch('/api/inventory?page=1&per_page=20');
 const { items, page, per_page, total_count, total_pages } = response;
 ```
 
@@ -208,7 +208,7 @@ const { items, page, per_page, total_count, total_pages } = response;
 
 **Key Files:**
 - `backend/app/controllers/inventory_controller.rb` - Added `index_paginated` action
-- `backend/config/routes.rb` - Added `/api/inventory/paginated` route
+- `backend/config/routes.rb` - Added `/api/inventory` route
 - `backend/config/initializers/pagy.rb` - Pagy configuration
 - `backend/Gemfile` - Added `pagy` gem
 - `backend/test/controllers/inventory_paginated_test.rb` - Comprehensive test suite
@@ -216,7 +216,7 @@ const { items, page, per_page, total_count, total_pages } = response;
 **API Contract:**
 
 ```
-GET /api/inventory/paginated?page=1&per_page=20
+GET /api/inventory?page=1&per_page=20
 
 Response:
 {
@@ -227,6 +227,8 @@ Response:
   "total_pages": 8
 }
 ```
+
+**Breaking Change:** The response format changed from a JSON array to a JSON object with pagination metadata.
 
 **Query Parameters:**
 - `page` (optional, default: 1) - Page number
@@ -240,16 +242,27 @@ Response:
 
 ### Frontend
 
-**Recommendation:** Create a new route `/inventory/paginated` to allow side-by-side comparison as noted in issue comments.
+**Required Changes (Breaking Change):**
 
-**Proposed Changes:**
-1. Create `frontend/src/routes/inventory/paginated/+page.svelte`
-2. Copy existing inventory page logic
-3. Update API calls to use `/api/inventory/paginated`
-4. Add loading states between pages
-5. Link from main inventory page: "Try backend pagination (experimental)"
+The frontend must be updated to handle the new paginated response format:
 
-This allows users to compare both approaches before committing to one.
+```typescript
+// OLD: Direct array response
+const items = await fetch('/api/inventory');
+// items is an array
+
+// NEW: Paginated response
+const response = await fetch('/api/inventory?page=1&per_page=20');
+const { items, page, per_page, total_count, total_pages } = await response.json();
+// items is nested in response object
+```
+
+**Required Updates:**
+1. Update API call in `inventory/+page.svelte` to destructure response
+2. Update pagination controls to use backend page/per_page params
+3. Add loading states for page navigation
+4. Update state management to track current page
+5. Test with various inventory sizes
 
 ---
 
@@ -271,11 +284,11 @@ With CardDetailsService caching, subsequent page loads hit the cache, but the in
 
 > "Create a separate frontend route for the backend pagination of data so that the two pagination techniques can be compared directly."
 
-**Recommendation:** ✅ Implemented as suggested
+**Status:** ✅ Implemented
 
-- Backend endpoint ready: `/api/inventory/paginated`
-- Frontend route (to be created): `/inventory/paginated`
-- Both approaches can coexist, allowing A/B testing and user feedback
+- Backend pagination is now the default for `/api/inventory`
+- Response format changed (breaking change - see below)
+- Frontend must be updated to handle new response structure
 
 ---
 
