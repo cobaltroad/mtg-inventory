@@ -69,11 +69,11 @@ describe('Sidebar Component - Navigation Items', () => {
 		expect(metagameLink).toHaveTextContent('Metagame');
 	});
 
-	it('should render Decks placeholder navigation link', () => {
+	it('should render Wishlist placeholder navigation link', () => {
 		const { container } = render(Sidebar);
-		const decksLink = container.querySelector('a[href*="decks"]');
-		expect(decksLink).toBeInTheDocument();
-		expect(decksLink).toHaveTextContent('Decks');
+		const wishlistLink = container.querySelector('a[href*="wishlist"]');
+		expect(wishlistLink).toBeInTheDocument();
+		expect(wishlistLink).toHaveTextContent('Wishlist');
 	});
 
 	it('should render Reports placeholder navigation link', () => {
