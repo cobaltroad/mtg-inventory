@@ -59,7 +59,8 @@ class JobStats
       finished_at: last_execution.finished_at,
       duration_seconds: last_execution.execution_time_seconds,
       commanders_succeeded: last_execution.try(:commanders_succeeded),
-      cards_succeeded: last_execution.try(:cards_succeeded)
+      cards_succeeded: last_execution.try(:cards_succeeded),
+      error_summary: last_execution.try(:error_summary)
     }
   end
 
@@ -158,6 +159,46 @@ class JobStats
     end
   end
 
+  # Get recent failed executions across all job types
+  #
+  # @param limit [Integer] Maximum number of failures to return (default: 10)
+  # @param days [Integer] Number of days to look back (default: 7)
+  # @return [Array<Hash>] Array of failed execution details
+  def recent_failures(limit: 10, days: 7)
+    since = days.days.ago
+    failures = []
+
+    # Collect failures from all execution tracking models
+    [ ScraperExecution, PriceUpdateExecution, ImageCacheExecution ].each do |execution_class|
+      failed = execution_class
+        .where(status: :failure)
+        .where("started_at >= ?", since)
+        .order(started_at: :desc)
+        .limit(limit)
+
+      failed.each do |execution|
+        failures << {
+          job_class: job_class_for_execution(execution),
+          execution_id: execution.id,
+          started_at: execution.started_at,
+          finished_at: execution.finished_at,
+          duration_seconds: execution.execution_time_seconds,
+          error_summary: execution.try(:error_summary),
+          mode: execution.try(:mode),
+          cards_attempted: execution.try(:cards_attempted),
+          cards_succeeded: execution.try(:cards_succeeded),
+          cards_failed: execution.try(:cards_failed),
+          commanders_attempted: execution.try(:commanders_attempted),
+          commanders_succeeded: execution.try(:commanders_succeeded),
+          commanders_failed: execution.try(:commanders_failed)
+        }
+      end
+    end
+
+    # Sort by started_at descending and limit
+    failures.sort_by { |f| f[:started_at] }.reverse.take(limit)
+  end
+
   private
 
   # Get the execution tracking class for a job class
@@ -174,6 +215,23 @@ class JobStats
       ImageCacheExecution
     else
       nil
+    end
+  end
+
+  # Get the job class name for an execution record (reverse mapping)
+  #
+  # @param execution [ActiveRecord::Base] Execution record
+  # @return [String] Job class name
+  def job_class_for_execution(execution)
+    case execution.class.name
+    when "ScraperExecution"
+      execution.mode == "discovery" ? "ScrapeEdhrecCommandersJob" : "ScrapeCommanderDecklistJob"
+    when "PriceUpdateExecution"
+      "UpdateCardPricesJob"
+    when "ImageCacheExecution"
+      "CacheCardImageJob"
+    else
+      "Unknown"
     end
   end
 end

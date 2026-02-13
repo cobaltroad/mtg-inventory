@@ -56,6 +56,14 @@ Rails.application.configure do
   # Highlight code that triggered redirect in logs.
   config.action_dispatch.verbose_redirect_logs = true
 
+  # Configure log rotation to prevent log files from growing unbounded
+  # Rotate when log file reaches 50MB, keep 3 old log files
+  config.logger = ActiveSupport::Logger.new(
+    Rails.root.join("log", "#{Rails.env}.log"),
+    3,                    # Keep 3 old log files
+    50 * 1024 * 1024      # Rotate at 50MB
+  )
+
   # Raises error for missing translations.
   # config.i18n.raise_on_missing_translations = true
 

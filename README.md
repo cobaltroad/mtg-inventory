@@ -108,10 +108,23 @@ docker compose exec backend rails console
 docker compose logs -f jobs
 ```
 
-**Check job status:**
+**Check job status and statistics:**
 ```bash
 docker compose exec backend rails jobs:stats
 ```
+Shows queue statistics, next scheduled runs, last execution status, and **error summaries for failed jobs**.
+
+**View recent job failures:**
+```bash
+docker compose exec backend rails jobs:failures
+```
+Displays the last 20 failed job executions from the past 7 days with detailed error messages, timestamps, and metrics.
+
+**Clean up old log files:**
+```bash
+docker compose exec backend rails jobs:clean_logs
+```
+Removes old rotated log files to free up disk space.
 
 **Access Solid Queue Mission Control (if enabled):**
 ```
@@ -121,7 +134,9 @@ http://localhost:3000/solid_queue
 **View recent job history:**
 ```bash
 docker compose exec backend rails console
-> SolidQueue::Job.last(10)
+> PriceUpdateExecution.order(started_at: :desc).limit(5)  # Recent price updates
+> ScraperExecution.order(started_at: :desc).limit(5)      # Recent scraper runs
+> SolidQueue::Job.last(10)                                # Recent Solid Queue jobs
 ```
 
 ## API Integration

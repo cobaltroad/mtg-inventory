@@ -271,6 +271,9 @@ namespace :jobs do
           if last_exec
             puts "  Last Run:     #{last_exec[:started_at]&.strftime('%Y-%m-%d %H:%M %Z')} - #{last_exec[:status].to_s.upcase}"
             puts "  Duration:     #{stats_service.format_duration(last_exec[:duration_seconds])}"
+            if last_exec[:error_summary].present?
+              puts "  Error:        #{last_exec[:error_summary]}"
+            end
           else
             puts "  Last Run:     No executions found"
           end
@@ -292,6 +295,90 @@ namespace :jobs do
 
       puts "\n" + "=" * 80
     end
+
+    desc "Show recent job failures with error details"
+    task failures: :environment do
+      stats_service = JobStats.new
+      failures = stats_service.recent_failures(limit: 20, days: 7)
+
+      puts "=" * 80
+      puts "RECENT JOB FAILURES (LAST 7 DAYS)"
+      puts "=" * 80
+
+      if failures.empty?
+        puts "\n✓ No failed jobs found in the last 7 days!"
+        puts "\n" + "=" * 80
+        return
+      end
+
+      puts "Found #{failures.count} failed #{'execution'.pluralize(failures.count)}\n"
+      puts "-" * 80
+
+      failures.each_with_index do |failure, index|
+        puts "\n#{index + 1}. #{failure[:job_class]}"
+        puts "   Execution ID: #{failure[:execution_id]}"
+        puts "   Started:      #{failure[:started_at].strftime('%Y-%m-%d %H:%M:%S %Z')}"
+        puts "   Duration:     #{stats_service.format_duration(failure[:duration_seconds])}"
+        puts "   Mode:         #{failure[:mode]}" if failure[:mode]
+
+        # Show relevant metrics based on job type
+        if failure[:cards_attempted]
+          puts "   Cards:        #{failure[:cards_succeeded] || 0} succeeded / #{failure[:cards_attempted] || 0} attempted"
+        end
+
+        if failure[:commanders_attempted]
+          puts "   Commanders:   #{failure[:commanders_succeeded] || 0} succeeded / #{failure[:commanders_attempted] || 0} attempted"
+        end
+
+        # Show error with word wrapping for readability
+        if failure[:error_summary].present?
+          puts "   Error:"
+          # Wrap error message at 70 characters with proper indentation
+          error_lines = failure[:error_summary].scan(/.{1,70}(?:\s+|$)/)
+          error_lines.each do |line|
+            puts "     #{line.strip}"
+          end
+        end
+      end
+
+      puts "\n" + "=" * 80
+      puts "TIP: Use 'docker compose exec backend bin/rails console' to query"
+      puts "     PriceUpdateExecution, ScraperExecution, or ImageCacheExecution"
+      puts "     for more detailed information about specific failures."
+      puts "=" * 80
+    end
+
+    desc "Clean up old rotated log files"
+    task clean_logs: :environment do
+      puts "=" * 80
+      puts "CLEANING OLD LOG FILES"
+      puts "=" * 80
+
+      log_dir = Rails.root.join("log")
+      old_logs = Dir.glob(log_dir.join("*.log.*"))
+
+      if old_logs.empty?
+        puts "\n✓ No old log files to clean"
+        puts "\n" + "=" * 80
+        return
+      end
+
+      total_size = old_logs.sum { |f| File.size(f) }
+      puts "Found #{old_logs.count} old log #{'file'.pluralize(old_logs.count)}"
+      puts "Total size: #{'%.2f' % (total_size / 1024.0 / 1024.0)} MB"
+      puts "-" * 80
+
+      old_logs.each do |log_file|
+        size_mb = File.size(log_file) / 1024.0 / 1024.0
+        basename = File.basename(log_file)
+        puts "Removing #{basename} (#{'%.2f' % size_mb} MB)"
+        File.delete(log_file)
+      end
+
+      puts "-" * 80
+      puts "✓ Cleaned #{old_logs.count} old log #{'file'.pluralize(old_logs.count)}"
+      puts "=" * 80
+    end
   end
 
   # Convenience aliases
@@ -299,4 +386,6 @@ namespace :jobs do
   task update_prices: "prices:update"
   task clear_finished: "maintenance:clear_finished"
   task stats: "maintenance:stats"
+  task failures: "maintenance:failures"
+  task clean_logs: "maintenance:clean_logs"
 end

@@ -42,6 +42,14 @@ Rails.application.configure do
   # Print deprecation notices to the stderr.
   config.active_support.deprecation = :stderr
 
+  # Configure log rotation to prevent test.log from growing unbounded
+  # Rotate when log file reaches 100MB, keep 1 old log file
+  config.logger = ActiveSupport::Logger.new(
+    Rails.root.join("log", "#{Rails.env}.log"),
+    1,                    # Keep 1 old log file
+    100 * 1024 * 1024     # Rotate at 100MB
+  )
+
   # Raises error for missing translations.
   # config.i18n.raise_on_missing_translations = true
 
