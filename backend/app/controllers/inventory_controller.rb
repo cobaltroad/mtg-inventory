@@ -10,17 +10,8 @@ class InventoryController < ApplicationController
     enqueue_image_cache_job if response.successful?
   end
 
-  # Override index to include card details from Scryfall
-  def index
-    items = collection_items
-    preload_prices(items)
-    items_with_details = enrich_with_card_details(items)
-    sorted_items = sort_by_card_name(items_with_details)
-    render json: sorted_items
-  end
-
-  # Paginated version of index for backend pagination evaluation (Spike #156).
-  # Returns inventory items with pagination metadata.
+  # Override index to include card details from Scryfall with pagination.
+  # Backend pagination implemented per Spike #156 findings.
   #
   # Query Parameters:
   #   page - Page number (default: 1)
@@ -32,11 +23,9 @@ class InventoryController < ApplicationController
   #   per_page: items per page
   #   total_count: total number of items
   #   total_pages: total number of pages
-  def index_paginated
+  def index
     # Get base collection scoped to current user and inventory type
-    base_items = current_user.collection_items
-                             .where(collection_type: "inventory")
-                             .includes(cached_image_attachment: :blob)
+    base_items = collection_items.includes(cached_image_attachment: :blob)
 
     # Apply pagination with Pagy
     # Default to 20 items per page, max 100
@@ -51,7 +40,7 @@ class InventoryController < ApplicationController
     pagy_vars = { page: params[:page] || 1, limit: per_page }
     pagy, paginated_items = pagy(base_items, **pagy_vars)
 
-    # Preload prices and enrich with card details (same as non-paginated index)
+    # Preload prices and enrich with card details
     preload_prices(paginated_items)
     items_with_details = enrich_with_card_details(paginated_items)
     sorted_items = sort_by_card_name(items_with_details)

@@ -52,7 +52,7 @@ class InventoryPaginatedTest < ActionDispatch::IntegrationTest
   # Scenario 1: Basic pagination functionality
   # ---------------------------------------------------------------------------
 
-  test "GET /api/inventory/paginated returns first page by default" do
+  test "GET /api/inventory returns first page by default" do
     # Create 25 items (more than one page at 20 per page)
     25.times do |i|
       CollectionItem.create!(
@@ -64,7 +64,7 @@ class InventoryPaginatedTest < ActionDispatch::IntegrationTest
       stub_scryfall_card_details("page_test_#{i}")
     end
 
-    get api_path("/inventory/paginated")
+    get api_path("/inventory")
 
     assert_response :success
     body = JSON.parse(response.body)
@@ -76,7 +76,7 @@ class InventoryPaginatedTest < ActionDispatch::IntegrationTest
     assert_equal 2, body["total_pages"]
   end
 
-  test "GET /api/inventory/paginated accepts page parameter" do
+  test "GET /api/inventory accepts page parameter" do
     30.times do |i|
       CollectionItem.create!(
         user: @user,
@@ -87,7 +87,7 @@ class InventoryPaginatedTest < ActionDispatch::IntegrationTest
       stub_scryfall_card_details("page_param_#{i}")
     end
 
-    get api_path("/inventory/paginated?page=2")
+    get api_path("/inventory?page=2")
 
     assert_response :success
     body = JSON.parse(response.body)
@@ -97,7 +97,7 @@ class InventoryPaginatedTest < ActionDispatch::IntegrationTest
     assert_equal 30, body["total_count"]
   end
 
-  test "GET /api/inventory/paginated accepts per_page parameter" do
+  test "GET /api/inventory accepts per_page parameter" do
     60.times do |i|
       CollectionItem.create!(
         user: @user,
@@ -108,7 +108,7 @@ class InventoryPaginatedTest < ActionDispatch::IntegrationTest
       stub_scryfall_card_details("per_page_#{i}")
     end
 
-    get api_path("/inventory/paginated?per_page=50")
+    get api_path("/inventory?per_page=50")
 
     assert_response :success
     body = JSON.parse(response.body)
@@ -119,7 +119,7 @@ class InventoryPaginatedTest < ActionDispatch::IntegrationTest
     assert_equal 2, body["total_pages"]
   end
 
-  test "GET /api/inventory/paginated limits per_page to 100 maximum" do
+  test "GET /api/inventory limits per_page to 100 maximum" do
     150.times do |i|
       CollectionItem.create!(
         user: @user,
@@ -130,7 +130,7 @@ class InventoryPaginatedTest < ActionDispatch::IntegrationTest
       stub_scryfall_card_details("max_per_page_#{i}")
     end
 
-    get api_path("/inventory/paginated?per_page=500")
+    get api_path("/inventory?per_page=500")
 
     assert_response :success
     body = JSON.parse(response.body)
@@ -143,62 +143,62 @@ class InventoryPaginatedTest < ActionDispatch::IntegrationTest
   # Scenario 2: Performance benchmarks comparing both approaches
   # ---------------------------------------------------------------------------
 
-  test "benchmark: 50 items - paginated vs non-paginated" do
+  test "benchmark: 50 items - default page vs all items" do
     create_test_inventory(50)
 
-    paginated_time = Benchmark.realtime do
-      get api_path("/inventory/paginated?per_page=20")
+    default_page_time = Benchmark.realtime do
+      get api_path("/inventory?per_page=20")
       assert_response :success
     end
 
-    non_paginated_time = Benchmark.realtime do
-      get api_path("/inventory")
+    all_items_time = Benchmark.realtime do
+      get api_path("/inventory?per_page=50")
       assert_response :success
     end
 
     puts "\n=== Benchmark: 50 items ==="
-    puts "Paginated (20/page):    #{(paginated_time * 1000).round(2)}ms"
-    puts "Non-paginated (all 50): #{(non_paginated_time * 1000).round(2)}ms"
-    puts "Difference: #{((paginated_time - non_paginated_time) * 1000).round(2)}ms"
+    puts "Default page (20 items): #{(default_page_time * 1000).round(2)}ms"
+    puts "All items (50):          #{(all_items_time * 1000).round(2)}ms"
+    puts "Difference: #{((default_page_time - all_items_time) * 1000).round(2)}ms"
   end
 
-  test "benchmark: 100 items - paginated vs non-paginated" do
+  test "benchmark: 100 items - default page vs all items" do
     create_test_inventory(100)
 
-    paginated_time = Benchmark.realtime do
-      get api_path("/inventory/paginated?per_page=20")
+    default_page_time = Benchmark.realtime do
+      get api_path("/inventory?per_page=20")
       assert_response :success
     end
 
-    non_paginated_time = Benchmark.realtime do
-      get api_path("/inventory")
+    all_items_time = Benchmark.realtime do
+      get api_path("/inventory?per_page=100")
       assert_response :success
     end
 
     puts "\n=== Benchmark: 100 items ==="
-    puts "Paginated (20/page):     #{(paginated_time * 1000).round(2)}ms"
-    puts "Non-paginated (all 100): #{(non_paginated_time * 1000).round(2)}ms"
-    puts "Difference: #{((paginated_time - non_paginated_time) * 1000).round(2)}ms"
+    puts "Default page (20 items): #{(default_page_time * 1000).round(2)}ms"
+    puts "All items (100):         #{(all_items_time * 1000).round(2)}ms"
+    puts "Difference: #{((default_page_time - all_items_time) * 1000).round(2)}ms"
   end
 
-  test "benchmark: 500 items - paginated vs non-paginated" do
+  test "benchmark: 500 items - default page vs max page" do
     create_test_inventory(500)
 
-    paginated_time = Benchmark.realtime do
-      get api_path("/inventory/paginated?per_page=20")
+    default_page_time = Benchmark.realtime do
+      get api_path("/inventory?per_page=20")
       assert_response :success
     end
 
-    non_paginated_time = Benchmark.realtime do
-      get api_path("/inventory")
+    max_page_time = Benchmark.realtime do
+      get api_path("/inventory?per_page=100")
       assert_response :success
     end
 
     puts "\n=== Benchmark: 500 items ==="
-    puts "Paginated (20/page):     #{(paginated_time * 1000).round(2)}ms"
-    puts "Non-paginated (all 500): #{(non_paginated_time * 1000).round(2)}ms"
-    puts "Difference: #{((paginated_time - non_paginated_time) * 1000).round(2)}ms"
-    puts "Speedup: #{(non_paginated_time / paginated_time).round(2)}x"
+    puts "Default page (20 items): #{(default_page_time * 1000).round(2)}ms"
+    puts "Max page (100 items):    #{(max_page_time * 1000).round(2)}ms"
+    puts "Difference: #{((default_page_time - max_page_time) * 1000).round(2)}ms"
+    puts "Speedup: #{(max_page_time / default_page_time).round(2)}x faster for smaller page"
   end
 
   # ---------------------------------------------------------------------------
@@ -231,7 +231,7 @@ class InventoryPaginatedTest < ActionDispatch::IntegrationTest
     end
 
     queries = track_queries do
-      get api_path("/inventory/paginated?per_page=20")
+      get api_path("/inventory?per_page=20")
     end
 
     assert_response :success
@@ -263,13 +263,13 @@ class InventoryPaginatedTest < ActionDispatch::IntegrationTest
 
     # Measure page 1
     queries_page_1 = track_queries do
-      get api_path("/inventory/paginated?page=1&per_page=20")
+      get api_path("/inventory?page=1&per_page=20")
     end
     db_queries_page_1 = queries_page_1.select { |q| q.match?(/SELECT.*FROM/i) && !q.match?(/sqlite_master|PRAGMA/) }.size
 
     # Measure page 2
     queries_page_2 = track_queries do
-      get api_path("/inventory/paginated?page=2&per_page=20")
+      get api_path("/inventory?page=2&per_page=20")
     end
     db_queries_page_2 = queries_page_2.select { |q| q.match?(/SELECT.*FROM/i) && !q.match?(/sqlite_master|PRAGMA/) }.size
 
@@ -298,7 +298,7 @@ class InventoryPaginatedTest < ActionDispatch::IntegrationTest
     Rails.cache.clear
 
     # Paginated request (20 items)
-    get api_path("/inventory/paginated?per_page=20")
+    get api_path("/inventory?per_page=20")
     assert_response :success
     paginated_body = JSON.parse(response.body)
     paginated_items_count = paginated_body["items"].size
@@ -306,20 +306,20 @@ class InventoryPaginatedTest < ActionDispatch::IntegrationTest
     # Clear cache again
     Rails.cache.clear
 
-    # Non-paginated request (all 100 items)
-    get api_path("/inventory")
+    # Request all items (per_page=100 to get all 100 items)
+    get api_path("/inventory?per_page=100")
     assert_response :success
-    non_paginated_body = JSON.parse(response.body)
-    non_paginated_items_count = non_paginated_body.size
+    all_items_body = JSON.parse(response.body)
+    all_items_count = all_items_body["items"].size
 
     puts "\n=== Scryfall API Call Reduction ==="
-    puts "Paginated endpoint fetched:     #{paginated_items_count} cards"
-    puts "Non-paginated endpoint fetched: #{non_paginated_items_count} cards"
-    puts "Reduction: #{non_paginated_items_count - paginated_items_count} fewer API calls"
-    puts "Percentage: #{((1 - paginated_items_count.to_f / non_paginated_items_count) * 100).round(1)}% reduction"
+    puts "Default page size (20):     #{paginated_items_count} cards"
+    puts "Requesting all items (100): #{all_items_count} cards"
+    puts "Reduction: #{all_items_count - paginated_items_count} fewer API calls"
+    puts "Percentage: #{((1 - paginated_items_count.to_f / all_items_count) * 100).round(1)}% reduction"
 
-    assert paginated_items_count < non_paginated_items_count,
-           "Paginated endpoint should fetch fewer cards than non-paginated"
+    assert paginated_items_count < all_items_count,
+           "Default pagination (20/page) should fetch fewer cards than requesting all items"
   end
 
   # ---------------------------------------------------------------------------
@@ -331,21 +331,22 @@ class InventoryPaginatedTest < ActionDispatch::IntegrationTest
       CollectionItem.delete_all
       create_test_inventory(count)
 
-      # Measure paginated response (20 items)
-      get api_path("/inventory/paginated?per_page=20")
+      # Measure default page size (20 items)
+      get api_path("/inventory?per_page=20")
       assert_response :success
-      paginated_size = response.body.bytesize
+      default_page_size = response.body.bytesize
 
-      # Measure non-paginated response (all items)
-      get api_path("/inventory")
+      # Measure requesting all items (up to 100 max)
+      items_to_request = [count, 100].min
+      get api_path("/inventory?per_page=#{items_to_request}")
       assert_response :success
-      non_paginated_size = response.body.bytesize
+      all_items_size = response.body.bytesize
 
       puts "\n=== Payload Size: #{count} items in inventory ==="
-      puts "Paginated (20 items):        #{(paginated_size / 1024.0).round(2)} KB"
-      puts "Non-paginated (#{count} items): #{(non_paginated_size / 1024.0).round(2)} KB"
-      puts "Reduction: #{((non_paginated_size - paginated_size) / 1024.0).round(2)} KB"
-      puts "Percentage: #{((1 - paginated_size.to_f / non_paginated_size) * 100).round(1)}% smaller"
+      puts "Default page (20 items):     #{(default_page_size / 1024.0).round(2)} KB"
+      puts "All items (#{items_to_request} items):      #{(all_items_size / 1024.0).round(2)} KB"
+      puts "Reduction: #{((all_items_size - default_page_size) / 1024.0).round(2)} KB"
+      puts "Percentage: #{((1 - default_page_size.to_f / all_items_size) * 100).round(1)}% smaller"
     end
   end
 
