@@ -57,6 +57,8 @@ class WishlistControllerTest < ActionDispatch::IntegrationTest
     other_user = User.create!(email: "other_wish@example.com", name: "Other")
     CollectionItem.create!(user: other_user, card_id: "their_wish", collection_type: "wishlist", quantity: 1)
 
+    stub_scryfall_card_details("wish_card", name: "Wish Card")
+
     get api_path("/wishlist")
 
     assert_response :success
@@ -68,6 +70,8 @@ class WishlistControllerTest < ActionDispatch::IntegrationTest
   test "GET /api/wishlist does not return inventory items" do
     CollectionItem.create!(user: @user, card_id: "inv_only", collection_type: "inventory", quantity: 1)
     CollectionItem.create!(user: @user, card_id: "wish_only", collection_type: "wishlist", quantity: 1)
+
+    stub_scryfall_card_details("wish_only", name: "Wish Only Card")
 
     get api_path("/wishlist")
 
@@ -81,6 +85,8 @@ class WishlistControllerTest < ActionDispatch::IntegrationTest
   # #create -- adds item or increments quantity on duplicate
   # ---------------------------------------------------------------------------
   test "POST /api/wishlist creates a new wishlist item" do
+    stub_valid_card("new_wish")
+
     post api_path("/wishlist"), params: { card_id: "new_wish", quantity: 1 }, as: :json
 
     assert_response :created
@@ -93,6 +99,8 @@ class WishlistControllerTest < ActionDispatch::IntegrationTest
 
   test "POST /api/wishlist increments quantity when card already exists in wishlist" do
     CollectionItem.create!(user: @user, card_id: "dup_wish", collection_type: "wishlist", quantity: 2)
+
+    stub_valid_card("dup_wish")
 
     post api_path("/wishlist"), params: { card_id: "dup_wish", quantity: 1 }, as: :json
 
@@ -109,6 +117,8 @@ class WishlistControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "POST /api/wishlist returns unprocessable_entity for zero quantity" do
+    stub_valid_card("zero_wish")
+
     post api_path("/wishlist"), params: { card_id: "zero_wish", quantity: 0 }, as: :json
 
     assert_response :unprocessable_entity
