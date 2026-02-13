@@ -39,8 +39,9 @@ export type SortOption =
 	| 'date-oldest';
 
 export interface InventoryStats {
-	totalUniqueCards: number;
-	totalQuantity: number;
+	mostValuableCard: string | null;
+	totalValueCents: number;
+	cardsOverTenDollars: number;
 	totalSets: number;
 	mostCollectedSet: string | null;
 }

@@ -34,7 +34,8 @@ export const load: PageLoad = async ({ fetch, url }) => {
 				page: 1,
 				per_page: data.length,
 				total_count: data.length,
-				total_pages: 1
+				total_pages: 1,
+				stats: null
 			};
 		}
 
@@ -44,7 +45,8 @@ export const load: PageLoad = async ({ fetch, url }) => {
 			page: data.page || 1,
 			per_page: data.per_page || 20,
 			total_count: data.total_count || 0,
-			total_pages: data.total_pages || 0
+			total_pages: data.total_pages || 0,
+			stats: data.stats || null
 		};
 	} catch (error) {
 		console.error('Failed to fetch inventory:', error);
@@ -54,6 +56,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 			per_page: 20,
 			total_count: 0,
 			total_pages: 0,
+			stats: null,
 			error: error instanceof Error ? error.message : 'Failed to load inventory'
 		};
 	}

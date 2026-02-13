@@ -23,6 +23,7 @@ class InventoryController < ApplicationController
   #   per_page: items per page
   #   total_count: total number of items
   #   total_pages: total number of pages
+  #   stats: inventory statistics (most_valuable_card, total_value_cents, total_sets, most_collected_set)
   def index
     # Get base collection scoped to current user and inventory type
     base_items = collection_items.includes(cached_image_attachment: :blob)
@@ -45,12 +46,27 @@ class InventoryController < ApplicationController
     items_with_details = enrich_with_card_details(paginated_items)
     sorted_items = sort_by_card_name(items_with_details)
 
+    # Calculate stats for entire inventory (before pagination)
+    # Only calculate if there are items
+    stats = if base_items.any?
+              calculate_inventory_stats(base_items)
+            else
+              {
+                most_valuable_card: nil,
+                total_value_cents: 0,
+                cards_over_ten_dollars: 0,
+                total_sets: 0,
+                most_collected_set: nil
+              }
+            end
+
     render json: {
       items: sorted_items,
       page: pagy.page,
       per_page: pagy.limit,
       total_count: pagy.count,
-      total_pages: pagy.pages
+      total_pages: pagy.pages,
+      stats: stats
     }
   end
 
@@ -156,6 +172,49 @@ class InventoryController < ApplicationController
   end
 
   private
+
+  # Calculates inventory statistics for the entire collection.
+  # Preloads prices and enriches all items to get accurate stats.
+  def calculate_inventory_stats(base_items)
+    # Preload prices for all items
+    preload_prices(base_items)
+
+    # Enrich all items with card details
+    all_items_with_details = enrich_with_card_details(base_items)
+
+    # Find most valuable card by total_price_cents
+    most_valuable_item = all_items_with_details.max_by { |item| item[:total_price_cents] || 0 }
+    most_valuable_card = if most_valuable_item && (most_valuable_item[:total_price_cents] || 0) > 0
+                           most_valuable_item[:card_name]
+                         else
+                           nil
+                         end
+
+    # Calculate total value
+    total_value_cents = all_items_with_details.sum { |item| item[:total_price_cents] || 0 }
+
+    # Count cards valued over $10 (1000 cents)
+    cards_over_ten_dollars = all_items_with_details.count { |item| (item[:total_price_cents] || 0) >= 1000 }
+
+    # Count unique sets
+    unique_sets = all_items_with_details.map { |item| item[:set] }.uniq
+    total_sets = unique_sets.size
+
+    # Find most collected set by counting cards per set
+    set_counts = all_items_with_details.each_with_object(Hash.new(0)) do |item, counts|
+      counts[item[:set_name]] += 1
+    end
+
+    most_collected_set = set_counts.max_by { |_set_name, count| count }&.first
+
+    {
+      most_valuable_card: most_valuable_card,
+      total_value_cents: total_value_cents,
+      cards_over_ten_dollars: cards_over_ten_dollars,
+      total_sets: total_sets,
+      most_collected_set: most_collected_set
+    }
+  end
 
   # Preloads CardPrice records for all items to prevent N+1 queries.
   # Fetches the latest price for each unique card_id in a single query

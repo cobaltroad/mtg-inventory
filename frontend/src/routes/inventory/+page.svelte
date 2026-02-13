@@ -11,7 +11,7 @@
 	import SortDropdown from '$lib/components/SortDropdown.svelte';
 	import InventoryStats from '$lib/components/InventoryStats.svelte';
 	import { pluralize } from '$lib/utils/format';
-	import { filterBySet, sortInventory, calculateStats } from '$lib/utils/inventory';
+	import { filterBySet, sortInventory } from '$lib/utils/inventory';
 	import type { PageData } from './$types';
 	import type { SortOption } from '$lib/types/inventory';
 
@@ -42,6 +42,9 @@
 	let backendTotalCount = $state(0);
 	let backendTotalPages = $state(0);
 
+	// Backend stats from API - initialize without referencing data
+	let backendStats = $state<typeof data.stats>(null);
+
 	// Sync allItems and pagination metadata with data using $effect
 	// This reads data in a reactive context, establishing proper tracking
 	$effect(() => {
@@ -50,6 +53,7 @@
 		const newPerPage = data.per_page || 0;
 		const newTotalCount = data.total_count || 0;
 		const newTotalPages = data.total_pages || 0;
+		const newStats = data.stats || null;
 
 		// Only update if values have changed (avoid unnecessary reactivity)
 		if (newPage !== backendPage) backendPage = newPage;
@@ -67,6 +71,7 @@
 		}
 		if (newTotalCount !== backendTotalCount) backendTotalCount = newTotalCount;
 		if (newTotalPages !== backendTotalPages) backendTotalPages = newTotalPages;
+		backendStats = newStats;
 
 		// Mark initial loading as complete once we've synced data
 		initialLoading = false;
@@ -130,7 +135,6 @@
 	// Apply filtering and sorting
 	let filteredItems = $derived(filterBySet(allItems, currentFilter));
 	let sortedItems = $derived(sortInventory(filteredItems, currentSort));
-	let stats = $derived(calculateStats(filteredItems));
 
 	// Check if we're using backend pagination
 	// Backend pagination: we have metadata AND we don't have all items locally
@@ -256,7 +260,9 @@
 	{:else if !error && allItems.length === 0}
 		<EmptyInventory />
 	{:else if allItems.length > 0}
-		<InventoryStats {stats} />
+		{#if backendStats}
+			<InventoryStats stats={backendStats} />
+		{/if}
 
 		<div class="controls-bar">
 			<FilterBar items={allItems} {currentFilter} onFilterChange={handleFilterChange} />

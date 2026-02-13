@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { filterBySet, sortInventory, calculateStats } from './inventory';
+import { filterBySet, sortInventory } from './inventory';
 import type { InventoryItem } from '$lib/types/inventory';
 
 // ---------------------------------------------------------------------------
@@ -240,44 +240,3 @@ describe('sortInventory - Date Added', () => {
 	});
 });
 
-// ---------------------------------------------------------------------------
-// Tests: calculateStats
-// ---------------------------------------------------------------------------
-describe('calculateStats', () => {
-	it('calculates total unique cards', () => {
-		const stats = calculateStats(MOCK_ITEMS);
-		expect(stats.totalUniqueCards).toBe(4);
-	});
-
-	it('calculates total quantity across all cards', () => {
-		const stats = calculateStats(MOCK_ITEMS);
-		expect(stats.totalQuantity).toBe(11); // 3 + 1 + 5 + 2
-	});
-
-	it('calculates number of different sets', () => {
-		const stats = calculateStats(MOCK_ITEMS);
-		expect(stats.totalSets).toBe(3); // c15, uma, lea
-	});
-
-	it('identifies most collected set by card count', () => {
-		const stats = calculateStats(MOCK_ITEMS);
-		expect(stats.mostCollectedSet).toBe('Commander 2015');
-	});
-
-	it('handles empty inventory', () => {
-		const stats = calculateStats([]);
-		expect(stats.totalUniqueCards).toBe(0);
-		expect(stats.totalQuantity).toBe(0);
-		expect(stats.totalSets).toBe(0);
-		expect(stats.mostCollectedSet).toBeNull();
-	});
-
-	it('updates stats when filtered', () => {
-		const filtered = filterBySet(MOCK_ITEMS, 'c15');
-		const stats = calculateStats(filtered);
-		expect(stats.totalUniqueCards).toBe(2);
-		expect(stats.totalQuantity).toBe(8); // 3 + 5
-		expect(stats.totalSets).toBe(1);
-		expect(stats.mostCollectedSet).toBe('Commander 2015');
-	});
-});

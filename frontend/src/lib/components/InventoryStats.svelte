@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { InventoryStats } from '$lib/types/inventory';
-	import { Library, Package, Layers, Trophy } from 'lucide-svelte';
+	import { TrendingUp, DollarSign, Gem, Layers, Trophy } from 'lucide-svelte';
+	import { formatPrice } from '$lib/utils/format';
 
 	interface Props {
 		stats: InventoryStats;
@@ -10,23 +11,35 @@
 </script>
 
 <div class="stats-container">
+	{#if stats.mostValuableCard}
+		<div class="stat-card">
+			<div class="stat-icon">
+				<TrendingUp size={20} />
+			</div>
+			<div class="stat-content">
+				<div class="stat-value">{stats.mostValuableCard}</div>
+				<div class="stat-label">Most Valuable</div>
+			</div>
+		</div>
+	{/if}
+
 	<div class="stat-card">
 		<div class="stat-icon">
-			<Library size={20} />
+			<DollarSign size={20} />
 		</div>
 		<div class="stat-content">
-			<div class="stat-value">{stats.totalUniqueCards}</div>
-			<div class="stat-label">Unique Cards</div>
+			<div class="stat-value">{formatPrice(stats.totalValueCents)}</div>
+			<div class="stat-label">Total Value</div>
 		</div>
 	</div>
 
 	<div class="stat-card">
 		<div class="stat-icon">
-			<Package size={20} />
+			<Gem size={20} />
 		</div>
 		<div class="stat-content">
-			<div class="stat-value">{stats.totalQuantity}</div>
-			<div class="stat-label">Total Quantity</div>
+			<div class="stat-value">{stats.cardsOverTenDollars}</div>
+			<div class="stat-label">Cards Over $10</div>
 		</div>
 	</div>
 
