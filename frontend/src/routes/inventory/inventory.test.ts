@@ -254,7 +254,7 @@ describe('Inventory Page - Data Display', () => {
 		});
 
 		await waitFor(() => {
-			expect(screen.getByText('foil')).toBeInTheDocument();
+			expect(screen.getByText('Foil')).toBeInTheDocument();
 			expect(screen.getByText('Acquired: 2025-01-15')).toBeInTheDocument();
 			expect(screen.getByText(/\$50\.00/)).toBeInTheDocument();
 		});

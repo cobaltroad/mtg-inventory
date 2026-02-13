@@ -59,14 +59,16 @@
 		if (newPage !== backendPage) backendPage = newPage;
 		if (newPerPage !== backendPerPage) {
 			backendPerPage = newPerPage;
-			// When backend per_page changes, sync to local pageSize if valid and initialized
+			// When backend per_page changes, sync to local pageSize if valid
+			// This handles deep linking with URL parameters (e.g., ?per_page=50)
 			if (
-				pageSizeInitialized &&
 				newPerPage > 0 &&
 				newPerPage !== pageSize &&
 				PAGE_SIZE_OPTIONS.includes(newPerPage as typeof PAGE_SIZE_OPTIONS[number])
 			) {
 				pageSize = newPerPage;
+				// Mark as initialized so localStorage doesn't override it
+				pageSizeInitialized = true;
 			}
 		}
 		if (newTotalCount !== backendTotalCount) backendTotalCount = newTotalCount;

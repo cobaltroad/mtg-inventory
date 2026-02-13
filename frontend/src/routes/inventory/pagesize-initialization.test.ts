@@ -186,7 +186,8 @@ describe('PageSize Initialization', () => {
 	});
 
 	it('should respect all valid localStorage values [20, 50, 100]', async () => {
-		const items51 = generateItems(51);
+		// Use 101 items so pagination shows for all page sizes (20, 50, 100)
+		const items = generateItems(101);
 
 		for (const validSize of [20, 50, 100]) {
 			localStorage.setItem('inventory-page-size', String(validSize));
@@ -194,7 +195,7 @@ describe('PageSize Initialization', () => {
 			const { unmount } = render(InventoryPage, {
 				props: {
 					data: {
-						items: items51
+						items
 					}
 				},
 				context: mockContext
