@@ -99,6 +99,8 @@ class CollectionItemIntegrationTest < ActionDispatch::IntegrationTest
   # Scenario 6 -- move_from_wishlist transfers the item correctly
   # ---------------------------------------------------------------------------
   test "POST /api/inventory/move_from_wishlist transfers card from wishlist to inventory" do
+    stub_valid_card("transfer_card")
+
     # Seed a wishlist item
     post api_path("/wishlist"), params: { card_id: "transfer_card", quantity: 3 }, as: :json
     assert_response :created
@@ -160,6 +162,8 @@ class CollectionItemIntegrationTest < ActionDispatch::IntegrationTest
 
     CollectionItem.create!(user: @user, card_id: "my_wish", collection_type: "wishlist", quantity: 1)
     CollectionItem.create!(user: other_user, card_id: "their_wish", collection_type: "wishlist", quantity: 1)
+
+    stub_scryfall_card_details("my_wish", name: "My Wish Card")
 
     get api_path("/wishlist")
     assert_response :success

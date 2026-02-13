@@ -586,6 +586,115 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "POST /api/inventory/move_from_wishlist accepts acquired_date and acquired_price parameters" do
+    wish_item = CollectionItem.create!(user: @user, card_id: "move_with_params", collection_type: "wishlist", quantity: 2)
+
+    post api_path("/inventory/move_from_wishlist"), params: {
+      card_id: "move_with_params",
+      acquired_date: "2026-02-10",
+      acquired_price_cents: 1500
+    }, as: :json
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "move_with_params", body["card_id"]
+    assert_equal "inventory", body["collection_type"]
+    assert_equal 2, body["quantity"]
+    assert_equal "2026-02-10", body["acquired_date"]
+    assert_equal 1500, body["acquired_price_cents"]
+
+    # Wishlist row must be gone
+    assert_equal 0, CollectionItem.where(user: @user, card_id: "move_with_params", collection_type: "wishlist").count
+  end
+
+  test "POST /api/inventory/move_from_wishlist validates required acquired_date parameter" do
+    wish_item = CollectionItem.create!(user: @user, card_id: "move_no_date", collection_type: "wishlist", quantity: 1)
+
+    post api_path("/inventory/move_from_wishlist"), params: {
+      card_id: "move_no_date",
+      acquired_price_cents: 1000
+    }, as: :json
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_includes body["error"], "acquired_date"
+
+    # Wishlist item should still exist
+    assert_equal 1, CollectionItem.where(user: @user, card_id: "move_no_date", collection_type: "wishlist").count
+  end
+
+  test "POST /api/inventory/move_from_wishlist validates required acquired_price parameter" do
+    wish_item = CollectionItem.create!(user: @user, card_id: "move_no_price", collection_type: "wishlist", quantity: 1)
+
+    post api_path("/inventory/move_from_wishlist"), params: {
+      card_id: "move_no_price",
+      acquired_date: "2026-02-10"
+    }, as: :json
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_includes body["error"], "acquired_price"
+
+    # Wishlist item should still exist
+    assert_equal 1, CollectionItem.where(user: @user, card_id: "move_no_price", collection_type: "wishlist").count
+  end
+
+  test "POST /api/inventory/move_from_wishlist increments quantity when card already in inventory" do
+    CollectionItem.create!(user: @user, card_id: "existing_inv", collection_type: "inventory", quantity: 3, acquired_date: Date.parse("2026-01-01"), acquired_price_cents: 1000)
+    CollectionItem.create!(user: @user, card_id: "existing_inv", collection_type: "wishlist", quantity: 2)
+
+    post api_path("/inventory/move_from_wishlist"), params: {
+      card_id: "existing_inv",
+      acquired_date: "2026-02-10",
+      acquired_price_cents: 1500
+    }, as: :json
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "existing_inv", body["card_id"]
+    assert_equal "inventory", body["collection_type"]
+    assert_equal 5, body["quantity"] # 3 + 2
+
+    # Wishlist row must be gone
+    assert_equal 0, CollectionItem.where(user: @user, card_id: "existing_inv", collection_type: "wishlist").count
+    # Only one inventory row should exist
+    assert_equal 1, CollectionItem.where(user: @user, card_id: "existing_inv", collection_type: "inventory").count
+  end
+
+  test "POST /api/inventory/move_from_wishlist rolls back on error" do
+    wish_item = CollectionItem.create!(user: @user, card_id: "rollback_test", collection_type: "wishlist", quantity: 1)
+
+    post api_path("/inventory/move_from_wishlist"), params: {
+      card_id: "rollback_test",
+      acquired_date: (Date.today + 1).to_s, # Future date - invalid
+      acquired_price_cents: 1000
+    }, as: :json
+
+    assert_response :unprocessable_entity
+
+    # Wishlist item should still exist (transaction rolled back)
+    assert_equal 1, CollectionItem.where(user: @user, card_id: "rollback_test", collection_type: "wishlist").count
+    # No inventory item should be created
+    assert_equal 0, CollectionItem.where(user: @user, card_id: "rollback_test", collection_type: "inventory").count
+  end
+
+  test "POST /api/inventory/move_from_wishlist accepts optional finish and language parameters" do
+    wish_item = CollectionItem.create!(user: @user, card_id: "move_with_optional", collection_type: "wishlist", quantity: 1)
+
+    post api_path("/inventory/move_from_wishlist"), params: {
+      card_id: "move_with_optional",
+      acquired_date: "2026-02-10",
+      acquired_price_cents: 2000,
+      finish: "foil",
+      language: "Japanese"
+    }, as: :json
+
+    assert_response :created
+    body = JSON.parse(response.body)
+    assert_equal "foil", body["finish"]
+    assert_equal "Japanese", body["language"]
+  end
+
   # ---------------------------------------------------------------------------
   # Error handling for missing default user
   # ---------------------------------------------------------------------------

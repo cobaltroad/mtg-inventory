@@ -4,7 +4,7 @@
 		House,
 		Search,
 		Medal,
-		Layers,
+		Heart,
 		FileText,
 		LayoutGrid,
 		Menu,
@@ -49,7 +49,7 @@
 		{ href: `${base}/`, label: 'Home', icon: House },
 		{ href: `${base}/search`, label: 'Search', icon: Search },
 		{ href: `${base}/metagame`, label: 'Metagame', icon: Medal },
-		{ href: `${base}/decks`, label: 'Decks', icon: Layers },
+		{ href: `${base}/wishlist`, label: 'Wishlist', icon: Heart },
 		{ href: `${base}/reports`, label: 'Reports', icon: FileText },
 		{ href: `${base}/inventory`, label: 'Inventory', icon: LayoutGrid }
 	];
