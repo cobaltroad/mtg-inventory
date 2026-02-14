@@ -6,6 +6,7 @@
 export interface DecklistCard {
 	card_id: string;
 	card_name: string;
+	card_url?: string;
 	quantity: number;
 	is_commander?: boolean;
 	card_type?: string;
