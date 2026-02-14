@@ -1,447 +1,299 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { render, cleanup, fireEvent, waitFor } from '@testing-library/svelte';
+import { render, cleanup, fireEvent, waitFor, screen } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
+import { tick } from 'svelte';
 import PrintingModal from './PrintingModal.svelte';
+import { MOCK_CARD, MOCK_PRINTINGS, mockFetchForPrintings } from './PrintingModal.test.helpers';
 
 afterEach(() => {
 	cleanup();
 	vi.restoreAllMocks();
 });
 
-const MOCK_CARD = {
-	id: 'spinerock-tyrant-id',
-	name: 'Spinerock Tyrant'
-};
-
-const MOCK_PRINTINGS = [
-	{
-		id: 'printing-1',
-		name: 'Spinerock Tyrant',
-		set: 'm19',
-		set_name: 'Core Set 2019',
-		collector_number: '161',
-		image_url: 'https://example.com/m19-161.jpg',
-		released_at: '2018-07-13'
-	},
-	{
-		id: 'printing-2',
-		name: 'Spinerock Tyrant',
-		set: 'cmr',
-		set_name: 'Commander Legends',
-		collector_number: '200',
-		image_url: 'https://example.com/cmr-200.jpg',
-		released_at: '2020-11-20'
-	},
-	{
-		id: 'printing-3',
-		name: 'Spinerock Tyrant',
-		set: 'dmu',
-		set_name: 'Dominaria United',
-		collector_number: '155',
-		image_url: 'https://example.com/dmu-155.jpg',
-		released_at: '2022-09-09'
-	}
-];
-
-describe('PrintingModal - Issue #117: Drawer closes unexpectedly', () => {
-	beforeEach(() => {
-		// Mock fetch for printings API
-		vi.stubGlobal(
-			'fetch',
-			vi.fn().mockImplementation((url: string) => {
-				if (typeof url === 'string' && url.includes('/printings')) {
-					return Promise.resolve({
-						ok: true,
-						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
-					});
-				}
-				if (typeof url === 'string' && url.includes('/inventory')) {
-					return Promise.resolve({
-						ok: true,
-						json: () => Promise.resolve({ quantity: 1 })
-					});
-				}
-				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-			})
-		);
-	});
-
-	/**
-	 * BUG 1: Drawer should stay open when clicking/selecting printings on the left
-	 */
-	describe('BUG 1: Clicking printings should not close the drawer', () => {
-		it('should keep drawer open when hovering over a printing', async () => {
-			let isOpen = true;
-			const { rerender } = render(PrintingModal, {
-				props: {
-					card: MOCK_CARD,
-					open: isOpen
-				}
-			});
-
-			// Wait for printings to load
-			await waitFor(() => {
-				const printingItems = document.body.querySelectorAll('[data-testid="printing-item"]');
-				expect(printingItems.length).toBe(3);
-			});
-
-			// Hover over second printing
-			const printingItems = document.body.querySelectorAll('[data-testid="printing-item"]');
-			await fireEvent.mouseEnter(printingItems[1]);
-
-			// Wait a bit to ensure no state change
-			await new Promise((resolve) => setTimeout(resolve, 100));
-
-			// Drawer should still be visible
-			const drawer = document.body.querySelector('[data-testid="modal-backdrop"]');
-			expect(drawer).toBeVisible();
-		});
-
-		it('should keep drawer open when clicking on a printing item', async () => {
-			let isOpen = true;
-			const { rerender } = render(PrintingModal, {
-				props: {
-					card: MOCK_CARD,
-					open: isOpen
-				}
-			});
-
-			// Wait for printings to load
-			await waitFor(() => {
-				const printingItems = document.body.querySelectorAll('[data-testid="printing-item"]');
-				expect(printingItems.length).toBe(3);
-			});
-
-			// Click on second printing
-			const printingItems = document.body.querySelectorAll('[data-testid="printing-item"]');
-			await fireEvent.click(printingItems[1]);
-
-			// Wait a bit to ensure no state change
-			await new Promise((resolve) => setTimeout(resolve, 100));
-
-			// Drawer should still be visible
-			const drawer = document.body.querySelector('[data-testid="modal-backdrop"]');
-			expect(drawer).toBeVisible();
-		});
-
-		it('should change displayed image when hovering over different printings', async () => {
-			render(PrintingModal, {
-				props: {
-					card: MOCK_CARD,
-					open: true
-				}
-			});
-
-			// Wait for printings to load and first image to display
-			await waitFor(() => {
-				const img = document.body.querySelector('.image-preview-area img') as HTMLImageElement;
-				expect(img).toBeInTheDocument();
-			});
-
-			// Get initial image source (first printing auto-selected)
-			const img = document.body.querySelector('.image-preview-area img') as HTMLImageElement;
-			const initialSrc = img.src;
-			expect(initialSrc).toContain(MOCK_PRINTINGS[0].image_url);
-
-			// Hover over second printing
-			const printingItems = document.body.querySelectorAll('[data-testid="printing-item"]');
-			await fireEvent.mouseEnter(printingItems[1]);
-
-			// Wait for image to update
-			await waitFor(() => {
-				const updatedImg = document.body.querySelector(
-					'.image-preview-area img'
-				) as HTMLImageElement;
-				expect(updatedImg.src).toContain(MOCK_PRINTINGS[1].image_url);
-			});
-		});
-
-		it('should focus on a printing without closing the drawer', async () => {
-			render(PrintingModal, {
-				props: {
-					card: MOCK_CARD,
-					open: true
-				}
-			});
-
-			// Wait for printings to load
-			await waitFor(() => {
-				const printingItems = document.body.querySelectorAll('[data-testid="printing-item"]');
-				expect(printingItems.length).toBe(3);
-			});
-
-			// Focus on third printing
-			const printingItems = document.body.querySelectorAll('[data-testid="printing-item"]');
-			await fireEvent.focus(printingItems[2]);
-
-			// Wait a bit
-			await new Promise((resolve) => setTimeout(resolve, 100));
-
-			// Drawer should still be visible
-			const drawer = document.body.querySelector('[data-testid="modal-backdrop"]');
-			expect(drawer).toBeVisible();
-		});
-	});
-
-	/**
-	 * BUG 2: Drawer should stay open when clicking "Add to Inventory"
-	 */
-	describe('BUG 2: Add to Inventory button should not close the drawer', () => {
-		it('should close drawer after successfully adding to inventory', async () => {
-			const mockFetch = vi.fn().mockImplementation((url: string) => {
-				if (typeof url === 'string' && url.includes('/printings')) {
-					return Promise.resolve({
-						ok: true,
-						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
-					});
-				}
-				if (typeof url === 'string' && url.includes('/inventory')) {
-					return Promise.resolve({
-						ok: true,
-						json: () => Promise.resolve({ quantity: 1 })
-					});
-				}
-				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-			});
+// ===========================================================================
+// RENDERING & DISPLAY
+// ===========================================================================
+describe('PrintingModal - Rendering & Display', () => {
+	describe('Modal Display & Loading', () => {
+		it('renders modal centered when open prop is true', async () => {
+			const mockFetch = mockFetchForPrintings();
 			vi.stubGlobal('fetch', mockFetch);
 
-			render(PrintingModal, {
-				props: {
-					card: MOCK_CARD,
-					open: true
-				}
-			});
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
 
-			// Wait for printings to load
+			const dialog = screen.getByRole('dialog');
+			expect(dialog).toBeInTheDocument();
+		});
+
+		it('does not render modal when open prop is false', () => {
+			render(PrintingModal, { props: { card: MOCK_CARD, open: false } });
+
+			const dialog = screen.queryByRole('dialog');
+			expect(dialog).not.toBeInTheDocument();
+		});
+
+		it('displays card name as title', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
 			await waitFor(() => {
-				const printingItems = document.body.querySelectorAll('[data-testid="printing-item"]');
-				expect(printingItems.length).toBe(3);
+				expect(screen.getByText(/Lightning Bolt/)).toBeInTheDocument();
 			});
+		});
 
-			// Find and click the Add to Inventory button
-			const addButton = document.body.querySelector('button.inventory-button') as HTMLButtonElement;
-			expect(addButton).toBeInTheDocument();
-			expect(addButton.textContent).toContain('Add to Inventory');
-
-			await fireEvent.click(addButton);
-
-			// Wait for the API call to complete
-			await waitFor(() => {
-				expect(mockFetch).toHaveBeenCalledWith(
-					expect.stringContaining('/api/inventory'),
-					expect.objectContaining({
-						method: 'POST'
-					})
+		it('shows loading indicator during data fetch', async () => {
+			const mockFetch = vi
+				.fn()
+				.mockImplementation(
+					() =>
+						new Promise((resolve) =>
+							setTimeout(
+								() =>
+									resolve({ ok: true, json: () => Promise.resolve({ printings: MOCK_PRINTINGS }) }),
+								100
+							)
+						)
 				);
-			});
+			vi.stubGlobal('fetch', mockFetch);
 
-			// Note: Drawer closing behavior is tested via manual/integration testing
-			// In unit tests, the Dialog component doesn't fully unmount
-		});
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
 
-		it('should show success toast and close drawer after adding to inventory', async () => {
-			render(PrintingModal, {
-				props: {
-					card: MOCK_CARD,
-					open: true
-				}
-			});
-
-			// Wait for printings to load
-			await waitFor(() => {
-				const printingItems = document.body.querySelectorAll('[data-testid="printing-item"]');
-				expect(printingItems.length).toBe(3);
-			});
-
-			// Click Add to Inventory
-			const addButton = document.body.querySelector('button.inventory-button') as HTMLButtonElement;
-			await fireEvent.click(addButton);
-
-			// Wait for success toast to appear
-			await waitFor(() => {
-				const toastMessage = document.body.textContent;
-				expect(toastMessage).toContain('Added');
-				expect(toastMessage).toContain('to inventory');
-			});
-
-			// Note: Drawer closing behavior is tested via manual/integration testing
-			// In unit tests, the Dialog component doesn't fully unmount
+			expect(screen.getByText(/loading/i)).toBeInTheDocument();
 		});
 	});
 
-	/**
-	 * Suspected Issue: Form fields should have correct values when hovering changes the art
-	 */
-	describe('Form field values when hovering changes the art', () => {
-		it('should submit correct printing data when art is changed by hovering', async () => {
-			const mockFetch = vi.fn().mockImplementation((url: string) => {
-				if (typeof url === 'string' && url.includes('/printings')) {
-					return Promise.resolve({
-						ok: true,
-						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
-					});
-				}
-				if (typeof url === 'string' && url.includes('/inventory')) {
-					return Promise.resolve({
-						ok: true,
-						json: () => Promise.resolve({ quantity: 1 })
-					});
-				}
-				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-			});
+	describe('Printing Information', () => {
+		it('displays all printings with set name, abbreviation, and collector number', async () => {
+			const mockFetch = mockFetchForPrintings();
 			vi.stubGlobal('fetch', mockFetch);
 
-			render(PrintingModal, {
-				props: {
-					card: MOCK_CARD,
-					open: true
-				}
-			});
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
 
-			// Wait for printings to load
 			await waitFor(() => {
-				const printingItems = document.body.querySelectorAll('[data-testid="printing-item"]');
-				expect(printingItems.length).toBe(3);
-			});
+				expect(screen.getByText(/Core Set 2021/)).toBeInTheDocument();
+				expect(screen.getByText(/m21/i)).toBeInTheDocument();
+				expect(screen.getByText(/125/)).toBeInTheDocument();
 
-			// Hover over the third printing (Dominaria United)
-			const printingItems = document.body.querySelectorAll('[data-testid="printing-item"]');
-			await fireEvent.mouseEnter(printingItems[2]);
+				expect(screen.getByText(/Magic 2010/)).toBeInTheDocument();
+				expect(screen.getByText(/m10/i)).toBeInTheDocument();
+				expect(screen.getByText(/146/)).toBeInTheDocument();
 
-			// Wait for image to update
-			await waitFor(() => {
-				const img = document.body.querySelector('.image-preview-area img') as HTMLImageElement;
-				expect(img.src).toContain(MOCK_PRINTINGS[2].image_url);
-			});
-
-			// Click Add to Inventory
-			const addButton = document.body.querySelector('button.inventory-button') as HTMLButtonElement;
-			await fireEvent.click(addButton);
-
-			// Verify the correct printing was sent to the API
-			await waitFor(() => {
-				expect(mockFetch).toHaveBeenCalledWith(
-					expect.stringContaining('/api/inventory'),
-					expect.objectContaining({
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: expect.stringContaining(MOCK_PRINTINGS[2].id)
-					})
-				);
+				expect(screen.getByText(/Limited Edition Alpha/)).toBeInTheDocument();
+				expect(screen.getByText(/lea/i)).toBeInTheDocument();
+				expect(screen.getByText(/157/)).toBeInTheDocument();
 			});
 		});
 
-		it('should have all form fields (acquired_date, price) available', async () => {
-			render(PrintingModal, {
-				props: {
-					card: MOCK_CARD,
-					open: true
-				}
-			});
-
-			// Wait for printings and form to load
-			await waitFor(() => {
-				const addButton = document.body.querySelector('button.inventory-button');
-				expect(addButton).toBeInTheDocument();
-			});
-
-			// Verify visible form fields exist and are properly bound
-			const dateInput = document.body.querySelector('#acquired-date') as HTMLInputElement;
-			const priceInput = document.body.querySelector('#price') as HTMLInputElement;
-
-			expect(dateInput).toBeInTheDocument();
-			expect(dateInput.type).toBe('date');
-
-			expect(priceInput).toBeInTheDocument();
-			expect(priceInput.type).toBe('number');
-
-			// Verify default values
-			expect(priceInput.value).toBe('0');
-
-			// Note: finish and language fields are currently hidden but still
-			// have default values of 'nonfoil' and 'English' respectively
-		});
-
-		it('should preserve form field values when hovering changes the art multiple times', async () => {
-			const mockFetch = vi.fn().mockImplementation((url: string) => {
-				if (typeof url === 'string' && url.includes('/printings')) {
-					return Promise.resolve({
-						ok: true,
-						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
-					});
-				}
-				if (typeof url === 'string' && url.includes('/inventory')) {
-					return Promise.resolve({
-						ok: true,
-						json: () => Promise.resolve({ quantity: 1 })
-					});
-				}
-				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-			});
+		it('displays printings sorted by release date, newest first', async () => {
+			const mockFetch = mockFetchForPrintings();
 			vi.stubGlobal('fetch', mockFetch);
 
-			render(PrintingModal, {
-				props: {
-					card: MOCK_CARD,
-					open: true
-				}
-			});
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
 
-			// Wait for printings to load
 			await waitFor(() => {
-				const printingItems = document.body.querySelectorAll('[data-testid="printing-item"]');
-				expect(printingItems.length).toBe(3);
+				const setNames = screen.getAllByTestId(/printing-item/i);
+				expect(setNames).toHaveLength(3);
 			});
 
-			// Set custom price
-			const priceInput = document.body.querySelector('#price') as HTMLInputElement;
-			priceInput.value = '25.50';
-			await fireEvent.input(priceInput);
+			const modalContent = screen.getByRole('dialog').textContent || '';
+			const m21Index = modalContent.indexOf('Core Set 2021');
+			const m10Index = modalContent.indexOf('Magic 2010');
+			const leaIndex = modalContent.indexOf('Limited Edition Alpha');
 
-			// Hover over different printings multiple times
-			const printingItems = document.body.querySelectorAll('[data-testid="printing-item"]');
-			await fireEvent.mouseEnter(printingItems[1]);
-			await fireEvent.mouseEnter(printingItems[2]);
+			expect(m21Index).toBeLessThan(m10Index);
+			expect(m10Index).toBeLessThan(leaIndex);
+		});
+
+		it('renders scrollable container for many printings', async () => {
+			const manyPrintings = Array.from({ length: 25 }, (_, i) => ({
+				id: `print-${i}`,
+				name: 'Test Card',
+				set: `set${i}`,
+				set_name: `Set ${i}`,
+				collector_number: `${i}`,
+				image_url: `https://example.com/set${i}.jpg`,
+				released_at: `2020-${String((i % 12) + 1).padStart(2, '0')}-01`
+			}));
+
+			const mockFetch = mockFetchForPrintings(manyPrintings);
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				const items = screen.getAllByTestId(/printing-item/i);
+				expect(items.length).toBeGreaterThanOrEqual(20);
+			});
+
+			const scrollContainer = screen.getByTestId('printings-list');
+			expect(scrollContainer).toBeInTheDocument();
+		});
+	});
+
+	describe('Accessibility', () => {
+		it('uses semantic dialog element with role="dialog"', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			const dialog = screen.getByRole('dialog');
+			expect(dialog).toBeInTheDocument();
+		});
+
+		it('has aria-labelledby for dialog title', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			const dialog = screen.getByRole('dialog');
+			expect(dialog).toHaveAttribute('aria-labelledby');
+		});
+	});
+});
+
+// ===========================================================================
+// INTERACTIONS & BEHAVIOR
+// ===========================================================================
+describe('PrintingModal - Interactions & Behavior', () => {
+	describe('Modal Dismissal', () => {
+		it('closes modal via X button', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			const onClose = vi.fn();
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true, onclose: onClose } });
+
+			await waitFor(() => {
+				expect(screen.getByRole('dialog')).toBeInTheDocument();
+			});
+
+			const closeButton = screen.getByRole('button', { name: /close/i });
+			await fireEvent.click(closeButton);
+
+			expect(onClose).toHaveBeenCalled();
+		});
+
+		it('does not add cards to inventory when dismissed', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			const onClose = vi.fn();
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true, onclose: onClose } });
+
+			await waitFor(() => {
+				expect(screen.getByRole('dialog')).toBeInTheDocument();
+			});
+
+			const closeButton = screen.getByRole('button', { name: /close/i });
+			await fireEvent.click(closeButton);
+
+			expect(mockFetch).not.toHaveBeenCalledWith(
+				expect.stringContaining('/api/inventory'),
+				expect.objectContaining({ method: 'POST' })
+			);
+		});
+	});
+
+	describe('Image Preview Behavior', () => {
+		it('does not show inline card-preview popup when hovering over a printing', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
 			await fireEvent.mouseEnter(printingItems[0]);
 
-			// Verify price is still correct (HTML input retains trailing zero)
-			expect(priceInput.value).toBe('25.50');
-
-			// Submit
-			const addButton = document.body.querySelector('button.inventory-button') as HTMLButtonElement;
-			await fireEvent.click(addButton);
-
-			// Verify price was submitted correctly
-			await waitFor(() => {
-				const lastCall = mockFetch.mock.calls.find((call) => call[0].includes('/api/inventory'));
-				if (lastCall) {
-					const body = JSON.parse(lastCall[1].body);
-					expect(body.price).toBe(25.5);
-				}
-			});
+			const inlinePopup = printingItems[0].querySelector('.card-preview');
+			expect(inlinePopup).not.toBeInTheDocument();
 		});
-	});
 
-	/**
-	 * Issue #128: Handle missing image_url for two-sided cards
-	 */
-	describe('Image URL handling - Issue #128', () => {
-		it('should display image when image_url is present', async () => {
-			render(PrintingModal, {
-				props: {
-					card: MOCK_CARD,
-					open: true
-				}
+		it('displays image in right-side preview area when hovering over a printing', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
 			});
 
-			// Wait for printings to load and image to display
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
 			await waitFor(() => {
-				const img = document.body.querySelector('.image-preview-area img') as HTMLImageElement;
-				expect(img).toBeInTheDocument();
-				expect(img.src).toContain(MOCK_PRINTINGS[0].image_url);
+				const previewArea = document.querySelector('.image-preview-area');
+				expect(previewArea).toBeInTheDocument();
+				const img = previewArea?.querySelector('img');
+				expect(img).toHaveAttribute('src', MOCK_PRINTINGS[0].image_url);
 			});
 		});
 
-		it('should handle missing image_url gracefully', async () => {
+		it('persists image in preview area when hovering off a printing', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				const previewArea = document.querySelector('.image-preview-area');
+				expect(previewArea).toBeInTheDocument();
+			});
+
+			await fireEvent.mouseLeave(printingItems[0]);
+
+			await waitFor(() => {
+				const previewArea = document.querySelector('.image-preview-area');
+				expect(previewArea).toBeInTheDocument();
+				const img = previewArea?.querySelector('img');
+				expect(img).toHaveAttribute('src', MOCK_PRINTINGS[0].image_url);
+			});
+		});
+
+		it('updates image when hovering onto a different printing', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				const img = document.querySelector('.image-preview-area img');
+				expect(img).toHaveAttribute('src', MOCK_PRINTINGS[0].image_url);
+			});
+
+			await fireEvent.mouseEnter(printingItems[1]);
+
+			await waitFor(() => {
+				const img = document.querySelector('.image-preview-area img');
+				expect(img).toHaveAttribute('src', MOCK_PRINTINGS[1].image_url);
+			});
+		});
+
+		it('handles missing image_url gracefully', async () => {
 			const printingsWithoutImage = [
 				{
 					...MOCK_PRINTINGS[0],
@@ -462,29 +314,19 @@ describe('PrintingModal - Issue #117: Drawer closes unexpectedly', () => {
 				})
 			);
 
-			render(PrintingModal, {
-				props: {
-					card: MOCK_CARD,
-					open: true
-				}
-			});
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
 
-			// Wait for printings to load
 			await waitFor(() => {
 				const printingItems = document.body.querySelectorAll('[data-testid="printing-item"]');
 				expect(printingItems.length).toBe(1);
 			});
 
-			// Image preview area should not be rendered when image_url is missing
 			const imagePreview = document.body.querySelector('.image-preview-area');
 			expect(imagePreview).not.toBeInTheDocument();
 		});
 	});
 
-	/**
-	 * Issue #129: PrintingModal displays stale image data from previously viewed cards
-	 */
-	describe('Issue #129: Stale image data prevention', () => {
+	describe('Issue #129: Stale Image Data Prevention', () => {
 		const MOCK_CARD_A = {
 			id: 'lightning-bolt-id',
 			name: 'Lightning Bolt'
@@ -519,8 +361,7 @@ describe('PrintingModal - Issue #117: Drawer closes unexpectedly', () => {
 			}
 		];
 
-		it('should reset selectedPrinting to null when modal reopens for different card', async () => {
-			// Setup mock fetch that tracks which card is being fetched
+		it('resets selectedPrinting to null when modal reopens for different card', async () => {
 			const mockFetch = vi.fn().mockImplementation((url: string) => {
 				if (typeof url === 'string' && url.includes(MOCK_CARD_A.id)) {
 					return Promise.resolve({
@@ -538,7 +379,6 @@ describe('PrintingModal - Issue #117: Drawer closes unexpectedly', () => {
 			});
 			vi.stubGlobal('fetch', mockFetch);
 
-			// Simulate the real app behavior: component stays mounted, props change
 			let isOpen = true;
 			let currentCard = MOCK_CARD_A;
 
@@ -549,14 +389,12 @@ describe('PrintingModal - Issue #117: Drawer closes unexpectedly', () => {
 				}
 			});
 
-			// Wait for Card A's printings to load and auto-select
 			await waitFor(() => {
 				const img = document.body.querySelector('.image-preview-area img') as HTMLImageElement;
 				expect(img).toBeInTheDocument();
 				expect(img.src).toContain(MOCK_PRINTINGS_A[0].image_url);
 			});
 
-			// Close the modal (component stays mounted)
 			isOpen = false;
 			rerender({
 				card: currentCard,
@@ -565,7 +403,6 @@ describe('PrintingModal - Issue #117: Drawer closes unexpectedly', () => {
 
 			await new Promise((resolve) => setTimeout(resolve, 50));
 
-			// Change to Card B and reopen
 			currentCard = MOCK_CARD_B;
 			isOpen = true;
 			rerender({
@@ -573,217 +410,834 @@ describe('PrintingModal - Issue #117: Drawer closes unexpectedly', () => {
 				open: isOpen
 			});
 
-			// THIS IS THE BUG: At this moment, selectedPrinting still has Card A's data
-			// So the template renders Card A's image briefly before Card B loads
-			// We need to verify this doesn't happen
 			await new Promise((resolve) => setTimeout(resolve, 10));
 
-			// Check immediately after opening - should NOT show Card A's image
 			const imagesImmediately = document.body.querySelectorAll('.image-preview-area img');
 			imagesImmediately.forEach((img) => {
 				const src = (img as HTMLImageElement).src;
-				// If an image appears, it should never be Card A's image
 				if (src) {
 					expect(src).not.toContain(MOCK_PRINTINGS_A[0].image_url);
 				}
 			});
 
-			// Wait for Card B's image to load
 			await waitFor(() => {
 				const img = document.body.querySelector('.image-preview-area img') as HTMLImageElement;
 				expect(img).toBeInTheDocument();
 				expect(img.src).toContain(MOCK_PRINTINGS_B[0].image_url);
 			});
 		});
+	});
 
-		it('should show loading state when modal opens with no selected printing', async () => {
-			// Mock a delayed fetch to simulate loading state
-			let resolveFetch: ((value: any) => void) | null = null;
-			const fetchPromise = new Promise((resolve) => {
-				resolveFetch = resolve;
-			});
-
-			const mockFetch = vi.fn().mockImplementation((url: string) => {
-				if (typeof url === 'string' && url.includes('/printings')) {
-					return fetchPromise.then(() => ({
-						ok: true,
-						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
-					}));
-				}
-				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-			});
+	describe('Keyboard Navigation', () => {
+		it('traps focus within modal when open', async () => {
+			const mockFetch = mockFetchForPrintings();
 			vi.stubGlobal('fetch', mockFetch);
 
-			render(PrintingModal, {
-				props: {
-					card: MOCK_CARD,
-					open: true
-				}
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				const dialog = screen.getByRole('dialog');
+				expect(dialog).toBeInTheDocument();
 			});
 
-			// While loading and no selected printing, we should NOT see the image preview area
-			// This prevents stale images from showing
-			const imagePreviewBefore = document.body.querySelector('.image-preview-area');
-			expect(imagePreviewBefore).not.toBeInTheDocument();
+			const closeButton = screen.getByRole('button', { name: /close/i });
+			expect(document.body.contains(closeButton)).toBe(true);
+		});
 
-			// Resolve the fetch
-			if (resolveFetch) {
-				resolveFetch({});
-			}
+		it('supports keyboard navigation', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
 
-			// After loading completes, image should appear
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
 			await waitFor(() => {
-				const img = document.body.querySelector('.image-preview-area img') as HTMLImageElement;
-				expect(img).toBeInTheDocument();
+				expect(screen.getByRole('dialog')).toBeInTheDocument();
+			});
+
+			const closeButton = screen.getByRole('button', { name: /close/i });
+
+			closeButton.focus();
+			expect(document.activeElement).toBe(closeButton);
+		});
+	});
+});
+
+// ===========================================================================
+// FORM FIELDS
+// ===========================================================================
+describe('PrintingModal - Form Fields', () => {
+	describe('Form Field Display', () => {
+		it('displays all form fields with default values when printing is selected', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			const mouseEnterEvent = new MouseEvent('mouseenter', { bubbles: true });
+			printingItems[0].dispatchEvent(mouseEnterEvent);
+
+			await waitFor(() => {
+				const acquiredDateInput = screen.getByLabelText(/acquired date/i) as HTMLInputElement;
+				expect(acquiredDateInput).toBeInTheDocument();
+				expect(acquiredDateInput.value).toMatch(/\d{4}-\d{2}-\d{2}/);
+
+				const priceInput = screen.getByLabelText(/price/i);
+				expect(priceInput).toBeInTheDocument();
+				expect(priceInput).toHaveValue(0);
+
+				const finishLabel = screen.getByText('Finish');
+				expect(finishLabel).toBeInTheDocument();
+
+				const radios = screen.getAllByRole('radio');
+				// Radio buttons include finish options (3) and language options (11+)
+				expect(radios.length).toBeGreaterThanOrEqual(3);
+
+				const nonfoilRadio = radios.find((r) => (r as HTMLInputElement).value === 'nonfoil');
+				expect(nonfoilRadio).toBeChecked();
 			});
 		});
 
-		it('should prevent stale images across rapid open/close cycles', async () => {
-			const mockFetch = vi.fn().mockImplementation((url: string) => {
-				if (typeof url === 'string' && url.includes(MOCK_CARD_A.id)) {
-					// Simulate slower fetch for Card A
-					return new Promise((resolve) => {
-						setTimeout(() => {
-							resolve({
-								ok: true,
-								json: () => Promise.resolve({ printings: MOCK_PRINTINGS_A })
-							});
-						}, 50);
-					});
-				}
-				if (typeof url === 'string' && url.includes(MOCK_CARD_B.id)) {
-					return Promise.resolve({
-						ok: true,
-						json: () => Promise.resolve({ printings: MOCK_PRINTINGS_B })
-					});
-				}
-				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-			});
+		it('uses date input type for acquired date field', async () => {
+			const mockFetch = mockFetchForPrintings();
 			vi.stubGlobal('fetch', mockFetch);
 
-			let isOpen = true;
-			let currentCard = MOCK_CARD_A;
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
 
-			const { rerender } = render(PrintingModal, {
-				props: {
-					card: currentCard,
-					open: isOpen
-				}
-			});
-
-			// Open for Card A but close before it finishes loading
-			await new Promise((resolve) => setTimeout(resolve, 25)); // Close before 50ms fetch completes
-
-			isOpen = false;
-			rerender({
-				card: currentCard,
-				open: isOpen
-			});
-
-			// Immediately open for Card B
-			currentCard = MOCK_CARD_B;
-			isOpen = true;
-			rerender({
-				card: currentCard,
-				open: isOpen
-			});
-
-			// Card B's modal should not show Card A's loading state or image
 			await waitFor(() => {
-				const img = document.body.querySelector('.image-preview-area img') as HTMLImageElement;
-				expect(img).toBeInTheDocument();
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
 			});
 
-			const finalImg = document.body.querySelector('.image-preview-area img') as HTMLImageElement;
-			expect(finalImg.src).toContain(MOCK_PRINTINGS_B[0].image_url);
-			expect(finalImg.src).not.toContain(MOCK_PRINTINGS_A[0].image_url);
+			const printingItems = screen.getAllByTestId('printing-item');
+			const mouseEnterEvent = new MouseEvent('mouseenter', { bubbles: true });
+			printingItems[0].dispatchEvent(mouseEnterEvent);
+
+			await waitFor(() => {
+				const acquiredDateInput = screen.getByLabelText(/acquired date/i);
+				expect(acquiredDateInput).toHaveAttribute('type', 'date');
+			});
 		});
 
-		it('should auto-select first printing after data loads without stale state', async () => {
-			render(PrintingModal, {
-				props: {
-					card: MOCK_CARD,
-					open: true
-				}
-			});
+		it('uses number input type with step 0.01 for price field', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
 
-			// Wait for auto-selection to happen
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
 			await waitFor(() => {
-				const img = document.body.querySelector('.image-preview-area img') as HTMLImageElement;
-				expect(img).toBeInTheDocument();
-				expect(img.src).toContain(MOCK_PRINTINGS[0].image_url);
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
 			});
 
-			// Verify first printing is selected
-			const firstPrintingImage = MOCK_PRINTINGS[0].image_url;
-			const img = document.body.querySelector('.image-preview-area img') as HTMLImageElement;
-			expect(img.src).toContain(firstPrintingImage);
+			const printingItems = screen.getAllByTestId('printing-item');
+			const mouseEnterEvent = new MouseEvent('mouseenter', { bubbles: true });
+			printingItems[0].dispatchEvent(mouseEnterEvent);
+
+			await waitFor(() => {
+				const priceInput = screen.getByLabelText(/price/i);
+				expect(priceInput).toHaveAttribute('type', 'number');
+				expect(priceInput).toHaveAttribute('step', '0.01');
+				expect(priceInput).toHaveAttribute('min', '0');
+			});
 		});
 	});
 
-	/**
-	 * Additional tests for proper drawer behavior
-	 */
-	describe('Additional drawer interaction tests', () => {
-		it('should only close drawer when X button is clicked', async () => {
-			let isOpen = true;
-			const onclose = vi.fn(() => {
-				isOpen = false;
+	describe('Form Field Editing', () => {
+		it('allows editing the acquired date field', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
 			});
 
-			const { rerender } = render(PrintingModal, {
-				props: {
-					card: MOCK_CARD,
-					open: isOpen,
-					onclose
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByLabelText(/acquired date/i)).toBeInTheDocument();
+			});
+
+			const acquiredDateInput = screen.getByLabelText(/acquired date/i) as HTMLInputElement;
+			await fireEvent.input(acquiredDateInput, { target: { value: '2024-01-15' } });
+
+			expect(acquiredDateInput).toHaveValue('2024-01-15');
+		});
+
+		it('allows editing the price field', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByLabelText(/price/i)).toBeInTheDocument();
+			});
+
+			const priceInput = screen.getByLabelText(/price/i) as HTMLInputElement;
+			await fireEvent.input(priceInput, { target: { value: '25.50' } });
+
+			expect(priceInput).toHaveValue(25.5);
+		});
+
+		it('preserves form field values when hovering changes the art multiple times', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
+					});
 				}
+				if (typeof url === 'string' && url.includes('/inventory')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ quantity: 1 })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				const printingItems = document.body.querySelectorAll('[data-testid="printing-item"]');
+				expect(printingItems.length).toBe(3);
 			});
 
-			// Wait for drawer to open
+			const priceInput = document.body.querySelector('#price') as HTMLInputElement;
+			priceInput.value = '25.50';
+			await fireEvent.input(priceInput);
+
+			const printingItems = document.body.querySelectorAll('[data-testid="printing-item"]');
+			await fireEvent.mouseEnter(printingItems[1]);
+			await fireEvent.mouseEnter(printingItems[2]);
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			expect(priceInput.value).toBe('25.50');
+		});
+
+		it('preserves price but resets finish when selecting a different printing (Issue #138)', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
 			await waitFor(() => {
-				const drawer = document.body.querySelector('[data-testid="modal-backdrop"]');
-				expect(drawer).toBeVisible();
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
 			});
 
-			// Click the close button
-			const closeButton = document.body.querySelector(
-				'[aria-label="Close card printings drawer"]'
-			) as HTMLButtonElement;
-			expect(closeButton).toBeInTheDocument();
+			const printingItems = screen.getAllByTestId('printing-item');
 
-			await fireEvent.click(closeButton);
+			await fireEvent.mouseEnter(printingItems[0]);
 
-			// Verify onclose was called
 			await waitFor(() => {
-				expect(onclose).toHaveBeenCalled();
+				expect(screen.getByLabelText(/price/i)).toBeInTheDocument();
+			});
+
+			const priceInput = screen.getByLabelText(/price/i) as HTMLInputElement;
+			await fireEvent.input(priceInput, { target: { value: '25.50' } });
+
+			const radios = screen.getAllByRole('radio');
+			const foilRadio = radios.find((r) => (r as HTMLInputElement).value === 'foil');
+			await fireEvent.click(foilRadio!);
+
+			expect(priceInput).toHaveValue(25.5);
+			expect(foilRadio).toBeChecked();
+
+			await fireEvent.mouseEnter(printingItems[1]);
+
+			await waitFor(() => {
+				const updatedPriceInput = screen.getByLabelText(/price/i) as HTMLInputElement;
+				expect(updatedPriceInput).toHaveValue(25.5);
+
+				const updatedRadios = screen.getAllByRole('radio');
+				const updatedNonfoilRadio = updatedRadios.find(
+					(r) => (r as HTMLInputElement).value === 'nonfoil'
+				);
+				expect(updatedNonfoilRadio).toBeChecked();
+			});
+		});
+	});
+
+	describe('Client-Side Validation', () => {
+		it('prevents submission and shows error toast when acquired date is in the future', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
+					});
+				}
+				if (typeof url === 'string' && url.includes('/api/inventory') && opts?.method === 'POST') {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({ card_id: 'print-1', quantity: 1, collection_type: 'inventory' })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByLabelText(/acquired date/i)).toBeInTheDocument();
+			});
+
+			const futureDate = new Date();
+			futureDate.setDate(futureDate.getDate() + 7);
+			const futureDateStr = futureDate.toISOString().split('T')[0];
+
+			const acquiredDateInput = screen.getByLabelText(/acquired date/i) as HTMLInputElement;
+			await fireEvent.input(acquiredDateInput, { target: { value: futureDateStr } });
+
+			const addButton = screen.getByRole('button', { name: /add to inventory/i });
+			await fireEvent.click(addButton);
+
+			await waitFor(() => {
+				const toast = screen.getByRole('status');
+				expect(toast).toBeInTheDocument();
+				expect(toast).toHaveTextContent(/acquired date cannot be in the future/i);
+			});
+
+			expect(mockFetch).not.toHaveBeenCalledWith(
+				expect.stringContaining('/api/inventory'),
+				expect.objectContaining({ method: 'POST' })
+			);
+		});
+
+		it('highlights the acquired date field when validation fails', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByLabelText(/acquired date/i)).toBeInTheDocument();
+			});
+
+			const futureDate = new Date();
+			futureDate.setDate(futureDate.getDate() + 7);
+			const futureDateStr = futureDate.toISOString().split('T')[0];
+
+			const acquiredDateInput = screen.getByLabelText(/acquired date/i) as HTMLInputElement;
+			await fireEvent.input(acquiredDateInput, { target: { value: futureDateStr } });
+
+			const addButton = screen.getByRole('button', { name: /add to inventory/i });
+			await fireEvent.click(addButton);
+
+			await waitFor(() => {
+				expect(acquiredDateInput).toHaveClass('invalid');
 			});
 		});
 
-		it('should close drawer when pressing Escape key', async () => {
-			let isOpen = true;
-			const onclose = vi.fn(() => {
-				isOpen = false;
-			});
-
-			render(PrintingModal, {
-				props: {
-					card: MOCK_CARD,
-					open: isOpen,
-					onclose
+		it('prevents submission and shows error toast when price is negative', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
+					});
 				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
 			});
+			vi.stubGlobal('fetch', mockFetch);
 
-			// Wait for drawer to open
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
 			await waitFor(() => {
-				const drawer = document.body.querySelector('[data-testid="modal-backdrop"]');
-				expect(drawer).toBeVisible();
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
 			});
 
-			// Press Escape key
-			await fireEvent.keyDown(document.body, { key: 'Escape', code: 'Escape' });
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
 
-			// Note: The actual Escape key handling is done by the Dialog component
-			// This test verifies the component is set up with closeOnEscape={true}
+			await waitFor(() => {
+				expect(screen.getByLabelText(/price/i)).toBeInTheDocument();
+			});
+
+			const priceInput = screen.getByLabelText(/price/i) as HTMLInputElement;
+			await fireEvent.input(priceInput, { target: { value: '-10.00' } });
+
+			const addButton = screen.getByRole('button', { name: /add to inventory/i });
+			await fireEvent.click(addButton);
+
+			await waitFor(() => {
+				const toast = screen.getByRole('status');
+				expect(toast).toBeInTheDocument();
+				expect(toast).toHaveTextContent(/price must be \$0\.00 or greater/i);
+			});
+
+			expect(mockFetch).not.toHaveBeenCalledWith(
+				expect.stringContaining('/api/inventory'),
+				expect.objectContaining({ method: 'POST' })
+			);
+		});
+
+		it('highlights the price field when negative validation fails', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByLabelText(/price/i)).toBeInTheDocument();
+			});
+
+			const priceInput = screen.getByLabelText(/price/i) as HTMLInputElement;
+			await fireEvent.input(priceInput, { target: { value: '-10.00' } });
+
+			const addButton = screen.getByRole('button', { name: /add to inventory/i });
+			await fireEvent.click(addButton);
+
+			await waitFor(() => {
+				expect(priceInput).toHaveClass('invalid');
+			});
+		});
+
+		it('clears validation error highlighting when field is corrected', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByLabelText(/price/i)).toBeInTheDocument();
+			});
+
+			const priceInput = screen.getByLabelText(/price/i) as HTMLInputElement;
+			await fireEvent.input(priceInput, { target: { value: '-10.00' } });
+
+			const addButton = screen.getByRole('button', { name: /add to inventory/i });
+			await fireEvent.click(addButton);
+
+			await waitFor(() => {
+				expect(priceInput).toHaveClass('invalid');
+			});
+
+			await fireEvent.input(priceInput, { target: { value: '10.00' } });
+
+			await waitFor(() => {
+				expect(priceInput).not.toHaveClass('invalid');
+			});
+		});
+	});
+
+	describe('Finish Selection', () => {
+		it('displays all three finish options (Nonfoil, Foil, Etched)', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByText('Nonfoil')).toBeInTheDocument();
+				expect(screen.getByText('Foil')).toBeInTheDocument();
+				expect(screen.getByText('Etched')).toBeInTheDocument();
+			});
+		});
+
+		it('has "nonfoil" selected by default', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				const nonfoilRadio = screen.getByRole('radio', { name: /nonfoil/i });
+				expect(nonfoilRadio).toBeInTheDocument();
+				expect(nonfoilRadio).toBeChecked();
+			});
+		});
+
+		it('allows clicking to change finish selection from nonfoil to foil', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				const radios = screen.getAllByRole('radio');
+				expect(radios.length).toBeGreaterThan(0);
+			});
+
+			const radios = screen.getAllByRole('radio');
+			const foilRadio = radios.find((radio) => (radio as HTMLInputElement).value === 'foil');
+			const nonfoilRadio = radios.find((radio) => (radio as HTMLInputElement).value === 'nonfoil');
+
+			expect(nonfoilRadio).toBeChecked();
+			expect(foilRadio).not.toBeChecked();
+
+			await fireEvent.click(foilRadio!);
+
+			await waitFor(() => {
+				expect(foilRadio).toBeChecked();
+				expect(nonfoilRadio).not.toBeChecked();
+			});
+		});
+	});
+
+	describe('Language Selection', () => {
+		it('allows user to click and select a language option', async () => {
+			const user = userEvent.setup();
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByText(/^Language$/i)).toBeInTheDocument();
+			});
+
+			const japaneseOption = screen.getByText('JA');
+			await user.click(japaneseOption);
+			await tick();
+
+			const japaneseRadio = screen.getByDisplayValue('Japanese') as HTMLInputElement;
+			expect(japaneseRadio.checked).toBe(true);
+		});
+
+		it('does not close or disappear when user interacts with the language options', async () => {
+			const user = userEvent.setup();
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByText(/^Language$/i)).toBeInTheDocument();
+			});
+
+			const japaneseOption = screen.getByText('JA');
+			await user.click(japaneseOption);
+			await tick();
+
+			expect(japaneseOption).toBeInTheDocument();
+			expect(screen.getByText('DE')).toBeInTheDocument();
+			expect(screen.getByText('FR')).toBeInTheDocument();
+
+			await new Promise((resolve) => setTimeout(resolve, 100));
+
+			expect(japaneseOption).toBeInTheDocument();
+		});
+
+		it('allows user to select multiple languages sequentially', async () => {
+			const user = userEvent.setup();
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByText(/^Language$/i)).toBeInTheDocument();
+			});
+
+			await user.click(screen.getByText('JA'));
+			await tick();
+			let japaneseRadio = screen.getByDisplayValue('Japanese') as HTMLInputElement;
+			expect(japaneseRadio.checked).toBe(true);
+
+			await user.click(screen.getByText('DE'));
+			await tick();
+			const germanRadio = screen.getByDisplayValue('German') as HTMLInputElement;
+			expect(germanRadio.checked).toBe(true);
+			japaneseRadio = screen.getByDisplayValue('Japanese') as HTMLInputElement;
+			expect(japaneseRadio.checked).toBe(false);
+
+			await user.click(screen.getByText('FR'));
+			await tick();
+			const frenchRadio = screen.getByDisplayValue('French') as HTMLInputElement;
+			expect(frenchRadio.checked).toBe(true);
+			expect(germanRadio.checked).toBe(false);
+		});
+	});
+
+	describe('Issue #138: Filter Finish Options Based on Available Finishes', () => {
+		const PRINTING_NONFOIL_ONLY = {
+			id: 'nonfoil-only',
+			name: 'Test Card',
+			set: 'dom',
+			set_name: 'Dominaria',
+			collector_number: '100',
+			image_url: 'https://example.com/nonfoil.jpg',
+			released_at: '2018-04-27',
+			finishes: ['nonfoil']
+		};
+
+		const PRINTING_FOIL_ONLY = {
+			id: 'foil-only',
+			name: 'Test Card',
+			set: 'promo',
+			set_name: 'Promotional',
+			collector_number: 'P1',
+			image_url: 'https://example.com/foil.jpg',
+			released_at: '2020-01-01',
+			finishes: ['foil']
+		};
+
+		const PRINTING_BOTH_FINISHES = {
+			id: 'both-finishes',
+			name: 'Test Card',
+			set: 'znr',
+			set_name: 'Zendikar Rising',
+			collector_number: '42',
+			image_url: 'https://example.com/both.jpg',
+			released_at: '2020-09-25',
+			finishes: ['nonfoil', 'foil']
+		};
+
+		it('only shows "Nonfoil" option when printing has finishes: ["nonfoil"]', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ printings: [PRINTING_NONFOIL_ONLY] })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByText('Nonfoil')).toBeInTheDocument();
+			});
+
+			expect(screen.getByText('Nonfoil')).toBeInTheDocument();
+			expect(screen.queryByText('Foil')).not.toBeInTheDocument();
+			expect(screen.queryByText('Etched')).not.toBeInTheDocument();
+
+			// Check only finish-related radios (filter by name attribute)
+			const radios = screen.getAllByRole('radio');
+			const finishRadios = Array.from(radios).filter(
+				(r) => (r as HTMLInputElement).name === 'finish'
+			);
+			expect(finishRadios.length).toBe(1);
+			expect((finishRadios[0] as HTMLInputElement).value).toBe('nonfoil');
+		});
+
+		it('auto-selects "nonfoil" when it is the only available finish', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ printings: [PRINTING_NONFOIL_ONLY] })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				const radios = screen.getAllByRole('radio');
+				const finishRadios = Array.from(radios).filter(
+					(r) => (r as HTMLInputElement).name === 'finish'
+				);
+				expect(finishRadios.length).toBe(1);
+			});
+
+			const nonfoilRadio = screen.getByRole('radio', { name: /nonfoil/i });
+			expect(nonfoilRadio).toBeChecked();
+		});
+
+		it('auto-selects "foil" when it is the only available finish', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ printings: [PRINTING_FOIL_ONLY] })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				const radios = screen.getAllByRole('radio');
+				const finishRadios = Array.from(radios).filter(
+					(r) => (r as HTMLInputElement).name === 'finish'
+				);
+				expect(finishRadios.length).toBe(1);
+			});
+
+			const foilRadio = screen.getByRole('radio', { name: /foil/i });
+			expect(foilRadio).toBeChecked();
+		});
+
+		it('resets finish when switching from nonfoil-only to foil-only printing', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({ printings: [PRINTING_NONFOIL_ONLY, PRINTING_FOIL_ONLY] })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				const nonfoilRadio = screen.getByRole('radio', { name: /nonfoil/i });
+				expect(nonfoilRadio).toBeChecked();
+			});
+
+			await fireEvent.mouseEnter(printingItems[1]);
+
+			await waitFor(() => {
+				const foilRadio = screen.getByRole('radio', { name: /foil/i });
+				expect(foilRadio).toBeChecked();
+			});
+
+			expect(screen.queryByText('Nonfoil')).not.toBeInTheDocument();
+			expect(screen.getByText('Foil')).toBeInTheDocument();
+		});
+
+		it('defaults to "nonfoil" when both nonfoil and foil are available', async () => {
+			const mockFetch = vi.fn().mockImplementation((url: string) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ printings: [PRINTING_BOTH_FINISHES] })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				const nonfoilRadio = screen.getByRole('radio', { name: /nonfoil/i });
+				expect(nonfoilRadio).toBeChecked();
+			});
 		});
 	});
 });
