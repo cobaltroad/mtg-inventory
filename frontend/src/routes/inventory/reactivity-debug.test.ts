@@ -46,7 +46,7 @@ afterEach(() => {
 	cleanup();
 });
 
-describe.skip('Reactivity Chain - Data Loading', () => {
+describe('Reactivity Chain - Data Loading', () => {
 	it('should display pagination when data loads with 38 items', async () => {
 		const items = generateItems(38);
 
@@ -133,7 +133,7 @@ describe.skip('Reactivity Chain - Data Loading', () => {
 	});
 });
 
-describe.skip('Reactivity Chain - Empty to Full', () => {
+describe('Reactivity Chain - Empty to Full', () => {
 	it('should handle transition from empty data to 38 items', async () => {
 		// Start with empty data (simulates initial page load)
 		const { rerender } = render(InventoryPage, {

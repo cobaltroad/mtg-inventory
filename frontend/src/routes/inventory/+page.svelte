@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, getContext } from 'svelte';
+	import { onMount, getContext, untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page, navigating } from '$app/stores';
 	import { Search, ChevronLeft, ChevronRight } from 'lucide-svelte';
@@ -48,37 +48,42 @@
 	// Sync allItems and pagination metadata with data using $effect
 	// This reads data in a reactive context, establishing proper tracking
 	$effect(() => {
-		allItems = data.items || [];
-		const newPage = data.page || 1;
+		// Read from data prop (this creates the reactive dependency we want)
+		const newItems = data.items || [];
+		// Use 0 as default for page to distinguish "no backend pagination" from "page 1"
+		const newPage = data.page || 0;
 		const newPerPage = data.per_page || 0;
 		const newTotalCount = data.total_count || 0;
 		const newTotalPages = data.total_pages || 0;
 		const newStats = data.stats || null;
 
-		// Only update if values have changed (avoid unnecessary reactivity)
-		if (newPage !== backendPage) backendPage = newPage;
-		if (newPerPage !== backendPerPage) {
-			backendPerPage = newPerPage;
-			// When backend per_page changes, sync to local pageSize if valid
-			// This handles deep linking with URL parameters (e.g., ?per_page=50)
-			if (
-				newPerPage > 0 &&
-				newPerPage !== pageSize &&
-				PAGE_SIZE_OPTIONS.includes(newPerPage as typeof PAGE_SIZE_OPTIONS[number])
-			) {
+		// Update backend metadata
+		backendPage = newPage;
+		backendPerPage = newPerPage;
+		backendTotalCount = newTotalCount;
+		backendTotalPages = newTotalPages;
+		backendStats = newStats;
+
+		// When backend per_page changes, sync to local pageSize if valid
+		// This handles deep linking with URL parameters (e.g., ?per_page=50)
+		// Use untrack() only when reading pageSize to avoid creating a circular dependency
+		if (newPerPage > 0 && PAGE_SIZE_OPTIONS.includes(newPerPage as typeof PAGE_SIZE_OPTIONS[number])) {
+			const currentPageSize = untrack(() => pageSize);
+			if (newPerPage !== currentPageSize) {
 				pageSize = newPerPage;
 				// Mark as initialized so localStorage doesn't override it
 				pageSizeInitialized = true;
 			}
 		}
-		if (newTotalCount !== backendTotalCount) backendTotalCount = newTotalCount;
-		if (newTotalPages !== backendTotalPages) backendTotalPages = newTotalPages;
-		backendStats = newStats;
 
+		// Update allItems
 		// Handle completely empty inventory (Issue #171)
-		// When backend reports 0 total items, clear allItems to show empty state
-		if (newTotalCount === 0 && allItems.length > 0) {
+		// Only clear allItems if backend explicitly reports 0 items AND we have no new items
+		if (newTotalCount === 0 && newItems.length === 0) {
 			allItems = [];
+		} else {
+			// Use newItems even if totalCount is 0 (for client-side pagination without backend metadata)
+			allItems = newItems;
 		}
 
 		// Mark initial loading as complete once we've synced data
@@ -130,34 +135,10 @@
 		}
 	});
 
-	// Sync currentPage with backend state ONLY when backend page changes
-	// Track last synced value to avoid fighting with user interactions
-	let lastSyncedBackendPage = $state(0);
-	$effect(() => {
-		if (backendPage > 0 && backendPage !== lastSyncedBackendPage) {
-			currentPage = backendPage;
-			lastSyncedBackendPage = backendPage;
-		}
-	});
-
-	// Handle invalid page after deletions (Issue #171)
-	// When we're on a page that no longer exists (e.g., deleted all items on last page),
-	// redirect to the last valid page
-	$effect(() => {
-		// Only handle this for backend pagination with empty results
-		if (
-			isBackendPaginated &&
-			backendTotalPages > 0 &&
-			currentPage > backendTotalPages &&
-			displayItems.length === 0
-		) {
-			// Redirect to the last valid page
-			const url = new URL($page.url);
-			url.searchParams.set('page', String(backendTotalPages));
-			url.searchParams.set('per_page', String(pageSize));
-			goto(url.toString(), { keepFocus: true, noScroll: true });
-		}
-	});
+	// Compute the effective page for display and pagination logic
+	// This is a pure derivation - no side effects, no state updates
+	// When backend provides a page number, use it; otherwise use local state
+	let effectiveCurrentPage = $derived(backendPage > 0 ? backendPage : currentPage);
 
 	// Apply filtering and sorting
 	let filteredItems = $derived(filterBySet(allItems, currentFilter));
@@ -175,7 +156,7 @@
 	// Apply pagination
 	// When using backend pagination, items are already paginated - don't slice again
 	// When using client-side pagination (all items loaded locally or with filters), apply slicing
-	let paginationStart = $derived((currentPage - 1) * pageSize);
+	let paginationStart = $derived((effectiveCurrentPage - 1) * pageSize);
 	let paginationEnd = $derived(paginationStart + pageSize);
 	let displayItems = $derived(
 		isBackendPaginated ? sortedItems : sortedItems.slice(paginationStart, paginationEnd)
@@ -341,7 +322,7 @@
 						<Pagination
 							count={effectiveTotalCount}
 							{pageSize}
-							page={currentPage}
+							page={effectiveCurrentPage}
 							onPageChange={handlePageChange}
 						>
 							<Pagination.PrevTrigger>
