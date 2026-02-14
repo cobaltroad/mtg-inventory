@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { InventoryStats } from '$lib/types/inventory';
-	import { TrendingUp, Trophy } from 'lucide-svelte';
+	import { TrendingUp, DollarSign, Gem, Layers, Trophy } from 'lucide-svelte';
+	import { formatPrice } from '$lib/utils/format';
 
 	interface Props {
 		stats: InventoryStats;
@@ -21,6 +22,36 @@
 			</div>
 		</div>
 	{/if}
+
+	<div class="stat-card">
+		<div class="stat-icon">
+			<DollarSign size={20} />
+		</div>
+		<div class="stat-content">
+			<div class="stat-value">{formatPrice(stats.totalValueCents)}</div>
+			<div class="stat-label">Total Value</div>
+		</div>
+	</div>
+
+	<div class="stat-card">
+		<div class="stat-icon">
+			<Gem size={20} />
+		</div>
+		<div class="stat-content">
+			<div class="stat-value">{stats.cardsOverTenDollars}</div>
+			<div class="stat-label">Cards Over $10</div>
+		</div>
+	</div>
+
+	<div class="stat-card">
+		<div class="stat-icon">
+			<Layers size={20} />
+		</div>
+		<div class="stat-content">
+			<div class="stat-value">{stats.totalSets}</div>
+			<div class="stat-label">Different Sets</div>
+		</div>
+	</div>
 
 	{#if stats.mostCollectedSet}
 		<div class="stat-card">

@@ -40,8 +40,5 @@ export type SortOption =
 
 export interface InventoryStats {
 	mostValuableCard: string | null;
-	totalValueCents: number;
-	cardsOverTenDollars: number;
-	totalSets: number;
 	mostCollectedSet: string | null;
 }

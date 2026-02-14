@@ -1709,8 +1709,9 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, items.size
 
     # Should still use eager loading query structure even with no results
+    # Stats calculation adds 2 queries (most_valuable_card, most_collected_set)
     db_queries = queries.select { |q| q.match?(/SELECT.*FROM/i) && !q.match?(/sqlite_master|PRAGMA/) }
-    assert db_queries.size < 5,
+    assert db_queries.size < 8,
            "Empty inventory should require minimal queries, got #{db_queries.size}"
   end
 
@@ -2560,7 +2561,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET /api/inventory includes finish in stats calculation" do
-    # Create multiple cards with different finishes
+    # Create multiple cards with different finishes - foil is more valuable
     CollectionItem.create!(
       user: @user,
       card_id: "stats-card-1",
@@ -2595,8 +2596,8 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     body = JSON.parse(response.body)
     stats = body["stats"]
 
-    # Total value should be 500 + 1500 = 2000 cents
-    assert_equal 2000, stats["total_value_cents"]
+    # Most valuable card should use foil price (1500) over nonfoil (500)
+    assert_equal "Stats Card 1", stats["most_valuable_card"]
   end
 
   private

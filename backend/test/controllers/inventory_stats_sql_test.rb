@@ -82,18 +82,8 @@ class InventoryStatsSqlTest < ActionDispatch::IntegrationTest
     body = JSON.parse(response.body)
     stats = body["stats"]
 
-    # Expected calculations:
-    # Total value = (2 * 5000) + (5 * 100) + (1 * 1500) + (3 * 800) = 10000 + 500 + 1500 + 2400 = 14400
-    assert_equal 14400, stats["total_value_cents"]
-
     # Most valuable card by total price = card_1 (2 * 5000 = 10000)
     assert_equal "Expensive Card", stats["most_valuable_card"]
-
-    # Cards over $10 (1000 cents) = card_1 (10000), card_3 (1500), card_4 (2400) = 3 cards
-    assert_equal 3, stats["cards_over_ten_dollars"]
-
-    # Total unique sets = 3 (EXP, CHP, OTH)
-    assert_equal 3, stats["total_sets"]
 
     # Most collected set = EXP (2 items: card_1 and card_3)
     assert_equal "Expensive Set", stats["most_collected_set"]
@@ -133,14 +123,8 @@ class InventoryStatsSqlTest < ActionDispatch::IntegrationTest
     body = JSON.parse(response.body)
     stats = body["stats"]
 
-    # Total value only includes priced items
-    assert_equal 2000, stats["total_value_cents"]
-
     # Most valuable is the only priced card
     assert_equal "Priced Card", stats["most_valuable_card"]
-
-    # Two unique sets
-    assert_equal 2, stats["total_sets"]
   end
 
   test "stats handle foil pricing correctly" do
@@ -167,11 +151,11 @@ class InventoryStatsSqlTest < ActionDispatch::IntegrationTest
     body = JSON.parse(response.body)
     stats = body["stats"]
 
-    # Should use foil price (2 * 3000 = 6000), not nonfoil (2 * 1000 = 2000)
-    assert_equal 6000, stats["total_value_cents"]
+    # Most valuable card should be calculated using foil price
+    assert_equal "Foil Card", stats["most_valuable_card"]
   end
 
-  test "stats return zeros for empty inventory" do
+  test "stats return nils for empty inventory" do
     get api_path("/inventory")
     assert_response :success
 
@@ -179,9 +163,6 @@ class InventoryStatsSqlTest < ActionDispatch::IntegrationTest
     stats = body["stats"]
 
     assert_nil stats["most_valuable_card"]
-    assert_equal 0, stats["total_value_cents"]
-    assert_equal 0, stats["cards_over_ten_dollars"]
-    assert_equal 0, stats["total_sets"]
     assert_nil stats["most_collected_set"]
   end
 
@@ -225,12 +206,12 @@ class InventoryStatsSqlTest < ActionDispatch::IntegrationTest
     stats = body["stats"]
 
     # Verify stats are calculated correctly
-    assert_operator stats["total_value_cents"], :>, 0
-    assert_operator stats["total_sets"], :>, 0
+    assert_not_nil stats["most_valuable_card"]
+    assert_not_nil stats["most_collected_set"]
 
-    # Check that we're using SQL aggregates (SUM, COUNT, GROUP BY)
+    # Check that we're using SQL aggregates (COUNT, GROUP BY, ORDER BY)
     aggregate_queries = query_log.select do |sql|
-      sql.match?(/SUM|COUNT|GROUP BY|MAX/i) &&
+      sql.match?(/COUNT|GROUP BY|ORDER BY/i) &&
         sql.match?(/collection_items/i)
     end
 
