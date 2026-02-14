@@ -5,8 +5,7 @@ import { tick } from 'svelte';
 import PrintingModal from './PrintingModal.svelte';
 import { MOCK_CARD, MOCK_PRINTINGS, mockFetchForPrintings } from './PrintingModal.test.helpers';
 
-// Language dropdown hidden until issue #170 is fully resolved
-describe.skip('PrintingModal - Language Dropdown Functionality', () => {
+describe('PrintingModal - Language Dropdown Functionality', () => {
 	beforeEach(() => {
 		cleanup();
 		vi.restoreAllMocks();

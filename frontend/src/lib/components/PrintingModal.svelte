@@ -476,8 +476,7 @@
 												/>
 											</div>
 
-											<!-- Language field hidden until issue #170 is fully resolved -->
-											<!-- <div class="form-field">
+											<div class="form-field">
 												<Combobox
 													id="language"
 													placeholder="Select language..."
@@ -489,7 +488,7 @@
 													class="language-combobox"
 												>
 													<Combobox.Label class="form-field-label">Language</Combobox.Label>
-													<Combobox.Control class="combobox-control">
+													<Combobox.Control class="combobox-control" onclick={(e) => e.stopPropagation()}>
 														<Combobox.Input class="combobox-input" />
 														<Combobox.Trigger class="combobox-trigger" />
 													</Combobox.Control>
@@ -506,7 +505,7 @@
 														</Combobox.Positioner>
 													</Portal>
 												</Combobox>
-											</div> -->
+											</div>
 										</div>
 									{/if}
 
@@ -718,8 +717,7 @@
 		color: #374151;
 	}
 
-	.form-input,
-	.form-select {
+	.form-input {
 		width: 100%;
 		padding: 0.5rem;
 		border: 1px solid #d1d5db;
@@ -730,8 +728,7 @@
 		transition: border-color 0.2s;
 	}
 
-	.form-input:focus,
-	.form-select:focus {
+	.form-input:focus {
 		outline: none;
 		border-color: #3b82f6;
 		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
@@ -740,10 +737,6 @@
 	.form-input.invalid {
 		border-color: #dc2626;
 		outline: 2px solid rgba(220, 38, 38, 0.2);
-	}
-
-	.form-select {
-		cursor: pointer;
 	}
 
 	/* Combobox Styling */
@@ -858,12 +851,6 @@
 		gap: 0.5rem;
 	}
 
-	.form-label {
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: #374151;
-	}
-
 	/* Finish Options (Radio Group styled as Segmented Control) */
 	.finish-options {
 		display: flex;
@@ -935,15 +922,10 @@
 		color: #d1d5db;
 	}
 
-	:global(.dark) .form-input,
-	:global(.dark) .form-select {
+	:global(.dark) .form-input {
 		background: #1f2937;
 		border-color: #4b5563;
 		color: #f9fafb;
-	}
-
-	:global(.dark) .form-label {
-		color: #d1d5db;
 	}
 
 	:global(.dark) .finish-option {
