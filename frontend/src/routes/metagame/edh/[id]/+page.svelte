@@ -167,9 +167,7 @@
 								<option value="alphabetical">A-Z</option>
 								<option value="value">$ Value</option>
 								<option value="edh-rank">EDH Rank</option>
-								<option value="release-date">Newest</option>
 								<option value="type">Type</option>
-								<option value="rarity">Rarity</option>
 							</select>
 						</label>
 

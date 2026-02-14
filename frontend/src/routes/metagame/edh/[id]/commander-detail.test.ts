@@ -212,4 +212,33 @@ describe('Commander Detail Page', () => {
 			expect(screen.getByText(/no cards/i)).toBeInTheDocument();
 		});
 	});
+
+	describe('sort options', () => {
+		it('displays only the approved sort options', async () => {
+			mockFetch.mockResolvedValue({
+				ok: true,
+				json: async () => mockCommander
+			});
+
+			render(CommanderDetailPage);
+
+			await waitFor(() => {
+				expect(screen.getByText("Atraxa, Praetors' Voice")).toBeInTheDocument();
+			});
+
+			// Should have the correct sort options
+			const sortSelect = screen.getByLabelText(/sort/i) as HTMLSelectElement;
+			const options = Array.from(sortSelect.options).map((opt) => opt.value);
+
+			// Should have these 4 options
+			expect(options).toContain('alphabetical');
+			expect(options).toContain('value');
+			expect(options).toContain('edh-rank');
+			expect(options).toContain('type');
+
+			// Should NOT have these removed options
+			expect(options).not.toContain('release-date');
+			expect(options).not.toContain('rarity');
+		});
+	});
 });

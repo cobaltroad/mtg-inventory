@@ -145,32 +145,6 @@ describe('sortDecklistCards', () => {
 		});
 	});
 
-	describe('release date sorting', () => {
-		it('sorts by release date descending (newest first) with commander first', () => {
-			const cards = [commander, solRing, commandTower, expensiveCard];
-			const sorted = sortDecklistCards(cards, 'release-date');
-
-			expect(sorted[0].card_name).toBe('Atraxa, Praetors\' Voice'); // Commander
-			expect(sorted[1].card_name).toBe('Command Tower'); // 2023-11-17
-			expect(sorted[2].card_name).toBe('Sol Ring'); // 2023-08-04
-			expect(sorted[3].card_name).toBe('Expensive Artifact'); // 2020-01-01
-		});
-
-		it('handles missing release dates', () => {
-			const noDate: DecklistCard = {
-				...solRing,
-				card_name: 'No Date',
-				release_date: undefined
-			};
-
-			const cards = [noDate, commander, solRing];
-			const sorted = sortDecklistCards(cards, 'release-date');
-
-			expect(sorted[0].card_name).toBe('Atraxa, Praetors\' Voice');
-			expect(sorted[1].card_name).toBe('Sol Ring');
-			expect(sorted[2].card_name).toBe('No Date');
-		});
-	});
 
 	describe('type grouping', () => {
 		it('groups by card type with commander first', () => {
@@ -205,46 +179,10 @@ describe('sortDecklistCards', () => {
 		});
 	});
 
-	describe('rarity grouping', () => {
-		it('groups by rarity (mythic > rare > uncommon > common) with commander first', () => {
-			const cards = [commandTower, solRing, commander, expensiveCard];
-			const sorted = sortDecklistCards(cards, 'rarity');
-
-			// Commander first
-			expect(sorted[0].is_commander).toBe(true);
-
-			// Then by rarity order
-			expect(sorted[1].rarity).toBe('rare'); // Expensive Artifact
-			expect(sorted[2].rarity).toBe('uncommon'); // Sol Ring
-			expect(sorted[3].rarity).toBe('common'); // Command Tower
-		});
-
-		it('handles missing rarity', () => {
-			const noRarity: DecklistCard = {
-				...solRing,
-				card_name: 'No Rarity',
-				rarity: undefined
-			};
-
-			const cards = [noRarity, commander, solRing];
-			const sorted = sortDecklistCards(cards, 'rarity');
-
-			expect(sorted[0].is_commander).toBe(true);
-			expect(sorted[1].card_name).toBe('Sol Ring'); // Has rarity
-			expect(sorted[2].card_name).toBe('No Rarity'); // No rarity goes last
-		});
-	});
 
 	describe('commander-first invariant', () => {
 		it('always places commanders first regardless of sort option', () => {
-			const sortOptions: SortOption[] = [
-				'alphabetical',
-				'value',
-				'edh-rank',
-				'release-date',
-				'type',
-				'rarity'
-			];
+			const sortOptions: SortOption[] = ['alphabetical', 'value', 'edh-rank', 'type'];
 
 			const cards = [solRing, commandTower, commander, expensiveCard];
 

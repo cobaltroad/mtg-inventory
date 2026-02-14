@@ -16,13 +16,7 @@ export interface DecklistCard {
 	usd_price?: string;
 }
 
-export type SortOption =
-	| 'alphabetical'
-	| 'value'
-	| 'edh-rank'
-	| 'release-date'
-	| 'type'
-	| 'rarity';
+export type SortOption = 'alphabetical' | 'value' | 'edh-rank' | 'type';
 
 /**
  * Sorts decklist cards according to the specified option
@@ -58,14 +52,8 @@ export function sortDecklistCards(
 		case 'edh-rank':
 			sortedNonCommanders = sortByEdhRank(nonCommanders);
 			break;
-		case 'release-date':
-			sortedNonCommanders = sortByReleaseDate(nonCommanders);
-			break;
 		case 'type':
 			sortedNonCommanders = sortByType(nonCommanders);
-			break;
-		case 'rarity':
-			sortedNonCommanders = sortByRarity(nonCommanders);
 			break;
 		default:
 			sortedNonCommanders = sortAlphabetically(nonCommanders);
@@ -122,29 +110,6 @@ function sortByEdhRank(cards: DecklistCard[]): DecklistCard[] {
 }
 
 /**
- * Sorts cards by release date (descending - newest first)
- * Cards with no release date are placed at the end
- */
-function sortByReleaseDate(cards: DecklistCard[]): DecklistCard[] {
-	return [...cards].sort((a, b) => {
-		const dateA = a.release_date || '';
-		const dateB = b.release_date || '';
-
-		// Cards without dates go to the end
-		if (!dateA && !dateB) return a.card_name.localeCompare(b.card_name);
-		if (!dateA) return 1;
-		if (!dateB) return -1;
-
-		// Sort by date descending (newest first)
-		const comparison = dateB.localeCompare(dateA);
-		if (comparison !== 0) return comparison;
-
-		// Tie-breaker: alphabetical
-		return a.card_name.localeCompare(b.card_name);
-	});
-}
-
-/**
  * Sorts cards grouped by card type
  * Within each type group, cards are sorted alphabetically
  * Cards with no type are placed at the end
@@ -167,30 +132,3 @@ function sortByType(cards: DecklistCard[]): DecklistCard[] {
 	});
 }
 
-/**
- * Rarity order for sorting (most rare to least rare)
- */
-const RARITY_ORDER: Record<string, number> = {
-	mythic: 1,
-	rare: 2,
-	uncommon: 3,
-	common: 4
-};
-
-/**
- * Sorts cards grouped by rarity (mythic > rare > uncommon > common)
- * Within each rarity group, cards are sorted alphabetically
- * Cards with no rarity are placed at the end
- */
-function sortByRarity(cards: DecklistCard[]): DecklistCard[] {
-	return [...cards].sort((a, b) => {
-		const rarityA = a.rarity ? RARITY_ORDER[a.rarity] || 999 : 999;
-		const rarityB = b.rarity ? RARITY_ORDER[b.rarity] || 999 : 999;
-
-		// Group by rarity
-		if (rarityA !== rarityB) return rarityA - rarityB;
-
-		// Within same rarity, sort alphabetically
-		return a.card_name.localeCompare(b.card_name);
-	});
-}
