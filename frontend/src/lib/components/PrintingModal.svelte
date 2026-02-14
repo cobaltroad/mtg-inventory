@@ -42,17 +42,17 @@
 
 	// Language options for enhanced tracking
 	const LANGUAGE_OPTIONS = [
-		{ label: 'English', value: 'English' },
-		{ label: 'Japanese', value: 'Japanese' },
-		{ label: 'German', value: 'German' },
-		{ label: 'French', value: 'French' },
-		{ label: 'Spanish', value: 'Spanish' },
-		{ label: 'Italian', value: 'Italian' },
-		{ label: 'Portuguese', value: 'Portuguese' },
-		{ label: 'Russian', value: 'Russian' },
-		{ label: 'Korean', value: 'Korean' },
-		{ label: 'Chinese Simplified', value: 'Chinese Simplified' },
-		{ label: 'Chinese Traditional', value: 'Chinese Traditional' }
+		{ label: 'English', value: 'English', abbr: 'EN' },
+		{ label: 'Japanese', value: 'Japanese', abbr: 'JA' },
+		{ label: 'German', value: 'German', abbr: 'DE' },
+		{ label: 'French', value: 'French', abbr: 'FR' },
+		{ label: 'Spanish', value: 'Spanish', abbr: 'ES' },
+		{ label: 'Italian', value: 'Italian', abbr: 'IT' },
+		{ label: 'Portuguese', value: 'Portuguese', abbr: 'PT' },
+		{ label: 'Russian', value: 'Russian', abbr: 'RU' },
+		{ label: 'Korean', value: 'Korean', abbr: 'KO' },
+		{ label: 'Chinese Simplified', value: 'Chinese Simplified', abbr: 'ZHS' },
+		{ label: 'Chinese Traditional', value: 'Chinese Traditional', abbr: 'ZHT' }
 	];
 
 	// Combobox state and collection for language selection
@@ -480,7 +480,7 @@
 												<label class="form-field-label">Language</label>
 												<div class="language-options" onclick={(e) => e.stopPropagation()}>
 													{#each LANGUAGE_OPTIONS as languageOption}
-														<label class="language-option">
+														<label class="language-option" title={languageOption.label}>
 															<input
 																type="radio"
 																name="language"
@@ -488,7 +488,7 @@
 																bind:group={language}
 																checked={language === languageOption.value}
 															/>
-															<span>{languageOption.label}</span>
+															<span>{languageOption.abbr}</span>
 														</label>
 													{/each}
 												</div>
@@ -899,7 +899,7 @@
 	/* Language Options (Radio Group styled as Button Grid) */
 	.language-options {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+		grid-template-columns: repeat(3, 1fr);
 		gap: 0.5rem;
 		width: 100%;
 		max-height: 200px;
