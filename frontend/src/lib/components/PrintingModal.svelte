@@ -1,7 +1,13 @@
 <script lang="ts">
 	import { base } from '$app/paths';
 	import { invalidate } from '$app/navigation';
-	import { Dialog, Portal } from '@skeletonlabs/skeleton-svelte';
+	import {
+		Dialog,
+		Portal,
+		Combobox,
+		useListCollection,
+		type ComboboxRootProps
+	} from '@skeletonlabs/skeleton-svelte';
 	import { X } from 'lucide-svelte';
 	import Toast from './Toast.svelte';
 
@@ -36,18 +42,59 @@
 
 	// Language options for enhanced tracking
 	const LANGUAGE_OPTIONS = [
-		'English',
-		'Japanese',
-		'German',
-		'French',
-		'Spanish',
-		'Italian',
-		'Portuguese',
-		'Russian',
-		'Korean',
-		'Chinese Simplified',
-		'Chinese Traditional'
+		{ label: 'English', value: 'English' },
+		{ label: 'Japanese', value: 'Japanese' },
+		{ label: 'German', value: 'German' },
+		{ label: 'French', value: 'French' },
+		{ label: 'Spanish', value: 'Spanish' },
+		{ label: 'Italian', value: 'Italian' },
+		{ label: 'Portuguese', value: 'Portuguese' },
+		{ label: 'Russian', value: 'Russian' },
+		{ label: 'Korean', value: 'Korean' },
+		{ label: 'Chinese Simplified', value: 'Chinese Simplified' },
+		{ label: 'Chinese Traditional', value: 'Chinese Traditional' }
 	];
+
+	// Combobox state and collection for language selection
+	let languageItems = $state(LANGUAGE_OPTIONS);
+
+	const languageCollection = $derived(
+		useListCollection({
+			items: languageItems,
+			itemToString: (item) => item.label,
+			itemToValue: (item) => item.value
+		})
+	);
+
+	const onLanguageOpenChange = () => {
+		languageItems = LANGUAGE_OPTIONS;
+	};
+
+	const onLanguageInputValueChange: ComboboxRootProps['onInputValueChange'] = (event) => {
+		const inputValue = event.inputValue;
+		const filtered = LANGUAGE_OPTIONS.filter((item) =>
+			item.value.toLowerCase().includes(inputValue.toLowerCase())
+		);
+		if (filtered.length > 0) {
+			languageItems = filtered;
+			// If there's an exact match (case-insensitive), update the language
+			const exactMatch = filtered.find(
+				(item) => item.value.toLowerCase() === inputValue.toLowerCase()
+			);
+			if (exactMatch) {
+				language = exactMatch.value;
+			}
+		} else {
+			languageItems = LANGUAGE_OPTIONS;
+		}
+	};
+
+	const onLanguageValueChange: ComboboxRootProps['onValueChange'] = (event) => {
+		const selected = event.value[0];
+		if (selected) {
+			language = selected;
+		}
+	};
 
 	// Helper function to format date in user's timezone
 	function formatDateInTimeZone(timeZone: string, date = new Date()): string {
@@ -429,19 +476,37 @@
 												/>
 											</div>
 
-											<div class="form-field">
-												<label for="language">Language</label>
-												<select
+											<!-- Language field hidden until issue #170 is fully resolved -->
+											<!-- <div class="form-field">
+												<Combobox
 													id="language"
-													bind:value={language}
-													class="form-select"
-													onclick={(e) => e.stopPropagation()}
+													placeholder="Select language..."
+													collection={languageCollection}
+													onOpenChange={onLanguageOpenChange}
+													onInputValueChange={onLanguageInputValueChange}
+													onValueChange={onLanguageValueChange}
+													value={[language]}
+													class="language-combobox"
 												>
-													{#each LANGUAGE_OPTIONS as lang}
-														<option value={lang}>{lang}</option>
-													{/each}
-												</select>
-											</div>
+													<Combobox.Label class="form-field-label">Language</Combobox.Label>
+													<Combobox.Control class="combobox-control">
+														<Combobox.Input class="combobox-input" />
+														<Combobox.Trigger class="combobox-trigger" />
+													</Combobox.Control>
+													<Portal>
+														<Combobox.Positioner class="combobox-positioner">
+															<Combobox.Content class="combobox-content">
+																{#each languageItems as item (item.value)}
+																	<Combobox.Item {item} class="combobox-item">
+																		<Combobox.ItemText>{item.label}</Combobox.ItemText>
+																		<Combobox.ItemIndicator />
+																	</Combobox.Item>
+																{/each}
+															</Combobox.Content>
+														</Combobox.Positioner>
+													</Portal>
+												</Combobox>
+											</div> -->
 										</div>
 									{/if}
 
@@ -681,6 +746,81 @@
 		cursor: pointer;
 	}
 
+	/* Combobox Styling */
+	:global(.language-combobox) {
+		width: 100%;
+	}
+
+	:global(.combobox-control) {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		width: 100%;
+		padding: 0.5rem;
+		border: 1px solid #d1d5db;
+		border-radius: 4px;
+		background: white;
+		transition: border-color 0.2s;
+	}
+
+	:global(.combobox-control:focus-within) {
+		border-color: #3b82f6;
+		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+	}
+
+	:global(.combobox-input) {
+		flex: 1;
+		border: none;
+		outline: none;
+		font-size: 0.875rem;
+		color: #111827;
+		background: transparent;
+	}
+
+	:global(.combobox-trigger) {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.25rem;
+		cursor: pointer;
+		color: #6b7280;
+	}
+
+	:global(.combobox-positioner) {
+		z-index: 1000;
+	}
+
+	:global(.combobox-content) {
+		max-height: 300px;
+		overflow-y: auto;
+		border: 1px solid #d1d5db;
+		border-radius: 4px;
+		background: white;
+		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+	}
+
+	:global(.combobox-item) {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.5rem 0.75rem;
+		cursor: pointer;
+		font-size: 0.875rem;
+		color: #374151;
+		transition: background 0.2s;
+	}
+
+	:global(.combobox-item:hover),
+	:global(.combobox-item[data-highlighted]) {
+		background: #f3f4f6;
+	}
+
+	:global(.combobox-item[data-state='checked']) {
+		background: #eff6ff;
+		color: #1e40af;
+		font-weight: 500;
+	}
+
 	/* Optional Fields Toggle */
 	.optional-fields-toggle {
 		width: 100%;
@@ -838,6 +978,39 @@
 	:global(.dark) .optional-fields-toggle:hover {
 		background: #374151;
 		border-color: #6b7280;
+	}
+
+	/* Combobox Dark Mode */
+	:global(.dark .combobox-control) {
+		background: #1f2937;
+		border-color: #4b5563;
+	}
+
+	:global(.dark .combobox-input) {
+		color: #f9fafb;
+	}
+
+	:global(.dark .combobox-trigger) {
+		color: #9ca3af;
+	}
+
+	:global(.dark .combobox-content) {
+		background: #1f2937;
+		border-color: #4b5563;
+	}
+
+	:global(.dark .combobox-item) {
+		color: #d1d5db;
+	}
+
+	:global(.dark .combobox-item:hover),
+	:global(.dark .combobox-item[data-highlighted]) {
+		background: #374151;
+	}
+
+	:global(.dark .combobox-item[data-state='checked']) {
+		background: #1e3a8a;
+		color: #93c5fd;
 	}
 
 	@media (max-width: 768px) {
