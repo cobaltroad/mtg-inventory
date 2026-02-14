@@ -52,20 +52,25 @@ class InventoryController < ApplicationController
                end
     page = (params[:page] || 1).to_i
 
-    # Apply database-level sorting using ORDER BY on indexed columns
-    sorted_relation = apply_database_sort(base_items, sort_option)
+    # Check if denormalized fields are populated for sorting
+    # If any items have NULL denormalized fields needed for sorting, fall back to old behavior
+    needs_fallback = should_use_fallback_sorting?(base_items, sort_option)
 
-    # Paginate at database level with LIMIT/OFFSET
-    pagy, paginated_relation = pagy(sorted_relation, page: page, limit: per_page)
-
-    # Load paginated items with eager loading for images
-    paginated_items_db = paginated_relation.includes(cached_image_attachment: :blob).to_a
-
-    # Preload prices only for paginated items
-    preload_prices(paginated_items_db)
-
-    # Enrich ONLY the paginated items (performance win: 20 items vs 200+)
-    enriched_items = enrich_with_card_details(paginated_items_db)
+    if needs_fallback
+      # Fallback: enrich all items, sort in memory, then paginate (backward compatibility)
+      all_items_with_images = base_items.includes(cached_image_attachment: :blob).to_a
+      preload_prices(all_items_with_images)
+      all_items_enriched = enrich_with_card_details(all_items_with_images)
+      sorted_items = apply_sort(all_items_enriched, sort_option)
+      pagy, enriched_items = pagy_array(sorted_items, page: page, limit: per_page)
+    else
+      # Optimized path: sort at DB, paginate, then enrich only paginated items
+      sorted_relation = apply_database_sort(base_items, sort_option)
+      pagy, paginated_relation = pagy(sorted_relation, page: page, limit: per_page)
+      paginated_items_db = paginated_relation.includes(cached_image_attachment: :blob).to_a
+      preload_prices(paginated_items_db)
+      enriched_items = enrich_with_card_details(paginated_items_db)
+    end
 
     # Calculate stats for entire inventory using SQL aggregates
     stats = if base_items.any?
@@ -503,6 +508,26 @@ class InventoryController < ApplicationController
       normalized
     else
       DEFAULT_SORT
+    end
+  end
+
+  # Determines if we should fall back to in-memory sorting.
+  # Falls back when denormalized fields needed for sorting are NULL.
+  # This ensures backward compatibility with existing data/tests.
+  #
+  # @param relation [ActiveRecord::Relation] Base items relation
+  # @param sort_option [String] Sort option
+  # @return [Boolean] True if should use fallback sorting
+  def should_use_fallback_sorting?(relation, sort_option)
+    case sort_option
+    when "name-asc", "name-desc"
+      relation.where(card_name: nil).exists?
+    when "set-asc", "set-desc"
+      relation.where(set_name: nil).exists?
+    when "release-newest", "release-oldest"
+      relation.where(released_at: nil).exists?
+    else
+      false  # value and date sorts don't require denormalized fields
     end
   end
 
