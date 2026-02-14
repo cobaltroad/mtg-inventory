@@ -167,10 +167,13 @@ class InventoryController < ApplicationController
   end
 
   # Transfers a card from the user's wishlist to their inventory.
-  # If an inventory row already exists for the card, its quantity is
-  # incremented by the wishlist quantity.  The entire operation runs in a
-  # single transaction so a failure after the wishlist deletion cannot
-  # leave orphaned state.
+  # If an inventory row already exists for the card with the same finish,
+  # its quantity is incremented by the wishlist quantity. Different finishes
+  # are tracked separately. The entire operation runs in a single transaction
+  # so a failure after the wishlist deletion cannot leave orphaned state.
+  #
+  # Attributes from the wishlist item are preserved when moving to inventory,
+  # but can be overridden by providing parameters in the request.
   def move_from_wishlist
     card_id = params[:card_id]
     wishlist_item = current_user.collection_items.find_by(card_id: card_id, collection_type: "wishlist")
@@ -180,11 +183,37 @@ class InventoryController < ApplicationController
       return
     end
 
+    # Validate required parameters for move operation (legacy behavior for backward compatibility)
+    # If either parameter is provided, both must be provided
+    has_date = params.key?(:acquired_date) && params[:acquired_date].present?
+    has_price = params.key?(:acquired_price_cents) && params[:acquired_price_cents].present?
+
+    if (params.key?(:acquired_date) || params.key?(:acquired_price_cents)) && !(has_date && has_price)
+      if !has_date
+        render json: { error: "acquired_date is required when providing purchase info" }, status: :unprocessable_entity
+        return
+      elsif !has_price
+        render json: { error: "acquired_price is required when providing purchase info" }, status: :unprocessable_entity
+        return
+      end
+    end
+
     inventory_item = CollectionItem.transaction do
       qty = wishlist_item.quantity
+
+      # Use request parameters if provided, otherwise preserve wishlist item attributes
+      finish = params[:finish].presence || wishlist_item.finish
+      acquired_price_cents = params[:acquired_price_cents].presence || wishlist_item.acquired_price_cents
+      acquired_date = params[:acquired_date].presence || wishlist_item.acquired_date
+      language = params[:language].presence || wishlist_item.language
+
       wishlist_item.destroy!
 
-      existing = current_user.collection_items.find_by(card_id: card_id, collection_type: "inventory")
+      existing = current_user.collection_items.find_by(
+        card_id: card_id,
+        collection_type: "inventory",
+        finish: finish
+      )
 
       if existing
         existing.update!(quantity: existing.quantity + qty)
@@ -193,7 +222,11 @@ class InventoryController < ApplicationController
         current_user.collection_items.create!(
           card_id: card_id,
           collection_type: "inventory",
-          quantity: qty
+          quantity: qty,
+          finish: finish,
+          acquired_price_cents: acquired_price_cents,
+          acquired_date: acquired_date,
+          language: language
         )
       end
     end

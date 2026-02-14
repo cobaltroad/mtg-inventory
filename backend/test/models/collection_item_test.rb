@@ -753,4 +753,180 @@ class CollectionItemTest < ActiveSupport::TestCase
     )
     assert item.valid?, "Test card IDs should be allowed in test environment"
   end
+
+  # ---------------------------------------------------------------------------
+  # Foil/Nonfoil Uniqueness Tests (Issue #166)
+  # ---------------------------------------------------------------------------
+  test "allows foil and nonfoil versions of the same card to coexist" do
+    # Create nonfoil version
+    nonfoil_item = CollectionItem.create!(
+      user: @user,
+      card_id: "same_card_different_finish",
+      collection_type: "inventory",
+      quantity: 1,
+      finish: "nonfoil"
+    )
+
+    # Create foil version - should be allowed
+    foil_item = CollectionItem.new(
+      user: @user,
+      card_id: "same_card_different_finish",
+      collection_type: "inventory",
+      quantity: 1,
+      finish: "foil"
+    )
+    assert foil_item.valid?, "Foil version should be valid when nonfoil exists: #{foil_item.errors.full_messages.inspect}"
+    assert foil_item.save, "Foil version should save successfully"
+  end
+
+  test "allows etched and nonfoil versions of the same card to coexist" do
+    # Create nonfoil version
+    CollectionItem.create!(
+      user: @user,
+      card_id: "etched_card_test",
+      collection_type: "inventory",
+      quantity: 1,
+      finish: "nonfoil"
+    )
+
+    # Create etched version - should be allowed
+    etched_item = CollectionItem.new(
+      user: @user,
+      card_id: "etched_card_test",
+      collection_type: "inventory",
+      quantity: 1,
+      finish: "etched"
+    )
+    assert etched_item.valid?, "Etched version should be valid when nonfoil exists: #{etched_item.errors.full_messages.inspect}"
+    assert etched_item.save, "Etched version should save successfully"
+  end
+
+  test "allows foil and etched versions of the same card to coexist" do
+    # Create foil version
+    CollectionItem.create!(
+      user: @user,
+      card_id: "foil_etched_test",
+      collection_type: "inventory",
+      quantity: 1,
+      finish: "foil"
+    )
+
+    # Create etched version - should be allowed
+    etched_item = CollectionItem.new(
+      user: @user,
+      card_id: "foil_etched_test",
+      collection_type: "inventory",
+      quantity: 1,
+      finish: "etched"
+    )
+    assert etched_item.valid?, "Etched version should be valid when foil exists: #{etched_item.errors.full_messages.inspect}"
+    assert etched_item.save, "Etched version should save successfully"
+  end
+
+  test "allows all three finish types to coexist for the same card" do
+    card_id = "all_finishes_test"
+
+    # Create nonfoil
+    nonfoil = CollectionItem.create!(
+      user: @user,
+      card_id: card_id,
+      collection_type: "inventory",
+      quantity: 1,
+      finish: "nonfoil"
+    )
+
+    # Create foil
+    foil = CollectionItem.create!(
+      user: @user,
+      card_id: card_id,
+      collection_type: "inventory",
+      quantity: 1,
+      finish: "foil"
+    )
+
+    # Create etched
+    etched = CollectionItem.create!(
+      user: @user,
+      card_id: card_id,
+      collection_type: "inventory",
+      quantity: 1,
+      finish: "etched"
+    )
+
+    # Verify all three exist
+    items = CollectionItem.where(user: @user, card_id: card_id, collection_type: "inventory")
+    assert_equal 3, items.count, "Should have 3 separate items for different finishes"
+    assert_includes items.pluck(:finish), "nonfoil"
+    assert_includes items.pluck(:finish), "foil"
+    assert_includes items.pluck(:finish), "etched"
+  end
+
+  test "does not allow duplicate user_id + card_id + collection_type + finish" do
+    # Create first foil
+    CollectionItem.create!(
+      user: @user,
+      card_id: "duplicate_foil_test",
+      collection_type: "inventory",
+      quantity: 1,
+      finish: "foil"
+    )
+
+    # Try to create another foil - should fail
+    duplicate_foil = CollectionItem.new(
+      user: @user,
+      card_id: "duplicate_foil_test",
+      collection_type: "inventory",
+      quantity: 2,
+      finish: "foil"
+    )
+    assert duplicate_foil.invalid?, "Duplicate foil should be invalid"
+    assert_includes duplicate_foil.errors[:card_id], "has already been taken"
+  end
+
+  test "allows same card with nil finish and explicit nonfoil finish to coexist" do
+    # Create item with nil finish (legacy data scenario)
+    nil_finish = CollectionItem.create!(
+      user: @user,
+      card_id: "nil_finish_test",
+      collection_type: "inventory",
+      quantity: 1,
+      finish: nil
+    )
+
+    # Create item with explicit nonfoil finish - should be allowed
+    nonfoil = CollectionItem.new(
+      user: @user,
+      card_id: "nil_finish_test",
+      collection_type: "inventory",
+      quantity: 1,
+      finish: "nonfoil"
+    )
+    assert nonfoil.valid?, "Nonfoil should be valid when nil finish exists: #{nonfoil.errors.full_messages.inspect}"
+    assert nonfoil.save, "Nonfoil should save successfully"
+  end
+
+  test "allows same card in inventory and wishlist with different finishes" do
+    # Inventory nonfoil
+    CollectionItem.create!(
+      user: @user,
+      card_id: "cross_collection_test",
+      collection_type: "inventory",
+      quantity: 1,
+      finish: "nonfoil"
+    )
+
+    # Wishlist foil - should be allowed (different collection_type)
+    wishlist_foil = CollectionItem.new(
+      user: @user,
+      card_id: "cross_collection_test",
+      collection_type: "wishlist",
+      quantity: 1,
+      finish: "foil"
+    )
+    assert wishlist_foil.valid?, "Wishlist foil should be valid: #{wishlist_foil.errors.full_messages.inspect}"
+    assert wishlist_foil.save, "Wishlist foil should save successfully"
+
+    # Verify both exist
+    assert_equal 2, CollectionItem.where(user: @user, card_id: "cross_collection_test").count
+  end
 end

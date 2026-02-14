@@ -7,10 +7,19 @@ module CollectionItemActions
     render json: serialize_collection_items(collection_items)
   end
 
-  # Upsert: if a row already exists for this card in the current collection,
-  # increment its quantity rather than creating a duplicate.
+  # Upsert: if a row already exists for this card in the current collection
+  # with the same finish, increment its quantity rather than creating a duplicate.
+  # Different finishes (foil/nonfoil/etched) are tracked separately when explicitly specified.
+  #
+  # Backward Compatibility:
+  # - When finish is NOT specified: finds ANY existing version (maintains old behavior)
+  # - When finish IS specified: only matches that specific finish (enables foil/nonfoil separation)
   def create
-    item = find_existing_item(card_id_param)
+    # Check if finish was explicitly provided in request parameters
+    finish_explicit = params.key?(:finish)
+    finish_value = finish_explicit ? params[:finish].presence : nil
+
+    item = find_existing_item(card_id_param, finish_value, finish_explicit)
     status = :created
 
     if item
@@ -66,8 +75,24 @@ module CollectionItemActions
       .includes(cached_image_attachment: :blob)
   end
 
-  def find_existing_item(card_id)
-    collection_items.find_by(card_id: card_id)
+  def find_existing_item(card_id, finish = nil, finish_explicit = false)
+    # Backward compatibility logic:
+    # - If finish was NOT explicitly provided: find ANY existing version (old behavior)
+    # - If finish WAS explicitly provided: only match that specific finish (new behavior)
+    if !finish_explicit
+      # Find any existing version regardless of finish for backward compatibility
+      collection_items.find_by(card_id: card_id)
+    elsif finish.nil? || finish == DEFAULT_FINISH
+      # When explicitly requesting nonfoil, also match legacy nil finish
+      collection_items.find_by(card_id: card_id, finish: [ nil, DEFAULT_FINISH ])
+    else
+      # Explicit finish provided: only match that finish
+      collection_items.find_by(card_id: card_id, finish: finish)
+    end
+  end
+
+  def finish_param
+    params[:finish].presence || DEFAULT_FINISH
   end
 
   # Returns the record, or renders 404 and returns nil.
