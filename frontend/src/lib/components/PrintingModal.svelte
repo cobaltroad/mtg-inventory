@@ -478,7 +478,6 @@
 
 											<div class="form-field">
 												<Combobox
-													id="language"
 													placeholder="Select language..."
 													collection={languageCollection}
 													onOpenChange={onLanguageOpenChange}
