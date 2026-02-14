@@ -12,7 +12,13 @@ class InventoryController < ApplicationController
 
   # Override index to include card details from Scryfall with pagination.
   # Backend pagination implemented per Spike #156 findings.
-  # Global sorting implemented per Issue #163 - sorts entire collection before pagination.
+  # Database-driven sorting and pagination per Issue #169 - performance optimization.
+  #
+  # Performance optimization:
+  # - Sorts at database level using ORDER BY on indexed columns
+  # - Paginates with LIMIT/OFFSET before enriching
+  # - Only enriches paginated items (20 instead of 200+)
+  # - 90% reduction in items processed per request
   #
   # Query Parameters:
   #   page - Page number (default: 1)
@@ -32,7 +38,7 @@ class InventoryController < ApplicationController
   #   stats: inventory statistics (most_valuable_card, total_value_cents, total_sets, most_collected_set)
   def index
     # Get base collection scoped to current user and inventory type
-    base_items = collection_items.includes(cached_image_attachment: :blob)
+    base_items = collection_items
 
     # Normalize and validate sort parameter
     sort_option = normalize_sort_param(params[:sort])
@@ -46,25 +52,29 @@ class InventoryController < ApplicationController
                end
     page = (params[:page] || 1).to_i
 
-    # OPTION A: Enrich ALL items, sort globally, then paginate
-    # This ensures accurate global sorting across all pages
-    preload_prices(base_items)
-    all_items_enriched = enrich_with_card_details(base_items)
-    sorted_items = apply_sort(all_items_enriched, sort_option)
+    # Check if denormalized fields are populated for sorting
+    # If any items have NULL denormalized fields needed for sorting, fall back to old behavior
+    needs_fallback = should_use_fallback_sorting?(base_items, sort_option)
 
-    # Paginate the sorted array using Pagy::Array
-    pagy, paginated_items = pagy_array(sorted_items, page: page, limit: per_page)
-
-    # Handle case where requested page is beyond available pages (e.g., after deletions)
-    # When page > total_pages, return empty items array to signal frontend
-    # that this page doesn't exist anymore
-    if page > pagy.pages && pagy.pages > 0
-      paginated_items = []
+    if needs_fallback
+      # Fallback: enrich all items, sort in memory, then paginate (backward compatibility)
+      all_items_with_images = base_items.includes(cached_image_attachment: :blob).to_a
+      preload_prices(all_items_with_images)
+      all_items_enriched = enrich_with_card_details(all_items_with_images)
+      sorted_items = apply_sort(all_items_enriched, sort_option)
+      pagy, enriched_items = pagy_array(sorted_items, page: page, limit: per_page)
+    else
+      # Optimized path: sort at DB, paginate, then enrich only paginated items
+      sorted_relation = apply_database_sort(base_items, sort_option)
+      pagy, paginated_relation = pagy(sorted_relation, page: page, limit: per_page)
+      paginated_items_db = paginated_relation.includes(cached_image_attachment: :blob).to_a
+      preload_prices(paginated_items_db)
+      enriched_items = enrich_with_card_details(paginated_items_db)
     end
 
-    # Calculate stats for entire inventory
+    # Calculate stats for entire inventory using SQL aggregates
     stats = if base_items.any?
-              calculate_inventory_stats_from_enriched(all_items_enriched)
+              calculate_inventory_stats_from_enriched(base_items)
             else
               {
                 most_valuable_card: nil,
@@ -80,7 +90,7 @@ class InventoryController < ApplicationController
     actual_total_pages = pagy.count == 0 ? 0 : pagy.pages
 
     render json: {
-      items: paginated_items,
+      items: enriched_items,
       page: pagy.page,
       per_page: pagy.limit,
       total_count: pagy.count,
@@ -205,33 +215,113 @@ class InventoryController < ApplicationController
     calculate_inventory_stats_from_enriched(all_items_with_details)
   end
 
-  # Calculates inventory statistics from already-enriched items.
-  # Used to avoid double-enrichment when items are already processed for sorting.
-  def calculate_inventory_stats_from_enriched(enriched_items)
-    # Find most valuable card by total_price_cents
-    most_valuable_item = enriched_items.max_by { |item| item[:total_price_cents] || 0 }
-    most_valuable_card = if most_valuable_item && (most_valuable_item[:total_price_cents] || 0) > 0
-                           most_valuable_item[:card_name]
-                         else
-                           nil
-                         end
+  # Calculates inventory statistics using SQL aggregates for performance.
+  # This method uses database queries instead of loading all items into memory.
+  #
+  # @param base_items [ActiveRecord::Relation] Scoped collection_items relation
+  # @return [Hash] Stats hash with inventory metrics
+  def calculate_inventory_stats_from_enriched(base_items)
+    # Extract user_id and collection_type from the base relation for clean queries
+    # Create fresh queries to avoid any inherited scope issues
+    user_id = current_user.id
+    collection_type = "inventory"
 
-    # Calculate total value
-    total_value_cents = enriched_items.sum { |item| item[:total_price_cents] || 0 }
+    base_query = CollectionItem.where(user_id: user_id, collection_type: collection_type)
+
+    # Calculate total value using SQL aggregate with JOIN to card_prices
+    # SUM(quantity * price) where price depends on finish type
+    total_value_query = base_query
+      .joins("LEFT JOIN LATERAL (
+        SELECT card_id,
+               usd_cents,
+               usd_foil_cents,
+               usd_etched_cents
+        FROM card_prices
+        WHERE card_prices.card_id = collection_items.card_id
+        ORDER BY fetched_at DESC
+        LIMIT 1
+      ) AS latest_price ON true")
+      .select("
+        SUM(
+          collection_items.quantity *
+          CASE
+            WHEN collection_items.finish = 'foil' THEN COALESCE(latest_price.usd_foil_cents, 0)
+            WHEN collection_items.finish = 'etched' THEN COALESCE(latest_price.usd_etched_cents, 0)
+            ELSE COALESCE(latest_price.usd_cents, 0)
+          END
+        ) AS total_value
+      ")
+
+    total_value_cents = total_value_query.limit(1).take&.total_value&.to_i || 0
+
+    # Find most valuable card using SQL MAX aggregate
+    most_valuable_query = base_query
+      .joins("LEFT JOIN LATERAL (
+        SELECT card_id,
+               usd_cents,
+               usd_foil_cents,
+               usd_etched_cents
+        FROM card_prices
+        WHERE card_prices.card_id = collection_items.card_id
+        ORDER BY fetched_at DESC
+        LIMIT 1
+      ) AS latest_price ON true")
+      .select("
+        collection_items.card_name,
+        (collection_items.quantity *
+          CASE
+            WHEN collection_items.finish = 'foil' THEN COALESCE(latest_price.usd_foil_cents, 0)
+            WHEN collection_items.finish = 'etched' THEN COALESCE(latest_price.usd_etched_cents, 0)
+            ELSE COALESCE(latest_price.usd_cents, 0)
+          END
+        ) AS total_price
+      ")
+      .order("total_price DESC")
+      .limit(1)
+      .take
+
+    most_valuable_card = if most_valuable_query && most_valuable_query.total_price.to_i > 0
+                          most_valuable_query.card_name
+                        else
+                          nil
+                        end
 
     # Count cards valued over $10 (1000 cents)
-    cards_over_ten_dollars = enriched_items.count { |item| (item[:total_price_cents] || 0) >= 1000 }
+    cards_over_ten_dollars = base_query
+      .joins("LEFT JOIN LATERAL (
+        SELECT card_id,
+               usd_cents,
+               usd_foil_cents,
+               usd_etched_cents
+        FROM card_prices
+        WHERE card_prices.card_id = collection_items.card_id
+        ORDER BY fetched_at DESC
+        LIMIT 1
+      ) AS latest_price ON true")
+      .where("
+        (collection_items.quantity *
+          CASE
+            WHEN collection_items.finish = 'foil' THEN COALESCE(latest_price.usd_foil_cents, 0)
+            WHEN collection_items.finish = 'etched' THEN COALESCE(latest_price.usd_etched_cents, 0)
+            ELSE COALESCE(latest_price.usd_cents, 0)
+          END
+        ) >= 1000
+      ")
+      .count
 
-    # Count unique sets
-    unique_sets = enriched_items.map { |item| item[:set] }.uniq
-    total_sets = unique_sets.size
+    # Count unique sets using DISTINCT on denormalized set_name
+    # Use pluck to avoid GROUP BY issues with ActiveRecord's count
+    total_sets = base_query.distinct.pluck(:set_name).compact.count
 
-    # Find most collected set by counting cards per set
-    set_counts = enriched_items.each_with_object(Hash.new(0)) do |item, counts|
-      counts[item[:set_name]] += 1
-    end
+    # Find most collected set using GROUP BY and COUNT
+    most_collected_query = base_query
+      .select("set_name, COUNT(*) as card_count")
+      .group(:set_name)
+      .order("card_count DESC")
+      .limit(1)
+      .take
 
-    most_collected_set = set_counts.max_by { |_set_name, count| count }&.first
+    most_collected_set = most_collected_query&.set_name
 
     {
       most_valuable_card: most_valuable_card,
@@ -421,8 +511,86 @@ class InventoryController < ApplicationController
     end
   end
 
+  # Determines if we should fall back to in-memory sorting.
+  # Falls back when denormalized fields needed for sorting are NULL.
+  # This ensures backward compatibility with existing data/tests.
+  #
+  # @param relation [ActiveRecord::Relation] Base items relation
+  # @param sort_option [String] Sort option
+  # @return [Boolean] True if should use fallback sorting
+  def should_use_fallback_sorting?(relation, sort_option)
+    case sort_option
+    when "name-asc", "name-desc"
+      relation.where(card_name: nil).exists?
+    when "set-asc", "set-desc"
+      relation.where(set_name: nil).exists?
+    when "release-newest", "release-oldest"
+      relation.where(released_at: nil).exists?
+    else
+      false  # value and date sorts don't require denormalized fields
+    end
+  end
+
+  # Applies database-level sorting using ORDER BY on indexed columns.
+  # This is a performance optimization - sorts at DB level before pagination.
+  #
+  # @param relation [ActiveRecord::Relation] Base collection items relation
+  # @param sort_option [String] Sort option (name-asc, value-high, etc.)
+  # @return [ActiveRecord::Relation] Sorted relation
+  def apply_database_sort(relation, sort_option)
+    case sort_option
+    when "name-asc"
+      relation.order(Arel.sql("LOWER(card_name) ASC NULLS LAST"))
+    when "name-desc"
+      relation.order(Arel.sql("LOWER(card_name) DESC NULLS LAST"))
+    when "set-asc"
+      relation.order(Arel.sql("LOWER(set_name) ASC NULLS LAST"))
+    when "set-desc"
+      relation.order(Arel.sql("LOWER(set_name) DESC NULLS LAST"))
+    when "release-newest"
+      relation.order(Arel.sql("released_at DESC NULLS LAST"))
+    when "release-oldest"
+      relation.order(Arel.sql("released_at ASC NULLS LAST"))
+    when "value-high", "value-low"
+      # Join with latest prices and calculate value for sorting
+      sorted = relation
+        .joins("LEFT JOIN LATERAL (
+          SELECT card_id,
+                 usd_cents,
+                 usd_foil_cents,
+                 usd_etched_cents
+          FROM card_prices
+          WHERE card_prices.card_id = collection_items.card_id
+          ORDER BY fetched_at DESC
+          LIMIT 1
+        ) AS latest_price ON true")
+        .select("collection_items.*,
+          (collection_items.quantity *
+            CASE
+              WHEN collection_items.finish = 'foil' THEN COALESCE(latest_price.usd_foil_cents, latest_price.usd_cents, 0)
+              WHEN collection_items.finish = 'etched' THEN COALESCE(latest_price.usd_etched_cents, latest_price.usd_cents, 0)
+              ELSE COALESCE(latest_price.usd_cents, 0)
+            END
+          ) AS sort_value")
+
+      if sort_option == "value-high"
+        sorted.order("sort_value DESC NULLS LAST")
+      else
+        sorted.order("sort_value ASC NULLS LAST")
+      end
+    when "date-newest"
+      relation.order(created_at: :desc)
+    when "date-oldest"
+      relation.order(created_at: :asc)
+    else
+      # Fallback to default
+      relation.order(Arel.sql("LOWER(card_name) ASC NULLS LAST"))
+    end
+  end
+
   # Applies sorting to enriched inventory items based on sort option.
   # Items must already be enriched with card details and price data.
+  # DEPRECATED: Use apply_database_sort for better performance.
   def apply_sort(items, sort_option)
     case sort_option
     when "name-asc"

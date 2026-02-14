@@ -15,6 +15,9 @@ class CollectionItem < ApplicationRecord
   # Active Storage attachment for cached card images
   has_one_attached :cached_image
 
+  # Callbacks to populate denormalized card metadata
+  before_save :sync_card_metadata, if: :should_sync_metadata?
+
   # Required field validations
   validates :card_id, presence: true
   validates :card_id, uniqueness: { scope: [ :user_id, :collection_type ], message: "has already been taken" }
@@ -67,6 +70,45 @@ class CollectionItem < ApplicationRecord
   end
 
   private
+
+  # ---------------------------------------------------------------------------
+  # Denormalized field synchronization
+  # ---------------------------------------------------------------------------
+
+  # Determines if card metadata should be synced from Scryfall.
+  # Syncs when:
+  # - card_id has changed (new card or card swap)
+  # - Any denormalized field is nil (backfill scenario)
+  def should_sync_metadata?
+    card_id_changed? || card_name.nil? || set_name.nil? || released_at.nil?
+  end
+
+  # Populates denormalized card fields from Scryfall API.
+  # Handles errors gracefully - failures won't prevent record save.
+  def sync_card_metadata
+    return if card_id.blank?
+
+    card_details = fetch_card_details_for_sync
+    return unless card_details
+
+    self.card_name = card_details[:name]
+    self.set_name = card_details[:set_name]
+    self.released_at = Date.parse(card_details[:released_at]) if card_details[:released_at]
+  rescue StandardError => e
+    Rails.logger.warn("Failed to sync card metadata for #{card_id}: #{e.message}")
+    # Don't raise - allow save to proceed even if metadata sync fails
+  end
+
+  # Fetches card details from CardDetailsService with error handling
+  def fetch_card_details_for_sync
+    CardDetailsService.new(card_id: card_id).call
+  rescue CardDetailsService::NetworkError, CardDetailsService::TimeoutError => e
+    Rails.logger.warn("Network error fetching card details for #{card_id}: #{e.message}")
+    nil
+  rescue CardDetailsService::RateLimitError => e
+    Rails.logger.error("Scryfall rate limit exceeded: #{e.message}")
+    nil
+  end
 
   def acquired_date_cannot_be_in_future
     return if acquired_date.blank?
