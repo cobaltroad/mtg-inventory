@@ -62,9 +62,9 @@ class InventoryController < ApplicationController
       paginated_items = []
     end
 
-    # Calculate stats for entire inventory
+    # Calculate stats for entire inventory using SQL aggregates
     stats = if base_items.any?
-              calculate_inventory_stats_from_enriched(all_items_enriched)
+              calculate_inventory_stats_from_enriched(base_items)
             else
               {
                 most_valuable_card: nil,
@@ -205,33 +205,113 @@ class InventoryController < ApplicationController
     calculate_inventory_stats_from_enriched(all_items_with_details)
   end
 
-  # Calculates inventory statistics from already-enriched items.
-  # Used to avoid double-enrichment when items are already processed for sorting.
-  def calculate_inventory_stats_from_enriched(enriched_items)
-    # Find most valuable card by total_price_cents
-    most_valuable_item = enriched_items.max_by { |item| item[:total_price_cents] || 0 }
-    most_valuable_card = if most_valuable_item && (most_valuable_item[:total_price_cents] || 0) > 0
-                           most_valuable_item[:card_name]
-                         else
-                           nil
-                         end
+  # Calculates inventory statistics using SQL aggregates for performance.
+  # This method uses database queries instead of loading all items into memory.
+  #
+  # @param base_items [ActiveRecord::Relation] Scoped collection_items relation
+  # @return [Hash] Stats hash with inventory metrics
+  def calculate_inventory_stats_from_enriched(base_items)
+    # Extract user_id and collection_type from the base relation for clean queries
+    # Create fresh queries to avoid any inherited scope issues
+    user_id = current_user.id
+    collection_type = "inventory"
 
-    # Calculate total value
-    total_value_cents = enriched_items.sum { |item| item[:total_price_cents] || 0 }
+    base_query = CollectionItem.where(user_id: user_id, collection_type: collection_type)
+
+    # Calculate total value using SQL aggregate with JOIN to card_prices
+    # SUM(quantity * price) where price depends on finish type
+    total_value_query = base_query
+      .joins("LEFT JOIN LATERAL (
+        SELECT card_id,
+               usd_cents,
+               usd_foil_cents,
+               usd_etched_cents
+        FROM card_prices
+        WHERE card_prices.card_id = collection_items.card_id
+        ORDER BY fetched_at DESC
+        LIMIT 1
+      ) AS latest_price ON true")
+      .select("
+        SUM(
+          collection_items.quantity *
+          CASE
+            WHEN collection_items.finish = 'foil' THEN COALESCE(latest_price.usd_foil_cents, 0)
+            WHEN collection_items.finish = 'etched' THEN COALESCE(latest_price.usd_etched_cents, 0)
+            ELSE COALESCE(latest_price.usd_cents, 0)
+          END
+        ) AS total_value
+      ")
+
+    total_value_cents = total_value_query.limit(1).take&.total_value&.to_i || 0
+
+    # Find most valuable card using SQL MAX aggregate
+    most_valuable_query = base_query
+      .joins("LEFT JOIN LATERAL (
+        SELECT card_id,
+               usd_cents,
+               usd_foil_cents,
+               usd_etched_cents
+        FROM card_prices
+        WHERE card_prices.card_id = collection_items.card_id
+        ORDER BY fetched_at DESC
+        LIMIT 1
+      ) AS latest_price ON true")
+      .select("
+        collection_items.card_name,
+        (collection_items.quantity *
+          CASE
+            WHEN collection_items.finish = 'foil' THEN COALESCE(latest_price.usd_foil_cents, 0)
+            WHEN collection_items.finish = 'etched' THEN COALESCE(latest_price.usd_etched_cents, 0)
+            ELSE COALESCE(latest_price.usd_cents, 0)
+          END
+        ) AS total_price
+      ")
+      .order("total_price DESC")
+      .limit(1)
+      .take
+
+    most_valuable_card = if most_valuable_query && most_valuable_query.total_price.to_i > 0
+                          most_valuable_query.card_name
+                        else
+                          nil
+                        end
 
     # Count cards valued over $10 (1000 cents)
-    cards_over_ten_dollars = enriched_items.count { |item| (item[:total_price_cents] || 0) >= 1000 }
+    cards_over_ten_dollars = base_query
+      .joins("LEFT JOIN LATERAL (
+        SELECT card_id,
+               usd_cents,
+               usd_foil_cents,
+               usd_etched_cents
+        FROM card_prices
+        WHERE card_prices.card_id = collection_items.card_id
+        ORDER BY fetched_at DESC
+        LIMIT 1
+      ) AS latest_price ON true")
+      .where("
+        (collection_items.quantity *
+          CASE
+            WHEN collection_items.finish = 'foil' THEN COALESCE(latest_price.usd_foil_cents, 0)
+            WHEN collection_items.finish = 'etched' THEN COALESCE(latest_price.usd_etched_cents, 0)
+            ELSE COALESCE(latest_price.usd_cents, 0)
+          END
+        ) >= 1000
+      ")
+      .count
 
-    # Count unique sets
-    unique_sets = enriched_items.map { |item| item[:set] }.uniq
-    total_sets = unique_sets.size
+    # Count unique sets using DISTINCT on denormalized set_name
+    # Use pluck to avoid GROUP BY issues with ActiveRecord's count
+    total_sets = base_query.distinct.pluck(:set_name).compact.count
 
-    # Find most collected set by counting cards per set
-    set_counts = enriched_items.each_with_object(Hash.new(0)) do |item, counts|
-      counts[item[:set_name]] += 1
-    end
+    # Find most collected set using GROUP BY and COUNT
+    most_collected_query = base_query
+      .select("set_name, COUNT(*) as card_count")
+      .group(:set_name)
+      .order("card_count DESC")
+      .limit(1)
+      .take
 
-    most_collected_set = set_counts.max_by { |_set_name, count| count }&.first
+    most_collected_set = most_collected_query&.set_name
 
     {
       most_valuable_card: most_valuable_card,
