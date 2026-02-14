@@ -52,14 +52,8 @@ class InventoryController < ApplicationController
     all_items_enriched = enrich_with_card_details(base_items)
     sorted_items = apply_sort(all_items_enriched, sort_option)
 
-    # Calculate pagination metadata
-    total_count = sorted_items.size
-    total_pages = (total_count.to_f / per_page).ceil
-    start_index = (page - 1) * per_page
-    end_index = start_index + per_page
-
-    # Extract the page subset
-    paginated_items = sorted_items[start_index...end_index] || []
+    # Paginate the sorted array using Pagy::Array
+    pagy, paginated_items = pagy_array(sorted_items, page: page, limit: per_page)
 
     # Calculate stats for entire inventory
     stats = if base_items.any?
@@ -76,10 +70,10 @@ class InventoryController < ApplicationController
 
     render json: {
       items: paginated_items,
-      page: page,
-      per_page: per_page,
-      total_count: total_count,
-      total_pages: total_pages,
+      page: pagy.page,
+      per_page: pagy.limit,
+      total_count: pagy.count,
+      total_pages: pagy.pages,
       sort: sort_option,
       stats: stats
     }
