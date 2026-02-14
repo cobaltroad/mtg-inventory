@@ -476,12 +476,13 @@
 												/>
 											</div>
 
-											<div class="form-field">
+											<div class="form-field" style="position: relative; z-index: 9999;">
 												<label class="form-field-label" for="language-select">Language</label>
 												<select
 													id="language-select"
 													bind:value={language}
 													class="form-select"
+													style="position: relative; z-index: 9999;"
 													onclick={(e) => e.stopPropagation()}
 													onmousedown={(e) => e.stopPropagation()}
 												>
