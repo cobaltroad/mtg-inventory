@@ -487,7 +487,16 @@
 													class="language-combobox"
 												>
 													<Combobox.Label class="form-field-label">Language</Combobox.Label>
-													<Combobox.Control class="combobox-control" onclick={(e) => e.stopPropagation()}>
+													<Combobox.Control
+														class="combobox-control"
+														onclick={(e) => e.stopPropagation()}
+														onmousedown={(e) => e.stopPropagation()}
+														onmouseup={(e) => e.stopPropagation()}
+														onpointerdown={(e) => e.stopPropagation()}
+														onpointerup={(e) => e.stopPropagation()}
+														onfocus={(e) => e.stopPropagation()}
+														onkeydown={(e) => e.stopPropagation()}
+													>
 														<Combobox.Input class="combobox-input" />
 														<Combobox.Trigger class="combobox-trigger" />
 													</Combobox.Control>
