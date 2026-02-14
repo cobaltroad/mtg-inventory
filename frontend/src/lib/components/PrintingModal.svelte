@@ -350,9 +350,9 @@
 		<Dialog.Backdrop
 			class="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50 transition-opacity"
 		/>
-		<Dialog.Positioner class="fixed inset-0 z-50 flex justify-end">
+		<Dialog.Positioner class="fixed inset-0 z-50 flex justify-start">
 			<Dialog.Content
-				class="drawer-container data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right flex h-screen w-full flex-col bg-white shadow-xl transition-transform md:w-[600px] dark:bg-gray-800"
+				class="drawer-container data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left flex h-screen w-full flex-col bg-white shadow-xl transition-transform md:w-[600px] dark:bg-gray-800"
 				data-testid="modal-backdrop"
 				role="dialog"
 				aria-label="Card printings"
@@ -500,7 +500,7 @@
 														<Combobox.Input class="combobox-input" />
 														<Combobox.Trigger class="combobox-trigger" />
 													</Combobox.Control>
-													<Portal>
+													<Portal disabled={true}>
 														<Combobox.Positioner class="combobox-positioner">
 															<Combobox.Content class="combobox-content">
 																{#each languageItems as item (item.value)}
