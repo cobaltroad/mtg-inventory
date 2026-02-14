@@ -2128,6 +2128,159 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     assert_equal "release-newest", body["sort"]
   end
 
+  # ---------------------------------------------------------------------------
+  # DELETE action with pagination edge cases (Issue #171)
+  # ---------------------------------------------------------------------------
+
+  test "DELETE /api/inventory/:id returns correct pagination metadata after deletion" do
+    # Create 25 items (more than one page at 20 per page)
+    25.times do |i|
+      CollectionItem.create!(
+        user: @user,
+        card_id: "delete_page_#{i}",
+        collection_type: "inventory",
+        quantity: 1
+      )
+      stub_scryfall_card_details("delete_page_#{i}", name: "Delete Card #{i}")
+    end
+
+    # Get items on page 2 (items 20-24, which are 5 items)
+    get api_path("/inventory?page=2&per_page=20")
+    assert_response :success
+    page2_before = JSON.parse(response.body)
+    assert_equal 2, page2_before["page"]
+    assert_equal 5, page2_before["items"].size
+    assert_equal 25, page2_before["total_count"]
+    assert_equal 2, page2_before["total_pages"]
+
+    # Delete all 5 items on page 2
+    page2_before["items"].each do |item|
+      delete api_path("/inventory/#{item['id']}")
+      assert_response :no_content
+    end
+
+    # Request page 2 again - should now show the last page correctly
+    get api_path("/inventory?page=2&per_page=20")
+    assert_response :success
+    page2_after = JSON.parse(response.body)
+
+    # After deleting 5 items, we have 20 items total
+    # All 20 should be on page 1, so page 2 should be empty
+    assert_equal 20, page2_after["total_count"], "Total count should be 20 after deleting 5 items"
+    assert_equal 1, page2_after["total_pages"], "Should have only 1 page with 20 items"
+    assert_equal 0, page2_after["items"].size, "Page 2 should be empty"
+  end
+
+  test "DELETE all items on middle page should show remaining items that shift up" do
+    # Create 60 items (3 pages at 20 per page)
+    60.times do |i|
+      CollectionItem.create!(
+        user: @user,
+        card_id: "shift_test_#{i}",
+        collection_type: "inventory",
+        quantity: 1
+      )
+      stub_scryfall_card_details("shift_test_#{i}", name: "Card #{i.to_s.rjust(2, '0')}")
+    end
+
+    # Get items on page 2 (items 20-39)
+    get api_path("/inventory?page=2&per_page=20")
+    assert_response :success
+    page2_before = JSON.parse(response.body)
+    assert_equal 20, page2_before["items"].size
+    assert_equal 60, page2_before["total_count"]
+
+    # Delete all 20 items on page 2
+    page2_before["items"].each do |item|
+      delete api_path("/inventory/#{item['id']}")
+      assert_response :no_content
+    end
+
+    # Request page 2 again - should now show items that were previously on page 3
+    get api_path("/inventory?page=2&per_page=20")
+    assert_response :success
+    page2_after = JSON.parse(response.body)
+
+    # After deleting 20 items from middle, we have 40 items total (2 pages)
+    assert_equal 40, page2_after["total_count"], "Total count should be 40 after deleting 20 items"
+    assert_equal 2, page2_after["total_pages"], "Should have 2 pages with 40 items"
+    assert_equal 20, page2_after["items"].size, "Page 2 should show 20 items that shifted up from page 3"
+  end
+
+  test "DELETE all items on last page redirects to previous page by returning correct metadata" do
+    # Create 45 items (3 pages: 20, 20, 5)
+    45.times do |i|
+      CollectionItem.create!(
+        user: @user,
+        card_id: "last_page_#{i}",
+        collection_type: "inventory",
+        quantity: 1
+      )
+      stub_scryfall_card_details("last_page_#{i}", name: "Last Page Card #{i}")
+    end
+
+    # Get items on page 3 (last 5 items)
+    get api_path("/inventory?page=3&per_page=20")
+    assert_response :success
+    page3_before = JSON.parse(response.body)
+    assert_equal 3, page3_before["page"]
+    assert_equal 5, page3_before["items"].size
+    assert_equal 45, page3_before["total_count"]
+    assert_equal 3, page3_before["total_pages"]
+
+    # Delete all 5 items on page 3
+    page3_before["items"].each do |item|
+      delete api_path("/inventory/#{item['id']}")
+      assert_response :no_content
+    end
+
+    # Request page 3 again - should indicate that page 3 no longer exists
+    get api_path("/inventory?page=3&per_page=20")
+    assert_response :success
+    page3_after = JSON.parse(response.body)
+
+    # After deleting 5 items, we have 40 items total (2 pages)
+    assert_equal 40, page3_after["total_count"], "Total count should be 40"
+    assert_equal 2, page3_after["total_pages"], "Should have only 2 pages now"
+    assert_equal 0, page3_after["items"].size, "Page 3 should be empty since it no longer exists"
+  end
+
+  test "DELETE all items when only one page exists shows empty inventory correctly" do
+    # Create exactly 20 items (1 page)
+    20.times do |i|
+      CollectionItem.create!(
+        user: @user,
+        card_id: "single_page_#{i}",
+        collection_type: "inventory",
+        quantity: 1
+      )
+      stub_scryfall_card_details("single_page_#{i}", name: "Single Page Card #{i}")
+    end
+
+    # Get all items
+    get api_path("/inventory?page=1&per_page=20")
+    assert_response :success
+    page1_before = JSON.parse(response.body)
+    assert_equal 20, page1_before["items"].size
+    assert_equal 20, page1_before["total_count"]
+    assert_equal 1, page1_before["total_pages"]
+
+    # Delete all 20 items
+    page1_before["items"].each do |item|
+      delete api_path("/inventory/#{item['id']}")
+      assert_response :no_content
+    end
+
+    # Request page 1 again - should show empty inventory
+    get api_path("/inventory?page=1&per_page=20")
+    assert_response :success
+    page1_after = JSON.parse(response.body)
+
+    assert_equal 0, page1_after["total_count"], "Total count should be 0"
+    assert_equal 0, page1_after["total_pages"], "Should have 0 pages"
+    assert_equal 0, page1_after["items"].size, "Should have no items"
+  end
+
   private
 
   # Helper method to track SQL queries during a block

@@ -55,6 +55,13 @@ class InventoryController < ApplicationController
     # Paginate the sorted array using Pagy::Array
     pagy, paginated_items = pagy_array(sorted_items, page: page, limit: per_page)
 
+    # Handle case where requested page is beyond available pages (e.g., after deletions)
+    # When page > total_pages, return empty items array to signal frontend
+    # that this page doesn't exist anymore
+    if page > pagy.pages && pagy.pages > 0
+      paginated_items = []
+    end
+
     # Calculate stats for entire inventory
     stats = if base_items.any?
               calculate_inventory_stats_from_enriched(all_items_enriched)
@@ -68,12 +75,16 @@ class InventoryController < ApplicationController
               }
             end
 
+    # Correct total_pages for empty inventory
+    # Pagy returns 1 page for empty collections, but we want 0 pages
+    actual_total_pages = pagy.count == 0 ? 0 : pagy.pages
+
     render json: {
       items: paginated_items,
       page: pagy.page,
       per_page: pagy.limit,
       total_count: pagy.count,
-      total_pages: pagy.pages,
+      total_pages: actual_total_pages,
       sort: sort_option,
       stats: stats
     }
