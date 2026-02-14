@@ -16,8 +16,17 @@ export const load: PageLoad = async ({ fetch, url }) => {
 			perPage = '20';
 		}
 
-		// Fetch with pagination parameters
-		const res = await fetch(`${base}/api/inventory?page=${page}&per_page=${perPage}`);
+		// Get sort from URL, or fallback to localStorage, or default to name-asc
+		let sort = url.searchParams.get('sort');
+		if (!sort && browser) {
+			sort = localStorage.getItem('inventory-sort') || 'name-asc';
+		}
+		if (!sort) {
+			sort = 'name-asc';
+		}
+
+		// Fetch with pagination and sort parameters
+		const res = await fetch(`${base}/api/inventory?page=${page}&per_page=${perPage}&sort=${sort}`);
 		if (!res.ok) {
 			throw new Error(`Failed to fetch inventory: ${res.statusText}`);
 		}
@@ -46,6 +55,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 			per_page: data.per_page || 20,
 			total_count: data.total_count || 0,
 			total_pages: data.total_pages || 0,
+			sort: data.sort || 'name-asc',
 			stats: data.stats || null
 		};
 	} catch (error) {
@@ -56,6 +66,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
 			per_page: 20,
 			total_count: 0,
 			total_pages: 0,
+			sort: 'name-asc',
 			stats: null,
 			error: error instanceof Error ? error.message : 'Failed to load inventory'
 		};

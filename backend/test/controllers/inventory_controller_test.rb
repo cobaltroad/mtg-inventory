@@ -1804,6 +1804,330 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
            "but got #{db_queries.size} queries"
   end
 
+  # ---------------------------------------------------------------------------
+  # #index with sorting -- global sort before pagination (Issue #163)
+  # ---------------------------------------------------------------------------
+
+  test "GET /api/inventory with sort parameter sorts by card name ascending" do
+    CollectionItem.create!(user: @user, card_id: "uuid-zzz", collection_type: "inventory", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "uuid-aaa", collection_type: "inventory", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "uuid-mmm", collection_type: "inventory", quantity: 1)
+
+    stub_scryfall_card_details("uuid-zzz", name: "Zombie Token")
+    stub_scryfall_card_details("uuid-aaa", name: "Ancient Tomb")
+    stub_scryfall_card_details("uuid-mmm", name: "Mox Pearl")
+
+    get api_path("/inventory?sort=name-asc")
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    items = body["items"]
+
+    assert_equal "Ancient Tomb", items[0]["card_name"]
+    assert_equal "Mox Pearl", items[1]["card_name"]
+    assert_equal "Zombie Token", items[2]["card_name"]
+    assert_equal "name-asc", body["sort"]
+  end
+
+  test "GET /api/inventory with sort parameter sorts by card name descending" do
+    CollectionItem.create!(user: @user, card_id: "uuid-zzz", collection_type: "inventory", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "uuid-aaa", collection_type: "inventory", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "uuid-mmm", collection_type: "inventory", quantity: 1)
+
+    stub_scryfall_card_details("uuid-zzz", name: "Zombie Token")
+    stub_scryfall_card_details("uuid-aaa", name: "Ancient Tomb")
+    stub_scryfall_card_details("uuid-mmm", name: "Mox Pearl")
+
+    get api_path("/inventory?sort=name-desc")
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    items = body["items"]
+
+    assert_equal "Zombie Token", items[0]["card_name"]
+    assert_equal "Mox Pearl", items[1]["card_name"]
+    assert_equal "Ancient Tomb", items[2]["card_name"]
+    assert_equal "name-desc", body["sort"]
+  end
+
+  test "GET /api/inventory with sort parameter sorts by set name ascending" do
+    CollectionItem.create!(user: @user, card_id: "uuid-1", collection_type: "inventory", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "uuid-2", collection_type: "inventory", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "uuid-3", collection_type: "inventory", quantity: 1)
+
+    stub_request(:get, "https://api.scryfall.com/cards/uuid-1")
+      .to_return(status: 200, body: { id: "uuid-1", name: "Card 1", set: "ZNR", set_name: "Zendikar Rising", collector_number: "1", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
+    stub_request(:get, "https://api.scryfall.com/cards/uuid-2")
+      .to_return(status: 200, body: { id: "uuid-2", name: "Card 2", set: "AFR", set_name: "Adventures in the Forgotten Realms", collector_number: "2", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
+    stub_request(:get, "https://api.scryfall.com/cards/uuid-3")
+      .to_return(status: 200, body: { id: "uuid-3", name: "Card 3", set: "MID", set_name: "Midnight Hunt", collector_number: "3", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
+
+    get api_path("/inventory?sort=set-asc")
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    items = body["items"]
+
+    assert_equal "Adventures in the Forgotten Realms", items[0]["set_name"]
+    assert_equal "Midnight Hunt", items[1]["set_name"]
+    assert_equal "Zendikar Rising", items[2]["set_name"]
+    assert_equal "set-asc", body["sort"]
+  end
+
+  test "GET /api/inventory with sort parameter sorts by release date newest first" do
+    CollectionItem.create!(user: @user, card_id: "uuid-old", collection_type: "inventory", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "uuid-new", collection_type: "inventory", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "uuid-mid", collection_type: "inventory", quantity: 1)
+
+    stub_request(:get, "https://api.scryfall.com/cards/uuid-old")
+      .to_return(status: 200, body: { id: "uuid-old", name: "Old Card", set: "LEA", set_name: "Alpha", collector_number: "1", released_at: "1993-08-05", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
+    stub_request(:get, "https://api.scryfall.com/cards/uuid-new")
+      .to_return(status: 200, body: { id: "uuid-new", name: "New Card", set: "BRO", set_name: "Brothers War", collector_number: "2", released_at: "2022-11-18", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
+    stub_request(:get, "https://api.scryfall.com/cards/uuid-mid")
+      .to_return(status: 200, body: { id: "uuid-mid", name: "Mid Card", set: "M21", set_name: "Core 2021", collector_number: "3", released_at: "2020-07-03", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
+
+    get api_path("/inventory?sort=release-newest")
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    items = body["items"]
+
+    assert_equal "New Card", items[0]["card_name"]
+    assert_equal "Mid Card", items[1]["card_name"]
+    assert_equal "Old Card", items[2]["card_name"]
+    assert_equal "release-newest", body["sort"]
+  end
+
+  test "GET /api/inventory with sort parameter sorts by release date oldest first" do
+    CollectionItem.create!(user: @user, card_id: "uuid-old", collection_type: "inventory", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "uuid-new", collection_type: "inventory", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "uuid-mid", collection_type: "inventory", quantity: 1)
+
+    stub_request(:get, "https://api.scryfall.com/cards/uuid-old")
+      .to_return(status: 200, body: { id: "uuid-old", name: "Old Card", set: "LEA", set_name: "Alpha", collector_number: "1", released_at: "1993-08-05", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
+    stub_request(:get, "https://api.scryfall.com/cards/uuid-new")
+      .to_return(status: 200, body: { id: "uuid-new", name: "New Card", set: "BRO", set_name: "Brothers War", collector_number: "2", released_at: "2022-11-18", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
+    stub_request(:get, "https://api.scryfall.com/cards/uuid-mid")
+      .to_return(status: 200, body: { id: "uuid-mid", name: "Mid Card", set: "M21", set_name: "Core 2021", collector_number: "3", released_at: "2020-07-03", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
+
+    get api_path("/inventory?sort=release-oldest")
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    items = body["items"]
+
+    assert_equal "Old Card", items[0]["card_name"]
+    assert_equal "Mid Card", items[1]["card_name"]
+    assert_equal "New Card", items[2]["card_name"]
+    assert_equal "release-oldest", body["sort"]
+  end
+
+  test "GET /api/inventory with sort parameter sorts by value highest first" do
+    item1 = CollectionItem.create!(user: @user, card_id: "uuid-cheap", collection_type: "inventory", quantity: 1, finish: "nonfoil")
+    item2 = CollectionItem.create!(user: @user, card_id: "uuid-expensive", collection_type: "inventory", quantity: 2, finish: "nonfoil")
+    item3 = CollectionItem.create!(user: @user, card_id: "uuid-medium", collection_type: "inventory", quantity: 1, finish: "nonfoil")
+
+    CardPrice.create!(card_id: "uuid-cheap", fetched_at: 1.hour.ago, usd_cents: 50)
+    CardPrice.create!(card_id: "uuid-expensive", fetched_at: 1.hour.ago, usd_cents: 1000)
+    CardPrice.create!(card_id: "uuid-medium", fetched_at: 1.hour.ago, usd_cents: 500)
+
+    stub_scryfall_card_details("uuid-cheap", name: "Cheap Card")
+    stub_scryfall_card_details("uuid-expensive", name: "Expensive Card")
+    stub_scryfall_card_details("uuid-medium", name: "Medium Card")
+
+    get api_path("/inventory?sort=value-high")
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    items = body["items"]
+
+    # Expensive card: 2 × 1000 = 2000 cents
+    # Medium card: 1 × 500 = 500 cents
+    # Cheap card: 1 × 50 = 50 cents
+    assert_equal "Expensive Card", items[0]["card_name"]
+    assert_equal 2000, items[0]["total_price_cents"]
+    assert_equal "Medium Card", items[1]["card_name"]
+    assert_equal 500, items[1]["total_price_cents"]
+    assert_equal "Cheap Card", items[2]["card_name"]
+    assert_equal 50, items[2]["total_price_cents"]
+    assert_equal "value-high", body["sort"]
+  end
+
+  test "GET /api/inventory with sort parameter sorts by value lowest first" do
+    item1 = CollectionItem.create!(user: @user, card_id: "uuid-cheap", collection_type: "inventory", quantity: 1, finish: "nonfoil")
+    item2 = CollectionItem.create!(user: @user, card_id: "uuid-expensive", collection_type: "inventory", quantity: 2, finish: "nonfoil")
+    item3 = CollectionItem.create!(user: @user, card_id: "uuid-medium", collection_type: "inventory", quantity: 1, finish: "nonfoil")
+
+    CardPrice.create!(card_id: "uuid-cheap", fetched_at: 1.hour.ago, usd_cents: 50)
+    CardPrice.create!(card_id: "uuid-expensive", fetched_at: 1.hour.ago, usd_cents: 1000)
+    CardPrice.create!(card_id: "uuid-medium", fetched_at: 1.hour.ago, usd_cents: 500)
+
+    stub_scryfall_card_details("uuid-cheap", name: "Cheap Card")
+    stub_scryfall_card_details("uuid-expensive", name: "Expensive Card")
+    stub_scryfall_card_details("uuid-medium", name: "Medium Card")
+
+    get api_path("/inventory?sort=value-low")
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    items = body["items"]
+
+    assert_equal "Cheap Card", items[0]["card_name"]
+    assert_equal "Medium Card", items[1]["card_name"]
+    assert_equal "Expensive Card", items[2]["card_name"]
+    assert_equal "value-low", body["sort"]
+  end
+
+  test "GET /api/inventory with sort parameter sorts by date added newest first" do
+    CollectionItem.create!(user: @user, card_id: "uuid-old", collection_type: "inventory", quantity: 1, created_at: 7.days.ago)
+    CollectionItem.create!(user: @user, card_id: "uuid-new", collection_type: "inventory", quantity: 1, created_at: 1.day.ago)
+    CollectionItem.create!(user: @user, card_id: "uuid-mid", collection_type: "inventory", quantity: 1, created_at: 3.days.ago)
+
+    stub_scryfall_card_details("uuid-old", name: "Old Card")
+    stub_scryfall_card_details("uuid-new", name: "New Card")
+    stub_scryfall_card_details("uuid-mid", name: "Mid Card")
+
+    get api_path("/inventory?sort=date-newest")
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    items = body["items"]
+
+    assert_equal "New Card", items[0]["card_name"]
+    assert_equal "Mid Card", items[1]["card_name"]
+    assert_equal "Old Card", items[2]["card_name"]
+    assert_equal "date-newest", body["sort"]
+  end
+
+  test "GET /api/inventory with sort parameter sorts by date added oldest first" do
+    CollectionItem.create!(user: @user, card_id: "uuid-old", collection_type: "inventory", quantity: 1, created_at: 7.days.ago)
+    CollectionItem.create!(user: @user, card_id: "uuid-new", collection_type: "inventory", quantity: 1, created_at: 1.day.ago)
+    CollectionItem.create!(user: @user, card_id: "uuid-mid", collection_type: "inventory", quantity: 1, created_at: 3.days.ago)
+
+    stub_scryfall_card_details("uuid-old", name: "Old Card")
+    stub_scryfall_card_details("uuid-new", name: "New Card")
+    stub_scryfall_card_details("uuid-mid", name: "Mid Card")
+
+    get api_path("/inventory?sort=date-oldest")
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    items = body["items"]
+
+    assert_equal "Old Card", items[0]["card_name"]
+    assert_equal "Mid Card", items[1]["card_name"]
+    assert_equal "New Card", items[2]["card_name"]
+    assert_equal "date-oldest", body["sort"]
+  end
+
+  test "GET /api/inventory with pagination and sort applies sort globally before pagination" do
+    # Create 25 cards to test pagination (more than default page size of 20)
+    25.times do |i|
+      CollectionItem.create!(
+        user: @user,
+        card_id: "uuid-#{i}",
+        collection_type: "inventory",
+        quantity: 1
+      )
+      # Name them so they sort alphabetically: "Card 00", "Card 01", ..., "Card 24"
+      stub_scryfall_card_details("uuid-#{i}", name: "Card #{i.to_s.rjust(2, '0')}")
+    end
+
+    # Request page 2 sorted by name descending
+    get api_path("/inventory?page=2&per_page=10&sort=name-desc")
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    items = body["items"]
+
+    # Page 2 should contain cards 11-20 in descending order (Card 14 to Card 05)
+    assert_equal 10, items.size
+    assert_equal "Card 14", items[0]["card_name"]
+    assert_equal "Card 05", items[9]["card_name"]
+    assert_equal 2, body["page"]
+    assert_equal "name-desc", body["sort"]
+  end
+
+  test "GET /api/inventory defaults to name-asc when sort parameter not provided" do
+    CollectionItem.create!(user: @user, card_id: "uuid-zzz", collection_type: "inventory", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "uuid-aaa", collection_type: "inventory", quantity: 1)
+
+    stub_scryfall_card_details("uuid-zzz", name: "Zombie Token")
+    stub_scryfall_card_details("uuid-aaa", name: "Ancient Tomb")
+
+    get api_path("/inventory")
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    items = body["items"]
+
+    assert_equal "Ancient Tomb", items[0]["card_name"]
+    assert_equal "Zombie Token", items[1]["card_name"]
+    assert_equal "name-asc", body["sort"]
+  end
+
+  test "GET /api/inventory handles invalid sort parameter by defaulting to name-asc" do
+    CollectionItem.create!(user: @user, card_id: "uuid-zzz", collection_type: "inventory", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "uuid-aaa", collection_type: "inventory", quantity: 1)
+
+    stub_scryfall_card_details("uuid-zzz", name: "Zombie Token")
+    stub_scryfall_card_details("uuid-aaa", name: "Ancient Tomb")
+
+    get api_path("/inventory?sort=invalid-option")
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    items = body["items"]
+
+    # Should default to name-asc
+    assert_equal "Ancient Tomb", items[0]["card_name"]
+    assert_equal "Zombie Token", items[1]["card_name"]
+    assert_equal "name-asc", body["sort"]
+  end
+
+  test "GET /api/inventory handles cards without price data when sorting by value" do
+    item1 = CollectionItem.create!(user: @user, card_id: "uuid-priced", collection_type: "inventory", quantity: 1, finish: "nonfoil")
+    item2 = CollectionItem.create!(user: @user, card_id: "uuid-no-price", collection_type: "inventory", quantity: 1)
+
+    CardPrice.create!(card_id: "uuid-priced", fetched_at: 1.hour.ago, usd_cents: 500)
+    # No price for uuid-no-price
+
+    stub_scryfall_card_details("uuid-priced", name: "Priced Card")
+    stub_scryfall_card_details("uuid-no-price", name: "No Price Card")
+
+    get api_path("/inventory?sort=value-high")
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    items = body["items"]
+
+    # Priced card should come first, unprice card should come last (treated as 0)
+    assert_equal "Priced Card", items[0]["card_name"]
+    assert_equal "No Price Card", items[1]["card_name"]
+    assert_equal "value-high", body["sort"]
+  end
+
+  test "GET /api/inventory handles cards without release_at when sorting by release date" do
+    CollectionItem.create!(user: @user, card_id: "uuid-with-date", collection_type: "inventory", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "uuid-no-date", collection_type: "inventory", quantity: 1)
+
+    stub_request(:get, "https://api.scryfall.com/cards/uuid-with-date")
+      .to_return(status: 200, body: { id: "uuid-with-date", name: "With Date", set: "M21", set_name: "Core 2021", collector_number: "1", released_at: "2020-07-03", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
+    stub_request(:get, "https://api.scryfall.com/cards/uuid-no-date")
+      .to_return(status: 200, body: { id: "uuid-no-date", name: "No Date", set: "TST", set_name: "Test", collector_number: "2", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
+
+    get api_path("/inventory?sort=release-newest")
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    items = body["items"]
+
+    # Card with date should come first, card without date should come last
+    assert_equal "With Date", items[0]["card_name"]
+    assert_equal "No Date", items[1]["card_name"]
+    assert_equal "release-newest", body["sort"]
+  end
+
   private
 
   # Helper method to track SQL queries during a block

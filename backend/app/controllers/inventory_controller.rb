@@ -12,10 +12,15 @@ class InventoryController < ApplicationController
 
   # Override index to include card details from Scryfall with pagination.
   # Backend pagination implemented per Spike #156 findings.
+  # Global sorting implemented per Issue #163 - sorts entire collection before pagination.
   #
   # Query Parameters:
   #   page - Page number (default: 1)
   #   per_page - Items per page (default: 20, max: 100)
+  #   sort - Sort order (default: name-asc)
+  #          Options: name-asc, name-desc, set-asc, set-desc,
+  #                   release-newest, release-oldest, value-high, value-low,
+  #                   date-newest, date-oldest
   #
   # Returns JSON with:
   #   items: array of inventory items with card details
@@ -23,33 +28,36 @@ class InventoryController < ApplicationController
   #   per_page: items per page
   #   total_count: total number of items
   #   total_pages: total number of pages
+  #   sort: current sort option
   #   stats: inventory statistics (most_valuable_card, total_value_cents, total_sets, most_collected_set)
   def index
     # Get base collection scoped to current user and inventory type
     base_items = collection_items.includes(cached_image_attachment: :blob)
 
-    # Apply pagination with Pagy
-    # Default to 20 items per page, max 100
+    # Normalize and validate sort parameter
+    sort_option = normalize_sort_param(params[:sort])
+
+    # Pagination parameters
     requested_per_page = params[:per_page].to_i
     per_page = if requested_per_page > 0
                  [ requested_per_page, 100 ].min
                else
                  20
                end
+    page = (params[:page] || 1).to_i
 
-    # Pagy expects vars as a hash with 'limit' key (not 'items')
-    pagy_vars = { page: params[:page] || 1, limit: per_page }
-    pagy, paginated_items = pagy(base_items, **pagy_vars)
+    # OPTION A: Enrich ALL items, sort globally, then paginate
+    # This ensures accurate global sorting across all pages
+    preload_prices(base_items)
+    all_items_enriched = enrich_with_card_details(base_items)
+    sorted_items = apply_sort(all_items_enriched, sort_option)
 
-    # Preload prices and enrich with card details
-    preload_prices(paginated_items)
-    items_with_details = enrich_with_card_details(paginated_items)
-    sorted_items = sort_by_card_name(items_with_details)
+    # Paginate the sorted array using Pagy::Array
+    pagy, paginated_items = pagy_array(sorted_items, page: page, limit: per_page)
 
-    # Calculate stats for entire inventory (before pagination)
-    # Only calculate if there are items
+    # Calculate stats for entire inventory
     stats = if base_items.any?
-              calculate_inventory_stats(base_items)
+              calculate_inventory_stats_from_enriched(all_items_enriched)
             else
               {
                 most_valuable_card: nil,
@@ -61,11 +69,12 @@ class InventoryController < ApplicationController
             end
 
     render json: {
-      items: sorted_items,
+      items: paginated_items,
       page: pagy.page,
       per_page: pagy.limit,
       total_count: pagy.count,
       total_pages: pagy.pages,
+      sort: sort_option,
       stats: stats
     }
   end
@@ -182,8 +191,14 @@ class InventoryController < ApplicationController
     # Enrich all items with card details
     all_items_with_details = enrich_with_card_details(base_items)
 
+    calculate_inventory_stats_from_enriched(all_items_with_details)
+  end
+
+  # Calculates inventory statistics from already-enriched items.
+  # Used to avoid double-enrichment when items are already processed for sorting.
+  def calculate_inventory_stats_from_enriched(enriched_items)
     # Find most valuable card by total_price_cents
-    most_valuable_item = all_items_with_details.max_by { |item| item[:total_price_cents] || 0 }
+    most_valuable_item = enriched_items.max_by { |item| item[:total_price_cents] || 0 }
     most_valuable_card = if most_valuable_item && (most_valuable_item[:total_price_cents] || 0) > 0
                            most_valuable_item[:card_name]
                          else
@@ -191,17 +206,17 @@ class InventoryController < ApplicationController
                          end
 
     # Calculate total value
-    total_value_cents = all_items_with_details.sum { |item| item[:total_price_cents] || 0 }
+    total_value_cents = enriched_items.sum { |item| item[:total_price_cents] || 0 }
 
     # Count cards valued over $10 (1000 cents)
-    cards_over_ten_dollars = all_items_with_details.count { |item| (item[:total_price_cents] || 0) >= 1000 }
+    cards_over_ten_dollars = enriched_items.count { |item| (item[:total_price_cents] || 0) >= 1000 }
 
     # Count unique sets
-    unique_sets = all_items_with_details.map { |item| item[:set] }.uniq
+    unique_sets = enriched_items.map { |item| item[:set] }.uniq
     total_sets = unique_sets.size
 
     # Find most collected set by counting cards per set
-    set_counts = all_items_with_details.each_with_object(Hash.new(0)) do |item, counts|
+    set_counts = enriched_items.each_with_object(Hash.new(0)) do |item, counts|
       counts[item[:set_name]] += 1
     end
 
@@ -310,11 +325,6 @@ class InventoryController < ApplicationController
     end
   end
 
-  # Sorts items alphabetically by card name
-  def sort_by_card_name(items)
-    items.sort_by { |item| item[:card_name]&.downcase || "" }
-  end
-
   # Verify the card exists in Scryfall before we persist anything.
   # When card_id is blank we let the model validation surface that error
   # instead of hitting Scryfall with an empty string.
@@ -372,6 +382,61 @@ class InventoryController < ApplicationController
         date: point[:date].iso8601,
         value_cents: point[:value_cents]
       }
+    end
+  end
+
+  # Valid sort options for inventory
+  VALID_SORT_OPTIONS = [
+    "name-asc", "name-desc",
+    "set-asc", "set-desc",
+    "release-newest", "release-oldest",
+    "value-high", "value-low",
+    "date-newest", "date-oldest"
+  ].freeze
+
+  DEFAULT_SORT = "name-asc"
+
+  # Normalizes and validates the sort parameter.
+  # Returns a valid sort option or the default if invalid.
+  def normalize_sort_param(sort)
+    return DEFAULT_SORT if sort.blank?
+
+    normalized = sort.to_s.strip.downcase
+
+    if VALID_SORT_OPTIONS.include?(normalized)
+      normalized
+    else
+      DEFAULT_SORT
+    end
+  end
+
+  # Applies sorting to enriched inventory items based on sort option.
+  # Items must already be enriched with card details and price data.
+  def apply_sort(items, sort_option)
+    case sort_option
+    when "name-asc"
+      items.sort_by { |item| item[:card_name]&.downcase || "" }
+    when "name-desc"
+      items.sort_by { |item| item[:card_name]&.downcase || "" }.reverse
+    when "set-asc"
+      items.sort_by { |item| item[:set_name]&.downcase || "" }
+    when "set-desc"
+      items.sort_by { |item| item[:set_name]&.downcase || "" }.reverse
+    when "release-newest"
+      items.sort_by { |item| item[:released_at] || "1900-01-01" }.reverse
+    when "release-oldest"
+      items.sort_by { |item| item[:released_at] || "9999-12-31" }
+    when "value-high"
+      items.sort_by { |item| item[:total_price_cents] || 0 }.reverse
+    when "value-low"
+      items.sort_by { |item| item[:total_price_cents] || 0 }
+    when "date-newest"
+      items.sort_by { |item| item[:created_at] }.reverse
+    when "date-oldest"
+      items.sort_by { |item| item[:created_at] }
+    else
+      # Fallback to default
+      items.sort_by { |item| item[:card_name]&.downcase || "" }
     end
   end
 end

@@ -4,6 +4,7 @@
 # Default settings provide sensible defaults while allowing customization.
 
 require "pagy/extras/overflow"
+require "pagy/extras/array"  # Enable pagy_array for in-memory array pagination
 
 Pagy::DEFAULT[:items] = 20      # Default items per page
 # Note: max_items is enforced in controller logic, not via Pagy config
