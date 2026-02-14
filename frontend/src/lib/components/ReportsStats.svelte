@@ -1,0 +1,129 @@
+<script lang="ts">
+	import { DollarSign, Gem, Layers } from 'lucide-svelte';
+	import { formatPrice } from '$lib/utils/format';
+
+	interface Props {
+		totalValueCents: number;
+		cardsOverTenDollars: number;
+		totalSets: number;
+	}
+
+	let { totalValueCents, cardsOverTenDollars, totalSets }: Props = $props();
+</script>
+
+<div class="stats-container">
+	<div class="stat-card">
+		<div class="stat-icon">
+			<DollarSign size={20} />
+		</div>
+		<div class="stat-content">
+			<div class="stat-value">{formatPrice(totalValueCents)}</div>
+			<div class="stat-label">Total Value</div>
+		</div>
+	</div>
+
+	<div class="stat-card">
+		<div class="stat-icon">
+			<Gem size={20} />
+		</div>
+		<div class="stat-content">
+			<div class="stat-value">{cardsOverTenDollars}</div>
+			<div class="stat-label">Cards Over $10</div>
+		</div>
+	</div>
+
+	<div class="stat-card">
+		<div class="stat-icon">
+			<Layers size={20} />
+		</div>
+		<div class="stat-content">
+			<div class="stat-value">{totalSets}</div>
+			<div class="stat-label">Different Sets</div>
+		</div>
+	</div>
+</div>
+
+<style>
+	.stats-container {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		gap: 1rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.stat-card {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		padding: 1rem;
+		background: white;
+		border: 1px solid #e5e7eb;
+		border-radius: 0.5rem;
+		transition: all 0.2s;
+	}
+
+	.stat-card:hover {
+		border-color: #3b82f6;
+		box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+	}
+
+	:global(.dark) .stat-card {
+		background: #374151;
+		border-color: #4b5563;
+	}
+
+	:global(.dark) .stat-card:hover {
+		border-color: #60a5fa;
+	}
+
+	.stat-icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 2.5rem;
+		height: 2.5rem;
+		background: #dbeafe;
+		color: #1e40af;
+		border-radius: 0.5rem;
+	}
+
+	:global(.dark) .stat-icon {
+		background: #1e3a8a;
+		color: #93c5fd;
+	}
+
+	.stat-content {
+		flex: 1;
+	}
+
+	.stat-value {
+		font-size: 1.5rem;
+		font-weight: 700;
+		color: #111827;
+		line-height: 1.2;
+	}
+
+	:global(.dark) .stat-value {
+		color: #e5e7eb;
+	}
+
+	.stat-label {
+		font-size: 0.875rem;
+		color: #6b7280;
+		margin-top: 0.25rem;
+	}
+
+	:global(.dark) .stat-label {
+		color: #9ca3af;
+	}
+
+	@media (max-width: 768px) {
+		.stats-container {
+			grid-template-columns: 1fr;
+		}
+
+		.stat-value {
+			font-size: 1.25rem;
+		}
+	}
+</style>

@@ -42,6 +42,9 @@ Rails.application.routes.draw do
     # Search
     get "search", to: "search#index"
 
+    # Reports
+    get "reports/inventory_stats", to: "reports#inventory_stats"
+
     # Admin - Execution history for background jobs
     namespace :admin do
       resources :scraper_executions, only: [ :index, :show ] do
