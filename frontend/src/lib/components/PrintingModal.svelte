@@ -477,42 +477,18 @@
 											</div>
 
 											<div class="form-field">
-												<Combobox
-													placeholder="Select language..."
-													collection={languageCollection}
-													onOpenChange={onLanguageOpenChange}
-													onInputValueChange={onLanguageInputValueChange}
-													onValueChange={onLanguageValueChange}
-													value={[language]}
-													class="language-combobox"
+												<label class="form-field-label" for="language-select">Language</label>
+												<select
+													id="language-select"
+													bind:value={language}
+													class="form-select"
+													onclick={(e) => e.stopPropagation()}
+													onmousedown={(e) => e.stopPropagation()}
 												>
-													<Combobox.Label class="form-field-label">Language</Combobox.Label>
-													<Combobox.Control
-														class="combobox-control"
-														onclick={(e) => e.stopPropagation()}
-														onmousedown={(e) => e.stopPropagation()}
-														onmouseup={(e) => e.stopPropagation()}
-														onpointerdown={(e) => e.stopPropagation()}
-														onpointerup={(e) => e.stopPropagation()}
-														onfocus={(e) => e.stopPropagation()}
-														onkeydown={(e) => e.stopPropagation()}
-													>
-														<Combobox.Input class="combobox-input" />
-														<Combobox.Trigger class="combobox-trigger" />
-													</Combobox.Control>
-													<Portal disabled={true}>
-														<Combobox.Positioner class="combobox-positioner">
-															<Combobox.Content class="combobox-content">
-																{#each languageItems as item (item.value)}
-																	<Combobox.Item {item} class="combobox-item">
-																		<Combobox.ItemText>{item.label}</Combobox.ItemText>
-																		<Combobox.ItemIndicator />
-																	</Combobox.Item>
-																{/each}
-															</Combobox.Content>
-														</Combobox.Positioner>
-													</Portal>
-												</Combobox>
+													{#each LANGUAGE_OPTIONS as option}
+														<option value={option.value}>{option.label}</option>
+													{/each}
+												</select>
 											</div>
 										</div>
 									{/if}
