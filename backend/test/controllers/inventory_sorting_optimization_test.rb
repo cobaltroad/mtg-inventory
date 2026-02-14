@@ -283,7 +283,7 @@ class InventorySortingOptimizationTest < ActionDispatch::IntegrationTest
 
   test "sorts by created_at (date added)" do
     # Create items with different timestamps
-    Timecop.freeze(3.days.ago) do
+    travel_to 3.days.ago do
       stub_scryfall_card_details("old", name: "Old Card")
       CollectionItem.create!(
         user: @user,
@@ -293,7 +293,7 @@ class InventorySortingOptimizationTest < ActionDispatch::IntegrationTest
       )
     end
 
-    Timecop.freeze(1.day.ago) do
+    travel_to 1.day.ago do
       stub_scryfall_card_details("recent", name: "Recent Card")
       CollectionItem.create!(
         user: @user,
