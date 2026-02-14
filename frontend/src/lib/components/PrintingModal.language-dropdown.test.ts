@@ -34,13 +34,13 @@ describe('PrintingModal - Language Dropdown Functionality', () => {
 				expect(screen.getByText(/^Language$/i)).toBeInTheDocument();
 			});
 
-			// Find and click a language option
-			const japaneseOption = screen.getByText('Japanese');
+			// Find and click a language option (using abbreviation)
+			const japaneseOption = screen.getByText('JA');
 			await user.click(japaneseOption);
 			await tick();
 
-			// Verify the radio button is checked
-			const japaneseRadio = screen.getByRole('radio', { name: 'Japanese' }) as HTMLInputElement;
+			// Verify the radio button is checked (value is still full name)
+			const japaneseRadio = screen.getByDisplayValue('Japanese') as HTMLInputElement;
 			expect(japaneseRadio.checked).toBe(true);
 		});
 
@@ -62,14 +62,14 @@ describe('PrintingModal - Language Dropdown Functionality', () => {
 				expect(screen.getByText(/^Language$/i)).toBeInTheDocument();
 			});
 
-			const japaneseOption = screen.getByText('Japanese');
+			const japaneseOption = screen.getByText('JA');
 			await user.click(japaneseOption);
 			await tick();
 
 			// The language options should still be visible
 			expect(japaneseOption).toBeInTheDocument();
-			expect(screen.getByText('German')).toBeInTheDocument();
-			expect(screen.getByText('French')).toBeInTheDocument();
+			expect(screen.getByText('DE')).toBeInTheDocument();
+			expect(screen.getByText('FR')).toBeInTheDocument();
 
 			// Wait a bit to ensure they don't disappear
 			await new Promise((resolve) => setTimeout(resolve, 100));
@@ -96,26 +96,23 @@ describe('PrintingModal - Language Dropdown Functionality', () => {
 			});
 
 			// Select Japanese
-			const japaneseOption = screen.getByText('Japanese');
-			await user.click(japaneseOption);
+			await user.click(screen.getByText('JA'));
 			await tick();
-			let japaneseRadio = screen.getByRole('radio', { name: 'Japanese' }) as HTMLInputElement;
+			let japaneseRadio = screen.getByDisplayValue('Japanese') as HTMLInputElement;
 			expect(japaneseRadio.checked).toBe(true);
 
 			// Select German
-			const germanOption = screen.getByText('German');
-			await user.click(germanOption);
+			await user.click(screen.getByText('DE'));
 			await tick();
-			const germanRadio = screen.getByRole('radio', { name: 'German' }) as HTMLInputElement;
+			const germanRadio = screen.getByDisplayValue('German') as HTMLInputElement;
 			expect(germanRadio.checked).toBe(true);
-			japaneseRadio = screen.getByRole('radio', { name: 'Japanese' }) as HTMLInputElement;
+			japaneseRadio = screen.getByDisplayValue('Japanese') as HTMLInputElement;
 			expect(japaneseRadio.checked).toBe(false);
 
 			// Select French
-			const frenchOption = screen.getByText('French');
-			await user.click(frenchOption);
+			await user.click(screen.getByText('FR'));
 			await tick();
-			const frenchRadio = screen.getByRole('radio', { name: 'French' }) as HTMLInputElement;
+			const frenchRadio = screen.getByDisplayValue('French') as HTMLInputElement;
 			expect(frenchRadio.checked).toBe(true);
 			expect(germanRadio.checked).toBe(false);
 		});
@@ -145,8 +142,7 @@ describe('PrintingModal - Language Dropdown Functionality', () => {
 			expect(img).toHaveAttribute('src', MOCK_PRINTINGS[0].image_url);
 
 			// Click on a language option
-			const japaneseOption = screen.getByText('Japanese');
-			await fireEvent.click(japaneseOption);
+			await fireEvent.click(screen.getByText('JA'));
 			await tick();
 
 			// The selected printing should not change
@@ -173,25 +169,21 @@ describe('PrintingModal - Language Dropdown Functionality', () => {
 			});
 
 			// First selection
-			await user.click(screen.getByText('Japanese'));
+			await user.click(screen.getByText('JA'));
 			await tick();
-			expect((screen.getByRole('radio', { name: 'Japanese' }) as HTMLInputElement).checked).toBe(
-				true
-			);
+			expect((screen.getByDisplayValue('Japanese') as HTMLInputElement).checked).toBe(true);
 
 			// Second selection
-			await user.click(screen.getByText('German'));
+			await user.click(screen.getByText('DE'));
 			await tick();
-			expect((screen.getByRole('radio', { name: 'German' }) as HTMLInputElement).checked).toBe(true);
-			expect((screen.getByRole('radio', { name: 'Japanese' }) as HTMLInputElement).checked).toBe(
-				false
-			);
+			expect((screen.getByDisplayValue('German') as HTMLInputElement).checked).toBe(true);
+			expect((screen.getByDisplayValue('Japanese') as HTMLInputElement).checked).toBe(false);
 
 			// Third selection
-			await user.click(screen.getByText('French'));
+			await user.click(screen.getByText('FR'));
 			await tick();
-			expect((screen.getByRole('radio', { name: 'French' }) as HTMLInputElement).checked).toBe(true);
-			expect((screen.getByRole('radio', { name: 'German' }) as HTMLInputElement).checked).toBe(false);
+			expect((screen.getByDisplayValue('French') as HTMLInputElement).checked).toBe(true);
+			expect((screen.getByDisplayValue('German') as HTMLInputElement).checked).toBe(false);
 		});
 
 		it('language options are fully functional after expanding optional fields', async () => {
@@ -222,10 +214,10 @@ describe('PrintingModal - Language Dropdown Functionality', () => {
 			await tick();
 
 			// Now try to select a language
-			await user.click(screen.getByText('Korean'));
+			await user.click(screen.getByText('KO'));
 			await tick();
 
-			expect((screen.getByRole('radio', { name: 'Korean' }) as HTMLInputElement).checked).toBe(true);
+			expect((screen.getByDisplayValue('Korean') as HTMLInputElement).checked).toBe(true);
 		});
 
 		it('does not lose language selection when option is clicked multiple times', async () => {
@@ -247,23 +239,23 @@ describe('PrintingModal - Language Dropdown Functionality', () => {
 			});
 
 			// Select Spanish
-			const spanishOption = screen.getByText('Spanish');
+			const spanishOption = screen.getByText('ES');
 			await user.click(spanishOption);
 			await tick();
-			expect((screen.getByRole('radio', { name: 'Spanish' }) as HTMLInputElement).checked).toBe(true);
+			expect((screen.getByDisplayValue('Spanish') as HTMLInputElement).checked).toBe(true);
 
 			// Click on the same option again
 			await user.click(spanishOption);
 			await tick();
 
 			// Value should persist
-			expect((screen.getByRole('radio', { name: 'Spanish' }) as HTMLInputElement).checked).toBe(true);
+			expect((screen.getByDisplayValue('Spanish') as HTMLInputElement).checked).toBe(true);
 
 			// Click on another element and verify Spanish is still selected
 			await fireEvent.click(screen.getByText(/^Language$/i));
 			await tick();
 
-			expect((screen.getByRole('radio', { name: 'Spanish' }) as HTMLInputElement).checked).toBe(true);
+			expect((screen.getByDisplayValue('Spanish') as HTMLInputElement).checked).toBe(true);
 		});
 	});
 });

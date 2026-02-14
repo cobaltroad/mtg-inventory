@@ -42,17 +42,17 @@
 
 	// Language options for enhanced tracking
 	const LANGUAGE_OPTIONS = [
-		{ label: 'English', value: 'English', abbr: 'EN' },
-		{ label: 'Japanese', value: 'Japanese', abbr: 'JA' },
-		{ label: 'German', value: 'German', abbr: 'DE' },
-		{ label: 'French', value: 'French', abbr: 'FR' },
-		{ label: 'Spanish', value: 'Spanish', abbr: 'ES' },
-		{ label: 'Italian', value: 'Italian', abbr: 'IT' },
-		{ label: 'Portuguese', value: 'Portuguese', abbr: 'PT' },
-		{ label: 'Russian', value: 'Russian', abbr: 'RU' },
-		{ label: 'Korean', value: 'Korean', abbr: 'KO' },
-		{ label: 'Chinese Simplified', value: 'Chinese Simplified', abbr: 'ZHS' },
-		{ label: 'Chinese Traditional', value: 'Chinese Traditional', abbr: 'ZHT' }
+		{ value: 'English', abbr: 'EN' },
+		{ value: 'Japanese', abbr: 'JA' },
+		{ value: 'German', abbr: 'DE' },
+		{ value: 'French', abbr: 'FR' },
+		{ value: 'Spanish', abbr: 'ES' },
+		{ value: 'Italian', abbr: 'IT' },
+		{ value: 'Portuguese', abbr: 'PT' },
+		{ value: 'Russian', abbr: 'RU' },
+		{ value: 'Korean', abbr: 'KO' },
+		{ value: 'Chinese Simplified', abbr: 'ZHS' },
+		{ value: 'Chinese Traditional', abbr: 'ZHT' }
 	];
 
 	// Combobox state and collection for language selection
@@ -61,7 +61,7 @@
 	const languageCollection = $derived(
 		useListCollection({
 			items: languageItems,
-			itemToString: (item) => item.label,
+			itemToString: (item) => item.value,
 			itemToValue: (item) => item.value
 		})
 	);
@@ -480,7 +480,7 @@
 												<label class="form-field-label">Language</label>
 												<div class="language-options" onclick={(e) => e.stopPropagation()}>
 													{#each LANGUAGE_OPTIONS as languageOption}
-														<label class="language-option" title={languageOption.label}>
+														<label class="language-option" title={languageOption.value}>
 															<input
 																type="radio"
 																name="language"
