@@ -2311,6 +2311,294 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, page1_after["items"].size, "Should have no items"
   end
 
+  # ---------------------------------------------------------------------------
+  # Foil/Nonfoil Separation Tests (Issue #166)
+  # ---------------------------------------------------------------------------
+  test "POST /api/inventory creates separate entries for foil and nonfoil versions" do
+    stub_valid_card("lightning-bolt-123")
+    stub_scryfall_card_details("lightning-bolt-123", name: "Lightning Bolt")
+
+    # Create nonfoil version
+    post api_path("/inventory"), params: {
+      card_id: "lightning-bolt-123",
+      quantity: 1,
+      finish: "nonfoil"
+    }
+    assert_response :success
+
+    # Create foil version - should succeed and create separate entry
+    post api_path("/inventory"), params: {
+      card_id: "lightning-bolt-123",
+      quantity: 1,
+      finish: "foil"
+    }
+    assert_response :success
+
+    # Verify both entries exist
+    get api_path("/inventory")
+    assert_response :success
+    items = parse_inventory_response
+    assert_equal 2, items.size, "Should have 2 separate entries for foil and nonfoil"
+
+    finishes = items.map { |item| item["finish"] }.sort
+    assert_equal [ "foil", "nonfoil" ], finishes
+  end
+
+  test "GET /api/inventory returns foil and nonfoil as separate line items" do
+    # Create both versions
+    CollectionItem.create!(
+      user: @user,
+      card_id: "test-card-456",
+      collection_type: "inventory",
+      quantity: 2,
+      finish: "nonfoil"
+    )
+    CollectionItem.create!(
+      user: @user,
+      card_id: "test-card-456",
+      collection_type: "inventory",
+      quantity: 1,
+      finish: "foil"
+    )
+
+    stub_scryfall_card_details("test-card-456", name: "Test Card")
+
+    get api_path("/inventory")
+    assert_response :success
+    items = parse_inventory_response
+
+    assert_equal 2, items.size, "Should return 2 separate line items"
+
+    nonfoil_item = items.find { |item| item["finish"] == "nonfoil" }
+    foil_item = items.find { |item| item["finish"] == "foil" }
+
+    assert_not_nil nonfoil_item, "Should have nonfoil entry"
+    assert_not_nil foil_item, "Should have foil entry"
+
+    assert_equal 2, nonfoil_item["quantity"]
+    assert_equal 1, foil_item["quantity"]
+  end
+
+  test "POST /api/inventory with same card and finish increments quantity" do
+    stub_valid_card("duplicate-test-789")
+    stub_scryfall_card_details("duplicate-test-789", name: "Duplicate Test")
+
+    # Create first foil
+    post api_path("/inventory"), params: {
+      card_id: "duplicate-test-789",
+      quantity: 1,
+      finish: "foil"
+    }
+    assert_response :success
+
+    # Add another foil - should upsert and increment quantity
+    post api_path("/inventory"), params: {
+      card_id: "duplicate-test-789",
+      quantity: 2,
+      finish: "foil"
+    }
+    assert_response :ok
+    body = JSON.parse(response.body)
+    assert_equal 3, body["quantity"], "Quantity should be incremented (1 + 2)"
+    assert_equal "foil", body["finish"]
+
+    # Verify only one foil entry exists
+    foil_items = CollectionItem.where(
+      user: @user,
+      card_id: "duplicate-test-789",
+      collection_type: "inventory",
+      finish: "foil"
+    )
+    assert_equal 1, foil_items.count, "Should have exactly one foil entry"
+  end
+
+  test "DELETE /api/inventory removes only the specific finish" do
+    # Create both versions
+    nonfoil = CollectionItem.create!(
+      user: @user,
+      card_id: "delete-test-abc",
+      collection_type: "inventory",
+      quantity: 1,
+      finish: "nonfoil"
+    )
+    foil = CollectionItem.create!(
+      user: @user,
+      card_id: "delete-test-abc",
+      collection_type: "inventory",
+      quantity: 1,
+      finish: "foil"
+    )
+
+    stub_scryfall_card_details("delete-test-abc", name: "Delete Test")
+
+    # Delete foil version
+    delete api_path("/inventory/#{foil.id}")
+    assert_response :no_content
+
+    # Verify nonfoil still exists
+    get api_path("/inventory")
+    assert_response :success
+    items = parse_inventory_response
+
+    assert_equal 1, items.size, "Should have 1 item remaining"
+    assert_equal "nonfoil", items.first["finish"]
+    assert_equal nonfoil.id, items.first["id"]
+  end
+
+  test "GET /api/inventory/value includes both foil and nonfoil values" do
+    # Create both versions with different prices
+    CollectionItem.create!(
+      user: @user,
+      card_id: "value-test-def",
+      collection_type: "inventory",
+      quantity: 1,
+      finish: "nonfoil"
+    )
+    CollectionItem.create!(
+      user: @user,
+      card_id: "value-test-def",
+      collection_type: "inventory",
+      quantity: 1,
+      finish: "foil"
+    )
+
+    # Create price data with different prices for foil/nonfoil
+    CardPrice.create!(
+      card_id: "value-test-def",
+      fetched_at: 1.day.ago,
+      usd_cents: 200,          # $2.00 nonfoil
+      usd_foil_cents: 1000     # $10.00 foil
+    )
+
+    get api_path("/inventory/value")
+    assert_response :success
+
+    value_data = JSON.parse(response.body)
+    # Total should be $12.00 (200 + 1000)
+    assert_equal 1200, value_data["total_value_cents"]
+    assert_equal 2, value_data["valued_cards"], "Should count both finishes"
+  end
+
+  test "GET /api/inventory sorts foil and nonfoil independently by value" do
+    # Create foil version worth more than nonfoil
+    CollectionItem.create!(
+      user: @user,
+      card_id: "sort-test-ghi",
+      collection_type: "inventory",
+      quantity: 1,
+      finish: "nonfoil"
+    )
+    CollectionItem.create!(
+      user: @user,
+      card_id: "sort-test-ghi",
+      collection_type: "inventory",
+      quantity: 1,
+      finish: "foil"
+    )
+
+    CardPrice.create!(
+      card_id: "sort-test-ghi",
+      fetched_at: 1.day.ago,
+      usd_cents: 100,          # $1.00 nonfoil
+      usd_foil_cents: 5000     # $50.00 foil
+    )
+
+    stub_scryfall_card_details("sort-test-ghi", name: "Sort Test Card")
+
+    get api_path("/inventory?sort=value-high")
+    assert_response :success
+
+    items = parse_inventory_response
+    assert_equal 2, items.size
+
+    # Foil should be first (higher value)
+    assert_equal "foil", items[0]["finish"]
+    assert_equal 5000, items[0]["unit_price_cents"]
+
+    # Nonfoil should be second
+    assert_equal "nonfoil", items[1]["finish"]
+    assert_equal 100, items[1]["unit_price_cents"]
+  end
+
+  test "POST /api/inventory/move_from_wishlist respects finish parameter" do
+    # Create foil in wishlist
+    wishlist_foil = CollectionItem.create!(
+      user: @user,
+      card_id: "move-test-jkl",
+      collection_type: "wishlist",
+      quantity: 1,
+      finish: "foil"
+    )
+
+    # Create nonfoil already in inventory
+    inventory_nonfoil = CollectionItem.create!(
+      user: @user,
+      card_id: "move-test-jkl",
+      collection_type: "inventory",
+      quantity: 2,
+      finish: "nonfoil"
+    )
+
+    post api_path("/inventory/move_from_wishlist"), params: {
+      card_id: "move-test-jkl"
+    }
+    assert_response :created
+
+    # Verify wishlist foil was moved
+    assert_nil CollectionItem.find_by(id: wishlist_foil.id), "Wishlist item should be deleted"
+
+    # Verify both finishes exist in inventory
+    inventory_items = CollectionItem.where(
+      user: @user,
+      card_id: "move-test-jkl",
+      collection_type: "inventory"
+    )
+    assert_equal 2, inventory_items.count, "Should have 2 items in inventory (foil and nonfoil)"
+
+    finishes = inventory_items.pluck(:finish).sort
+    assert_equal [ "foil", "nonfoil" ], finishes
+  end
+
+  test "GET /api/inventory includes finish in stats calculation" do
+    # Create multiple cards with different finishes
+    CollectionItem.create!(
+      user: @user,
+      card_id: "stats-card-1",
+      collection_type: "inventory",
+      quantity: 1,
+      finish: "nonfoil",
+      card_name: "Stats Card 1",
+      set_name: "Test Set"
+    )
+    CollectionItem.create!(
+      user: @user,
+      card_id: "stats-card-1",
+      collection_type: "inventory",
+      quantity: 1,
+      finish: "foil",
+      card_name: "Stats Card 1",
+      set_name: "Test Set"
+    )
+
+    CardPrice.create!(
+      card_id: "stats-card-1",
+      fetched_at: 1.day.ago,
+      usd_cents: 500,
+      usd_foil_cents: 1500
+    )
+
+    stub_scryfall_card_details("stats-card-1", name: "Stats Card 1")
+
+    get api_path("/inventory")
+    assert_response :success
+
+    body = JSON.parse(response.body)
+    stats = body["stats"]
+
+    # Total value should be 500 + 1500 = 2000 cents
+    assert_equal 2000, stats["total_value_cents"]
+  end
+
   private
 
   # Helper method to track SQL queries during a block

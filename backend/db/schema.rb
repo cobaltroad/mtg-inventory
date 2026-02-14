@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_14_015810) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_14_052351) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -71,7 +71,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_14_015810) do
     t.index ["card_name"], name: "index_collection_items_on_card_name"
     t.index ["released_at"], name: "index_collection_items_on_released_at"
     t.index ["set_name"], name: "index_collection_items_on_set_name"
-    t.index ["user_id", "card_id", "collection_type"], name: "idx_on_user_id_card_id_collection_type_4c84eddf15", unique: true
+    t.index ["user_id", "card_id", "collection_type", "finish"], name: "idx_collection_items_on_user_card_type_finish", unique: true
     t.index ["user_id"], name: "index_collection_items_on_user_id"
   end
 
