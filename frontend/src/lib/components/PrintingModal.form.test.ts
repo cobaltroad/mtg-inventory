@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
+import { tick } from 'svelte';
 import PrintingModal from './PrintingModal.svelte';
 import { MOCK_CARD, MOCK_PRINTINGS, mockFetchForPrintings } from './PrintingModal.test.helpers';
 
@@ -126,7 +128,7 @@ describe('PrintingModal - Form', () => {
 			expect(nonfoilRadio).not.toBeChecked();
 		});
 
-		it.skip('displays all language options in dropdown', async () => {
+		it('displays all language options in dropdown', async () => {
 			const mockFetch = mockFetchForPrintings();
 			vi.stubGlobal('fetch', mockFetch);
 
@@ -163,7 +165,7 @@ describe('PrintingModal - Form', () => {
 			});
 		});
 
-		it.skip('allows selecting different language option', async () => {
+		it('allows selecting different language option', async () => {
 			const mockFetch = mockFetchForPrintings();
 			vi.stubGlobal('fetch', mockFetch);
 
@@ -184,6 +186,117 @@ describe('PrintingModal - Form', () => {
 			await fireEvent.change(languageSelect, { target: { value: 'Japanese' } });
 
 			expect(languageSelect).toHaveValue('Japanese');
+		});
+
+		it('defaults language to English on initial render', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByLabelText(/language/i)).toBeInTheDocument();
+			});
+
+			const languageSelect = screen.getByLabelText(/language/i) as HTMLSelectElement;
+			expect(languageSelect).toHaveValue('English');
+		});
+
+		it('preserves language selection when switching between printings', async () => {
+			const mockFetch = mockFetchForPrintings();
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+
+			// Select first printing and change language
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByLabelText(/language/i)).toBeInTheDocument();
+			});
+
+			const languageSelect = screen.getByLabelText(/language/i) as HTMLSelectElement;
+			await fireEvent.change(languageSelect, { target: { value: 'Japanese' } });
+
+			// Verify language changed
+			expect(languageSelect).toHaveValue('Japanese');
+
+			// Switch to second printing
+			await fireEvent.mouseEnter(printingItems[1]);
+
+			await waitFor(() => {
+				// Language should persist (unlike finish which resets)
+				const updatedLanguageSelect = screen.getByLabelText(/language/i) as HTMLSelectElement;
+				expect(updatedLanguageSelect).toHaveValue('Japanese');
+			});
+		});
+
+		it('includes language in form submission data', async () => {
+			const user = userEvent.setup();
+			const mockFetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+				if (typeof url === 'string' && url.includes('/printings')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ printings: MOCK_PRINTINGS })
+					});
+				}
+				if (typeof url === 'string' && url.includes('/api/inventory') && opts?.method === 'POST') {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({ card_id: 'print-1', quantity: 1, collection_type: 'inventory' })
+					});
+				}
+				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+			});
+			vi.stubGlobal('fetch', mockFetch);
+
+			render(PrintingModal, { props: { card: MOCK_CARD, open: true } });
+
+			await waitFor(() => {
+				expect(screen.getByTestId('printings-list')).toBeInTheDocument();
+			});
+
+			const printingItems = screen.getAllByTestId('printing-item');
+			await fireEvent.mouseEnter(printingItems[0]);
+
+			await waitFor(() => {
+				expect(screen.getByLabelText(/language/i)).toBeInTheDocument();
+			});
+
+			// Change language to German using userEvent for better Svelte compatibility
+			const languageSelect = screen.getByLabelText(/language/i) as HTMLSelectElement;
+			await user.selectOptions(languageSelect, 'German');
+			await tick();
+
+			const addButton = screen.getByRole('button', { name: /add to inventory/i });
+			await fireEvent.click(addButton);
+
+			// Verify language is included in API call
+			await waitFor(() => {
+				const inventoryCall = mockFetch.mock.calls.find(
+					(call) => call[0].includes('/api/inventory') && call[1]?.method === 'POST'
+				);
+				expect(inventoryCall).toBeDefined();
+
+				if (inventoryCall && inventoryCall[1]?.body) {
+					const body = JSON.parse(inventoryCall[1].body);
+					expect(body.language).toBe('German');
+				}
+			});
 		});
 
 		it('preserves price but resets finish when selecting a different printing (Issue #138)', async () => {

@@ -433,9 +433,11 @@
 												<label for="language">Language</label>
 												<select
 													id="language"
-													bind:value={language}
+													value={language}
+													onchange={(e) => {
+														language = (e.target as HTMLSelectElement).value;
+													}}
 													class="form-select"
-													onclick={(e) => e.stopPropagation()}
 												>
 													{#each LANGUAGE_OPTIONS as lang}
 														<option value={lang}>{lang}</option>
