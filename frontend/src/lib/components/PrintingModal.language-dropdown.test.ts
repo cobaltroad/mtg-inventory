@@ -5,8 +5,7 @@ import { tick } from 'svelte';
 import PrintingModal from './PrintingModal.svelte';
 import { MOCK_CARD, MOCK_PRINTINGS, mockFetchForPrintings } from './PrintingModal.test.helpers';
 
-// Language dropdown hidden until issue #170 is fully resolved
-describe.skip('PrintingModal - Language Dropdown Functionality', () => {
+describe('PrintingModal - Language Dropdown Functionality', () => {
 	beforeEach(() => {
 		cleanup();
 		vi.restoreAllMocks();
@@ -17,7 +16,7 @@ describe.skip('PrintingModal - Language Dropdown Functionality', () => {
 	});
 
 	describe('Language Dropdown Interactivity', () => {
-		it('allows user to click and open the language dropdown', async () => {
+		it('allows user to click and select a language option', async () => {
 			const user = userEvent.setup();
 			const mockFetch = mockFetchForPrintings();
 			vi.stubGlobal('fetch', mockFetch);
@@ -32,21 +31,20 @@ describe.skip('PrintingModal - Language Dropdown Functionality', () => {
 			await fireEvent.mouseEnter(printingItems[0]);
 
 			await waitFor(() => {
-				expect(screen.getByText(/language/i)).toBeInTheDocument();
+				expect(screen.getByText(/^Language$/i)).toBeInTheDocument();
 			});
 
-			// Find the Combobox input
-			const comboboxInput = screen.getByPlaceholderText(/select language/i) as HTMLInputElement;
-
-			// Click on the combobox to interact with it
-			await user.click(comboboxInput);
+			// Find and click a language option (using abbreviation)
+			const japaneseOption = screen.getByText('JA');
+			await user.click(japaneseOption);
 			await tick();
 
-			// The combobox input should still be in the document
-			expect(comboboxInput).toBeInTheDocument();
+			// Verify the radio button is checked (value is still full name)
+			const japaneseRadio = screen.getByDisplayValue('Japanese') as HTMLInputElement;
+			expect(japaneseRadio.checked).toBe(true);
 		});
 
-		it('does not close or disappear when user interacts with the language dropdown', async () => {
+		it('does not close or disappear when user interacts with the language options', async () => {
 			const user = userEvent.setup();
 			const mockFetch = mockFetchForPrintings();
 			vi.stubGlobal('fetch', mockFetch);
@@ -61,32 +59,25 @@ describe.skip('PrintingModal - Language Dropdown Functionality', () => {
 			await fireEvent.mouseEnter(printingItems[0]);
 
 			await waitFor(() => {
-				expect(screen.getByText(/language/i)).toBeInTheDocument();
+				expect(screen.getByText(/^Language$/i)).toBeInTheDocument();
 			});
 
-			const comboboxInput = screen.getByPlaceholderText(/select language/i) as HTMLInputElement;
-
-			// Click on the combobox to interact with it
-			await user.click(comboboxInput);
+			const japaneseOption = screen.getByText('JA');
+			await user.click(japaneseOption);
 			await tick();
 
-			// The combobox should still be visible and accessible
-			expect(comboboxInput).toBeInTheDocument();
+			// The language options should still be visible
+			expect(japaneseOption).toBeInTheDocument();
+			expect(screen.getByText('DE')).toBeInTheDocument();
+			expect(screen.getByText('FR')).toBeInTheDocument();
 
-			// Wait a bit to ensure it doesn't disappear
+			// Wait a bit to ensure they don't disappear
 			await new Promise((resolve) => setTimeout(resolve, 100));
 
-			expect(comboboxInput).toBeInTheDocument();
-
-			// Clear and type to filter and select a value
-			await user.clear(comboboxInput);
-			await user.type(comboboxInput, 'Japanese');
-			await tick();
-
-			expect(comboboxInput).toHaveValue('Japanese');
+			expect(japaneseOption).toBeInTheDocument();
 		});
 
-		it('allows user to select a language option using userEvent', async () => {
+		it('allows user to select multiple languages sequentially', async () => {
 			const user = userEvent.setup();
 			const mockFetch = mockFetchForPrintings();
 			vi.stubGlobal('fetch', mockFetch);
@@ -101,25 +92,32 @@ describe.skip('PrintingModal - Language Dropdown Functionality', () => {
 			await fireEvent.mouseEnter(printingItems[0]);
 
 			await waitFor(() => {
-				expect(screen.getByText(/language/i)).toBeInTheDocument();
+				expect(screen.getByText(/^Language$/i)).toBeInTheDocument();
 			});
 
-			const comboboxInput = screen.getByPlaceholderText(/select language/i) as HTMLInputElement;
-
-			// Click to open the combobox
-			await user.click(comboboxInput);
+			// Select Japanese
+			await user.click(screen.getByText('JA'));
 			await tick();
+			let japaneseRadio = screen.getByDisplayValue('Japanese') as HTMLInputElement;
+			expect(japaneseRadio.checked).toBe(true);
 
-			// Type to filter and select Japanese
-			await user.clear(comboboxInput);
-			await user.type(comboboxInput, 'Japanese');
+			// Select German
+			await user.click(screen.getByText('DE'));
 			await tick();
+			const germanRadio = screen.getByDisplayValue('German') as HTMLInputElement;
+			expect(germanRadio.checked).toBe(true);
+			japaneseRadio = screen.getByDisplayValue('Japanese') as HTMLInputElement;
+			expect(japaneseRadio.checked).toBe(false);
 
-			// Verify the value changed
-			expect(comboboxInput).toHaveValue('Japanese');
+			// Select French
+			await user.click(screen.getByText('FR'));
+			await tick();
+			const frenchRadio = screen.getByDisplayValue('French') as HTMLInputElement;
+			expect(frenchRadio.checked).toBe(true);
+			expect(germanRadio.checked).toBe(false);
 		});
 
-		it('does not trigger printing item hover handlers when interacting with language dropdown', async () => {
+		it('does not trigger printing item hover handlers when interacting with language options', async () => {
 			const mockFetch = mockFetchForPrintings();
 			vi.stubGlobal('fetch', mockFetch);
 
@@ -135,7 +133,7 @@ describe.skip('PrintingModal - Language Dropdown Functionality', () => {
 			await fireEvent.mouseEnter(printingItems[0]);
 
 			await waitFor(() => {
-				expect(screen.getByText(/language/i)).toBeInTheDocument();
+				expect(screen.getByText(/^Language$/i)).toBeInTheDocument();
 			});
 
 			// Verify first printing is selected
@@ -143,10 +141,8 @@ describe.skip('PrintingModal - Language Dropdown Functionality', () => {
 			const img = previewArea?.querySelector('img');
 			expect(img).toHaveAttribute('src', MOCK_PRINTINGS[0].image_url);
 
-			const comboboxInput = screen.getByPlaceholderText(/select language/i) as HTMLInputElement;
-
-			// Click on the combobox
-			await fireEvent.click(comboboxInput);
+			// Click on a language option
+			await fireEvent.click(screen.getByText('JA'));
 			await tick();
 
 			// The selected printing should not change
@@ -154,7 +150,7 @@ describe.skip('PrintingModal - Language Dropdown Functionality', () => {
 			expect(imgAfterClick).toHaveAttribute('src', MOCK_PRINTINGS[0].image_url);
 		});
 
-		it('allows multiple interactions with the language dropdown without interference', async () => {
+		it('allows multiple interactions with the language options without interference', async () => {
 			const user = userEvent.setup();
 			const mockFetch = mockFetchForPrintings();
 			vi.stubGlobal('fetch', mockFetch);
@@ -169,31 +165,28 @@ describe.skip('PrintingModal - Language Dropdown Functionality', () => {
 			await fireEvent.mouseEnter(printingItems[0]);
 
 			await waitFor(() => {
-				expect(screen.getByText(/language/i)).toBeInTheDocument();
+				expect(screen.getByText(/^Language$/i)).toBeInTheDocument();
 			});
 
-			const comboboxInput = screen.getByPlaceholderText(/select language/i) as HTMLInputElement;
-
 			// First selection
-			await user.clear(comboboxInput);
-			await user.type(comboboxInput, 'Japanese');
+			await user.click(screen.getByText('JA'));
 			await tick();
-			expect(comboboxInput).toHaveValue('Japanese');
+			expect((screen.getByDisplayValue('Japanese') as HTMLInputElement).checked).toBe(true);
 
 			// Second selection
-			await user.clear(comboboxInput);
-			await user.type(comboboxInput, 'German');
+			await user.click(screen.getByText('DE'));
 			await tick();
-			expect(comboboxInput).toHaveValue('German');
+			expect((screen.getByDisplayValue('German') as HTMLInputElement).checked).toBe(true);
+			expect((screen.getByDisplayValue('Japanese') as HTMLInputElement).checked).toBe(false);
 
 			// Third selection
-			await user.clear(comboboxInput);
-			await user.type(comboboxInput, 'French');
+			await user.click(screen.getByText('FR'));
 			await tick();
-			expect(comboboxInput).toHaveValue('French');
+			expect((screen.getByDisplayValue('French') as HTMLInputElement).checked).toBe(true);
+			expect((screen.getByDisplayValue('German') as HTMLInputElement).checked).toBe(false);
 		});
 
-		it('language dropdown is fully functional after expanding optional fields', async () => {
+		it('language options are fully functional after expanding optional fields', async () => {
 			const user = userEvent.setup();
 			const mockFetch = mockFetchForPrintings();
 			vi.stubGlobal('fetch', mockFetch);
@@ -220,16 +213,14 @@ describe.skip('PrintingModal - Language Dropdown Functionality', () => {
 			await fireEvent.click(toggleButton);
 			await tick();
 
-			// Now try to use the language dropdown
-			const comboboxInput = screen.getByPlaceholderText(/select language/i) as HTMLInputElement;
-			await user.clear(comboboxInput);
-			await user.type(comboboxInput, 'Korean');
+			// Now try to select a language
+			await user.click(screen.getByText('KO'));
 			await tick();
 
-			expect(comboboxInput).toHaveValue('Korean');
+			expect((screen.getByDisplayValue('Korean') as HTMLInputElement).checked).toBe(true);
 		});
 
-		it('does not lose language selection when dropdown is clicked multiple times', async () => {
+		it('does not lose language selection when option is clicked multiple times', async () => {
 			const user = userEvent.setup();
 			const mockFetch = mockFetchForPrintings();
 			vi.stubGlobal('fetch', mockFetch);
@@ -244,29 +235,27 @@ describe.skip('PrintingModal - Language Dropdown Functionality', () => {
 			await fireEvent.mouseEnter(printingItems[0]);
 
 			await waitFor(() => {
-				expect(screen.getByText(/language/i)).toBeInTheDocument();
+				expect(screen.getByText(/^Language$/i)).toBeInTheDocument();
 			});
 
-			const comboboxInput = screen.getByPlaceholderText(/select language/i) as HTMLInputElement;
-
-			// Select a language
-			await user.clear(comboboxInput);
-			await user.type(comboboxInput, 'Spanish');
+			// Select Spanish
+			const spanishOption = screen.getByText('ES');
+			await user.click(spanishOption);
 			await tick();
-			expect(comboboxInput).toHaveValue('Spanish');
+			expect((screen.getByDisplayValue('Spanish') as HTMLInputElement).checked).toBe(true);
 
-			// Click on the combobox again (simulating user trying to open it again)
-			await user.click(comboboxInput);
+			// Click on the same option again
+			await user.click(spanishOption);
 			await tick();
 
 			// Value should persist
-			expect(comboboxInput).toHaveValue('Spanish');
+			expect((screen.getByDisplayValue('Spanish') as HTMLInputElement).checked).toBe(true);
 
-			// Click somewhere else and back
-			await fireEvent.blur(comboboxInput);
+			// Click on another element and verify Spanish is still selected
+			await fireEvent.click(screen.getByText(/^Language$/i));
 			await tick();
 
-			expect(comboboxInput).toHaveValue('Spanish');
+			expect((screen.getByDisplayValue('Spanish') as HTMLInputElement).checked).toBe(true);
 		});
 	});
 });

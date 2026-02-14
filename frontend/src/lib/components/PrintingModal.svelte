@@ -42,17 +42,17 @@
 
 	// Language options for enhanced tracking
 	const LANGUAGE_OPTIONS = [
-		{ label: 'English', value: 'English' },
-		{ label: 'Japanese', value: 'Japanese' },
-		{ label: 'German', value: 'German' },
-		{ label: 'French', value: 'French' },
-		{ label: 'Spanish', value: 'Spanish' },
-		{ label: 'Italian', value: 'Italian' },
-		{ label: 'Portuguese', value: 'Portuguese' },
-		{ label: 'Russian', value: 'Russian' },
-		{ label: 'Korean', value: 'Korean' },
-		{ label: 'Chinese Simplified', value: 'Chinese Simplified' },
-		{ label: 'Chinese Traditional', value: 'Chinese Traditional' }
+		{ value: 'English', abbr: 'EN' },
+		{ value: 'Japanese', abbr: 'JA' },
+		{ value: 'German', abbr: 'DE' },
+		{ value: 'French', abbr: 'FR' },
+		{ value: 'Spanish', abbr: 'ES' },
+		{ value: 'Italian', abbr: 'IT' },
+		{ value: 'Portuguese', abbr: 'PT' },
+		{ value: 'Russian', abbr: 'RU' },
+		{ value: 'Korean', abbr: 'KO' },
+		{ value: 'Chinese Simplified', abbr: 'ZHS' },
+		{ value: 'Chinese Traditional', abbr: 'ZHT' }
 	];
 
 	// Combobox state and collection for language selection
@@ -61,7 +61,7 @@
 	const languageCollection = $derived(
 		useListCollection({
 			items: languageItems,
-			itemToString: (item) => item.label,
+			itemToString: (item) => item.value,
 			itemToValue: (item) => item.value
 		})
 	);
@@ -350,9 +350,9 @@
 		<Dialog.Backdrop
 			class="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50 transition-opacity"
 		/>
-		<Dialog.Positioner class="fixed inset-0 z-50 flex justify-end">
+		<Dialog.Positioner class="fixed inset-0 z-50 flex justify-start">
 			<Dialog.Content
-				class="drawer-container data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right flex h-screen w-full flex-col bg-white shadow-xl transition-transform md:w-[600px] dark:bg-gray-800"
+				class="drawer-container data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left flex h-screen w-full flex-col bg-white shadow-xl transition-transform md:w-[600px] dark:bg-gray-800"
 				data-testid="modal-backdrop"
 				role="dialog"
 				aria-label="Card printings"
@@ -476,37 +476,23 @@
 												/>
 											</div>
 
-											<!-- Language field hidden until issue #170 is fully resolved -->
-											<!-- <div class="form-field">
-												<Combobox
-													id="language"
-													placeholder="Select language..."
-													collection={languageCollection}
-													onOpenChange={onLanguageOpenChange}
-													onInputValueChange={onLanguageInputValueChange}
-													onValueChange={onLanguageValueChange}
-													value={[language]}
-													class="language-combobox"
-												>
-													<Combobox.Label class="form-field-label">Language</Combobox.Label>
-													<Combobox.Control class="combobox-control">
-														<Combobox.Input class="combobox-input" />
-														<Combobox.Trigger class="combobox-trigger" />
-													</Combobox.Control>
-													<Portal>
-														<Combobox.Positioner class="combobox-positioner">
-															<Combobox.Content class="combobox-content">
-																{#each languageItems as item (item.value)}
-																	<Combobox.Item {item} class="combobox-item">
-																		<Combobox.ItemText>{item.label}</Combobox.ItemText>
-																		<Combobox.ItemIndicator />
-																	</Combobox.Item>
-																{/each}
-															</Combobox.Content>
-														</Combobox.Positioner>
-													</Portal>
-												</Combobox>
-											</div> -->
+											<div class="form-group">
+												<label class="form-field-label">Language</label>
+												<div class="language-options" onclick={(e) => e.stopPropagation()}>
+													{#each LANGUAGE_OPTIONS as languageOption}
+														<label class="language-option" title={languageOption.value}>
+															<input
+																type="radio"
+																name="language"
+																value={languageOption.value}
+																bind:group={language}
+																checked={language === languageOption.value}
+															/>
+															<span>{languageOption.abbr}</span>
+														</label>
+													{/each}
+												</div>
+											</div>
 										</div>
 									{/if}
 
@@ -718,8 +704,7 @@
 		color: #374151;
 	}
 
-	.form-input,
-	.form-select {
+	.form-input {
 		width: 100%;
 		padding: 0.5rem;
 		border: 1px solid #d1d5db;
@@ -730,8 +715,7 @@
 		transition: border-color 0.2s;
 	}
 
-	.form-input:focus,
-	.form-select:focus {
+	.form-input:focus {
 		outline: none;
 		border-color: #3b82f6;
 		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
@@ -740,10 +724,6 @@
 	.form-input.invalid {
 		border-color: #dc2626;
 		outline: 2px solid rgba(220, 38, 38, 0.2);
-	}
-
-	.form-select {
-		cursor: pointer;
 	}
 
 	/* Combobox Styling */
@@ -858,12 +838,6 @@
 		gap: 0.5rem;
 	}
 
-	.form-label {
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: #374151;
-	}
-
 	/* Finish Options (Radio Group styled as Segmented Control) */
 	.finish-options {
 		display: flex;
@@ -922,6 +896,68 @@
 		border-radius: 4px;
 	}
 
+	/* Language Options (Radio Group styled as Button Grid) */
+	.language-options {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 0.5rem;
+		width: 100%;
+		max-height: 200px;
+		overflow-y: auto;
+		padding: 0.25rem;
+	}
+
+	.language-option {
+		position: relative;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.5rem 0.75rem;
+		border: 1px solid #d1d5db;
+		border-radius: 4px;
+		background: white;
+		transition:
+			background 0.2s,
+			border-color 0.2s,
+			color 0.2s;
+	}
+
+	.language-option input[type='radio'] {
+		position: absolute;
+		opacity: 0;
+		width: 0;
+		height: 0;
+	}
+
+	.language-option span {
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: #374151;
+		user-select: none;
+		text-align: center;
+	}
+
+	.language-option:hover {
+		background: #f9fafb;
+		border-color: #3b82f6;
+	}
+
+	.language-option input[type='radio']:checked + span {
+		color: white;
+	}
+
+	.language-option:has(input[type='radio']:checked) {
+		background: #3b82f6;
+		border-color: #3b82f6;
+	}
+
+	.language-option input[type='radio']:focus + span {
+		outline: 2px solid #3b82f6;
+		outline-offset: 2px;
+		border-radius: 4px;
+	}
+
 	:global(.dark) .drawer-header {
 		border-bottom-color: #374151;
 	}
@@ -935,15 +971,10 @@
 		color: #d1d5db;
 	}
 
-	:global(.dark) .form-input,
-	:global(.dark) .form-select {
+	:global(.dark) .form-input {
 		background: #1f2937;
 		border-color: #4b5563;
 		color: #f9fafb;
-	}
-
-	:global(.dark) .form-label {
-		color: #d1d5db;
 	}
 
 	:global(.dark) .finish-option {
@@ -966,6 +997,29 @@
 	}
 
 	:global(.dark) .finish-option input[type='radio']:checked + span {
+		color: white;
+	}
+
+	:global(.dark) .language-option {
+		background: #1f2937;
+		border-color: #4b5563;
+	}
+
+	:global(.dark) .language-option span {
+		color: #d1d5db;
+	}
+
+	:global(.dark) .language-option:hover {
+		background: #374151;
+		border-color: #3b82f6;
+	}
+
+	:global(.dark) .language-option:has(input[type='radio']:checked) {
+		background: #3b82f6;
+		border-color: #3b82f6;
+	}
+
+	:global(.dark) .language-option input[type='radio']:checked + span {
 		color: white;
 	}
 
