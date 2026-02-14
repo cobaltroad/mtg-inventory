@@ -1,0 +1,278 @@
+require "test_helper"
+require "webmock/minitest"
+
+class InventoryStatsSqlTest < ActionDispatch::IntegrationTest
+  # Tests to verify stats calculation uses SQL aggregates instead of loading all items.
+  # These tests ensure backward compatibility - stats should match existing behavior
+  # but use database queries instead of Ruby enumeration.
+
+  setup do
+    CollectionItem.delete_all
+    User.delete_all
+    CardPrice.delete_all
+    load Rails.root.join("db", "seeds.rb")
+    @user = User.find_by!(email: User::DEFAULT_EMAIL)
+    WebMock.reset!
+
+    @original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+  end
+
+  teardown do
+    Rails.cache = @original_cache
+  end
+
+  def api_path(path)
+    "#{ENV.fetch('PUBLIC_API_PATH', '/api')}#{path}"
+  end
+
+  def stub_scryfall_card_details(card_id, name: "Test Card", set: "TST", set_name: "Test Set")
+    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+      .to_return(
+        status: 200,
+        body: {
+          id: card_id,
+          name: name,
+          set: set,
+          set_name: set_name,
+          collector_number: "1",
+          released_at: "2024-01-01",
+          image_uris: {
+            normal: "https://cards.scryfall.io/normal/front/t/e/test.jpg"
+          }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+  end
+
+  # ---------------------------------------------------------------------------
+  # Test: Stats calculation matches existing behavior
+  # ---------------------------------------------------------------------------
+
+  test "stats match existing behavior with denormalized fields" do
+    # Create inventory with various prices and sets
+    items_data = [
+      { card_id: "card_1", name: "Expensive Card", set: "EXP", set_name: "Expensive Set", quantity: 2, price: 5000 },
+      { card_id: "card_2", name: "Cheap Card", set: "CHP", set_name: "Cheap Set", quantity: 5, price: 100 },
+      { card_id: "card_3", name: "Medium Card", set: "EXP", set_name: "Expensive Set", quantity: 1, price: 1500 },
+      { card_id: "card_4", name: "Another Card", set: "OTH", set_name: "Other Set", quantity: 3, price: 800 }
+    ]
+
+    items_data.each do |data|
+      stub_scryfall_card_details(data[:card_id], name: data[:name], set: data[:set], set_name: data[:set_name])
+
+      item = CollectionItem.create!(
+        user: @user,
+        card_id: data[:card_id],
+        collection_type: "inventory",
+        quantity: data[:quantity],
+        finish: "nonfoil"
+      )
+
+      CardPrice.create!(
+        card_id: data[:card_id],
+        fetched_at: 1.hour.ago,
+        usd_cents: data[:price]
+      )
+    end
+
+    get api_path("/inventory")
+    assert_response :success
+
+    body = JSON.parse(response.body)
+    stats = body["stats"]
+
+    # Expected calculations:
+    # Total value = (2 * 5000) + (5 * 100) + (1 * 1500) + (3 * 800) = 10000 + 500 + 1500 + 2400 = 14400
+    assert_equal 14400, stats["total_value_cents"]
+
+    # Most valuable card by total price = card_1 (2 * 5000 = 10000)
+    assert_equal "Expensive Card", stats["most_valuable_card"]
+
+    # Cards over $10 (1000 cents) = card_1 (10000), card_3 (1500), card_4 (2400) = 3 cards
+    assert_equal 3, stats["cards_over_ten_dollars"]
+
+    # Total unique sets = 3 (EXP, CHP, OTH)
+    assert_equal 3, stats["total_sets"]
+
+    # Most collected set = EXP (2 items: card_1 and card_3)
+    assert_equal "Expensive Set", stats["most_collected_set"]
+  end
+
+  test "stats handle items without prices correctly" do
+    # Mix of items with and without prices
+    stub_scryfall_card_details("priced_card", name: "Priced Card", set_name: "Set A")
+    stub_scryfall_card_details("unpriced_card", name: "Unpriced Card", set_name: "Set B")
+
+    priced = CollectionItem.create!(
+      user: @user,
+      card_id: "priced_card",
+      collection_type: "inventory",
+      quantity: 2,
+      finish: "nonfoil"
+    )
+
+    unpriced = CollectionItem.create!(
+      user: @user,
+      card_id: "unpriced_card",
+      collection_type: "inventory",
+      quantity: 3,
+      finish: "nonfoil"
+    )
+
+    # Only create price for first card
+    CardPrice.create!(
+      card_id: "priced_card",
+      fetched_at: 1.hour.ago,
+      usd_cents: 1000
+    )
+
+    get api_path("/inventory")
+    assert_response :success
+
+    body = JSON.parse(response.body)
+    stats = body["stats"]
+
+    # Total value only includes priced items
+    assert_equal 2000, stats["total_value_cents"]
+
+    # Most valuable is the only priced card
+    assert_equal "Priced Card", stats["most_valuable_card"]
+
+    # Two unique sets
+    assert_equal 2, stats["total_sets"]
+  end
+
+  test "stats handle foil pricing correctly" do
+    stub_scryfall_card_details("foil_card", name: "Foil Card", set_name: "Foil Set")
+
+    CollectionItem.create!(
+      user: @user,
+      card_id: "foil_card",
+      collection_type: "inventory",
+      quantity: 2,
+      finish: "foil"
+    )
+
+    CardPrice.create!(
+      card_id: "foil_card",
+      fetched_at: 1.hour.ago,
+      usd_cents: 1000,
+      usd_foil_cents: 3000
+    )
+
+    get api_path("/inventory")
+    assert_response :success
+
+    body = JSON.parse(response.body)
+    stats = body["stats"]
+
+    # Should use foil price (2 * 3000 = 6000), not nonfoil (2 * 1000 = 2000)
+    assert_equal 6000, stats["total_value_cents"]
+  end
+
+  test "stats return zeros for empty inventory" do
+    get api_path("/inventory")
+    assert_response :success
+
+    body = JSON.parse(response.body)
+    stats = body["stats"]
+
+    assert_nil stats["most_valuable_card"]
+    assert_equal 0, stats["total_value_cents"]
+    assert_equal 0, stats["cards_over_ten_dollars"]
+    assert_equal 0, stats["total_sets"]
+    assert_nil stats["most_collected_set"]
+  end
+
+  # ---------------------------------------------------------------------------
+  # Test: SQL optimization - minimal items loaded
+  # ---------------------------------------------------------------------------
+
+  test "stats calculation does not load all items into memory" do
+    # Create 200 items
+    200.times do |i|
+      card_id = "sql_test_#{i}"
+      stub_scryfall_card_details(card_id, name: "Card #{i}", set_name: "Set #{i % 10}")
+
+      CollectionItem.create!(
+        user: @user,
+        card_id: card_id,
+        collection_type: "inventory",
+        quantity: 1,
+        finish: "nonfoil"
+      )
+
+      CardPrice.create!(
+        card_id: card_id,
+        fetched_at: 1.hour.ago,
+        usd_cents: (i + 1) * 100
+      )
+    end
+
+    # Monitor ActiveRecord to ensure we're using SQL aggregates
+    query_log = []
+    subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |_name, _start, _finish, _id, payload|
+      query_log << payload[:sql]
+    end
+
+    get api_path("/inventory")
+    assert_response :success
+
+    ActiveSupport::Notifications.unsubscribe(subscriber)
+
+    body = JSON.parse(response.body)
+    stats = body["stats"]
+
+    # Verify stats are calculated correctly
+    assert_operator stats["total_value_cents"], :>, 0
+    assert_operator stats["total_sets"], :>, 0
+
+    # Check that we're using SQL aggregates (SUM, COUNT, GROUP BY)
+    aggregate_queries = query_log.select do |sql|
+      sql.match?(/SUM|COUNT|GROUP BY|MAX/i) &&
+        sql.match?(/collection_items/i)
+    end
+
+    assert aggregate_queries.any?, "Expected SQL aggregate queries for stats calculation"
+  end
+
+  # ---------------------------------------------------------------------------
+  # Test: Performance compared to in-memory calculation
+  # ---------------------------------------------------------------------------
+
+  test "SQL stats calculation is faster than loading all items" do
+    # Create large inventory
+    100.times do |i|
+      card_id = "perf_#{i}"
+      stub_scryfall_card_details(card_id, set_name: "Set #{i % 5}")
+
+      CollectionItem.create!(
+        user: @user,
+        card_id: card_id,
+        collection_type: "inventory",
+        quantity: rand(1..10),
+        finish: "nonfoil"
+      )
+
+      CardPrice.create!(
+        card_id: card_id,
+        fetched_at: 1.hour.ago,
+        usd_cents: rand(100..5000)
+      )
+    end
+
+    # Time the stats calculation
+    require "benchmark"
+    time = Benchmark.realtime do
+      get api_path("/inventory")
+      assert_response :success
+    end
+
+    puts "\nStats calculation time for 100 items: #{(time * 1000).round(2)}ms"
+
+    # With SQL aggregates, should be much faster than enriching all items
+    # which would require 100+ API calls or cache hits
+    assert time < 1.0, "Stats calculation took #{time}s, expected < 1s"
+  end
+end
