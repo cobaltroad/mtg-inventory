@@ -1,7 +1,10 @@
 require "test_helper"
 require "webmock/minitest"
+require_relative "../support/execution_logging_test_concern"
 
 class PriceUpdateExecutionLoggingTest < ActiveJob::TestCase
+  include ExecutionLoggingTestConcern
+
   setup do
     # Disable VCR for these tests since we're using WebMock stubs directly
     VCR.turn_off!(ignore_cassettes: true)
@@ -12,6 +15,12 @@ class PriceUpdateExecutionLoggingTest < ActiveJob::TestCase
     PriceUpdateExecution.delete_all
     CollectionItem.delete_all
     User.delete_all
+
+    # Stub card details API calls that happen during collection item creation
+    stub_request(:get, "https://api.scryfall.com/cards/card-abc-123")
+      .to_return(status: 200, body: { id: "card-abc-123", name: "Test Card 1" }.to_json)
+    stub_request(:get, "https://api.scryfall.com/cards/card-def-456")
+      .to_return(status: 200, body: { id: "card-def-456", name: "Test Card 2" }.to_json)
 
     # Create test user and collection items for batch mode testing
     @user = User.create!(
@@ -30,60 +39,79 @@ class PriceUpdateExecutionLoggingTest < ActiveJob::TestCase
       card_id: "card-def-456",
       quantity: 2
     )
-
-    # Capture logs for assertions
-    @original_logger = Rails.logger
-    @log_output = StringIO.new
-    Rails.logger = Logger.new(@log_output)
-    Rails.logger.level = Logger::INFO
   end
 
   teardown do
-    # Restore original logger
-    Rails.logger = @original_logger
-
     # Re-enable VCR
     VCR.turn_on!
   end
 
   # ---------------------------------------------------------------------------
-  # UpdateCardPricesJob: Execution record creation (batch mode)
+  # ExecutionLoggingTestConcern interface implementation
   # ---------------------------------------------------------------------------
-  test "UpdateCardPricesJob batch mode creates execution record with started_at" do
+
+  def perform_job
+    UpdateCardPricesJob.perform_now
+  end
+
+  def execution_model
+    PriceUpdateExecution
+  end
+
+  def job_class
+    UpdateCardPricesJob
+  end
+
+  def job_component_name
+    "UpdateCardPricesJob"
+  end
+
+  def stub_success
     stub_scryfall_price_api_success(@item1.card_id) do
       stub_scryfall_price_api_success(@item2.card_id) do
-        assert_difference "PriceUpdateExecution.count", 1 do
-          UpdateCardPricesJob.perform_now
-        end
+        yield
+      end
+    end
+  end
+
+  def stub_error(error)
+    stub_scryfall_price_api_error(@item1.card_id, error) do
+      # For batch mode, we need at least one item to process
+      # Override perform_job to use single card mode for error tests
+      @single_card_mode = true
+      yield
+    end
+  end
+
+  # Override perform_job for single card mode in error tests
+  def perform_job
+    if @single_card_mode
+      UpdateCardPricesJob.perform_now(@item1.card_id)
+    else
+      UpdateCardPricesJob.perform_now
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # UpdateCardPricesJob: Execution record creation (batch mode)
+  # ---------------------------------------------------------------------------
+  test "UpdateCardPricesJob batch mode sets mode field correctly" do
+    stub_scryfall_price_api_success(@item1.card_id) do
+      stub_scryfall_price_api_success(@item2.card_id) do
+        UpdateCardPricesJob.perform_now
 
         execution = PriceUpdateExecution.last
-        assert_not_nil execution.started_at
-        assert execution.started_at <= Time.current
         assert_equal "batch", execution.mode
       end
     end
   end
 
-  test "UpdateCardPricesJob batch mode sets finished_at when completed" do
+  test "UpdateCardPricesJob batch mode tracks card counts" do
     stub_scryfall_price_api_success(@item1.card_id) do
       stub_scryfall_price_api_success(@item2.card_id) do
         UpdateCardPricesJob.perform_now
 
         execution = PriceUpdateExecution.last
-        assert_not_nil execution.finished_at
-        assert execution.finished_at >= execution.started_at
-        assert execution.execution_time_seconds.positive?
-      end
-    end
-  end
-
-  test "UpdateCardPricesJob batch mode records success status when all cards processed" do
-    stub_scryfall_price_api_success(@item1.card_id) do
-      stub_scryfall_price_api_success(@item2.card_id) do
-        UpdateCardPricesJob.perform_now
-
-        execution = PriceUpdateExecution.last
-        assert_equal "success", execution.status
         assert_equal 2, execution.cards_attempted
         assert_equal 2, execution.cards_succeeded
         assert_equal 0, execution.cards_failed
@@ -125,33 +153,29 @@ class PriceUpdateExecutionLoggingTest < ActiveJob::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # UpdateCardPricesJob: Structured JSON logging (batch mode)
+  # UpdateCardPricesJob: Job-specific logging (batch mode)
   # ---------------------------------------------------------------------------
-  test "UpdateCardPricesJob logs price_update_started event in JSON format" do
+  test "UpdateCardPricesJob logs mode in started event" do
     stub_scryfall_price_api_success(@item1.card_id) do
       stub_scryfall_price_api_success(@item2.card_id) do
         UpdateCardPricesJob.perform_now
 
         log_content = @log_output.string
         assert_match /"event":"price_update_started"/, log_content
-        assert_match /"component":"UpdateCardPricesJob"/, log_content
         assert_match /"mode":"batch"/, log_content
-        assert_match /"timestamp":"#{Time.current.year}/, log_content
       end
     end
   end
 
-  test "UpdateCardPricesJob logs price_update_completed event with execution summary" do
+  test "UpdateCardPricesJob logs card counts in summary" do
     stub_scryfall_price_api_success(@item1.card_id) do
       stub_scryfall_price_api_success(@item2.card_id) do
         UpdateCardPricesJob.perform_now
 
         log_content = @log_output.string
         assert_match /"event":"price_update_completed"/, log_content
-        assert_match /"status":"success"/, log_content
         assert_match /"cards_attempted":2/, log_content
         assert_match /"cards_succeeded":2/, log_content
-        assert_match /"duration_seconds":/, log_content
       end
     end
   end
@@ -182,35 +206,8 @@ class PriceUpdateExecutionLoggingTest < ActiveJob::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # UpdateCardPricesJob: Error logging
+  # UpdateCardPricesJob: Partial success status
   # ---------------------------------------------------------------------------
-  test "UpdateCardPricesJob logs error with full context when Scryfall fetch fails" do
-    stub_scryfall_price_api_error(@item1.card_id, CardPriceService::NetworkError.new("Connection timeout")) do
-      # Expect any exception (retry behavior changes the exception type in tests)
-      assert_raises do
-        UpdateCardPricesJob.perform_now(@item1.card_id)
-      end
-
-      log_content = @log_output.string
-      assert_match /"event":"error_occurred"/, log_content
-      assert_match /"error_class":"CardPriceService::NetworkError"/, log_content
-      assert_match /"card_id":"card-abc-123"/, log_content
-    end
-  end
-
-  test "UpdateCardPricesJob records failure status when error occurs in single card mode" do
-    stub_scryfall_price_api_error(@item1.card_id, CardPriceService::NetworkError.new("Network error")) do
-      # Expect any exception (retry behavior changes the exception type in tests)
-      assert_raises do
-        UpdateCardPricesJob.perform_now(@item1.card_id)
-      end
-
-      execution = PriceUpdateExecution.last
-      assert_equal "failure", execution.status
-      assert_not_nil execution.error_summary
-    end
-  end
-
   test "UpdateCardPricesJob records partial_success when some cards fail in batch mode" do
     stub_scryfall_price_api_success(@item1.card_id) do
       # item2 will fail with non-retryable error
@@ -229,7 +226,7 @@ class PriceUpdateExecutionLoggingTest < ActiveJob::TestCase
   # ---------------------------------------------------------------------------
   # UpdateCardPricesJob: Rate limit logging
   # ---------------------------------------------------------------------------
-  test "UpdateCardPricesJob logs WARN level when rate limit encountered" do
+  test "UpdateCardPricesJob logs rate limit with service name" do
     error = CardPriceService::RateLimitError.new("Rate limit exceeded")
     error.define_singleton_method(:retry_after) { 60 }
 
@@ -243,54 +240,6 @@ class PriceUpdateExecutionLoggingTest < ActiveJob::TestCase
       assert_match /"level":"WARN"/, log_content
       assert_match /"event":"rate_limit_encountered"/, log_content
       assert_match /"service":"Scryfall"/, log_content
-    end
-  end
-
-  # ---------------------------------------------------------------------------
-  # UpdateCardPricesJob: Sensitive data redaction
-  # ---------------------------------------------------------------------------
-  test "UpdateCardPricesJob does not log sensitive API keys in error messages" do
-    # Set fake API key environment variable
-    original_key = ENV["SCRYFALL_API_KEY"]
-    ENV["SCRYFALL_API_KEY"] = "secret_scryfall_key_789"
-
-    error = StandardError.new("Error with SCRYFALL_API_KEY=secret_scryfall_key_789")
-    stub_scryfall_price_api_error(@item1.card_id, error) do
-      assert_raises(StandardError) do
-        UpdateCardPricesJob.perform_now(@item1.card_id)
-      end
-
-      log_content = @log_output.string
-      assert_no_match /secret_scryfall_key_789/, log_content
-      assert_match /\[REDACTED\]/, log_content
-    end
-  ensure
-    ENV["SCRYFALL_API_KEY"] = original_key
-  end
-
-  # ---------------------------------------------------------------------------
-  # UpdateCardPricesJob: ISO 8601 timestamp format
-  # ---------------------------------------------------------------------------
-  test "UpdateCardPricesJob logs timestamps in ISO 8601 format" do
-    stub_scryfall_price_api_success(@item1.card_id) do
-      UpdateCardPricesJob.perform_now(@item1.card_id)
-
-      log_content = @log_output.string
-      # ISO 8601 format: 2026-02-08T10:30:45Z or 2026-02-08T10:30:45+00:00
-      assert_match /"timestamp":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/, log_content
-    end
-  end
-
-  # ---------------------------------------------------------------------------
-  # UpdateCardPricesJob: Log levels
-  # ---------------------------------------------------------------------------
-  test "UpdateCardPricesJob uses appropriate log levels for different events" do
-    stub_scryfall_price_api_success(@item1.card_id) do
-      UpdateCardPricesJob.perform_now(@item1.card_id)
-
-      log_content = @log_output.string
-      # Should have INFO level for normal operations
-      assert_match /"level":"INFO"/, log_content
     end
   end
 

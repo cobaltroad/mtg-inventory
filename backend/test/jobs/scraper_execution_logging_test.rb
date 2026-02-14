@@ -1,6 +1,9 @@
 require "test_helper"
+require_relative "../support/execution_logging_test_concern"
 
 class ScraperExecutionLoggingTest < ActiveJob::TestCase
+  include ExecutionLoggingTestConcern
+
   setup do
     # Clear any existing data
     Decklist.delete_all
@@ -9,57 +12,51 @@ class ScraperExecutionLoggingTest < ActiveJob::TestCase
 
     # Clear Scryfall cache to ensure consistent test behavior
     ScryfallCardResolver.clear_cache
-
-    # Capture logs for assertions
-    @original_logger = Rails.logger
-    @log_output = StringIO.new
-    Rails.logger = Logger.new(@log_output)
-    Rails.logger.level = Logger::INFO
-  end
-
-  teardown do
-    # Restore original logger
-    Rails.logger = @original_logger
   end
 
   # ---------------------------------------------------------------------------
-  # ScrapeEdhrecCommandersJob: Execution record creation
+  # ExecutionLoggingTestConcern interface implementation
   # ---------------------------------------------------------------------------
-  test "ScrapeEdhrecCommandersJob creates execution record with started_at" do
-    mock_commanders = build_mock_commanders(5)
 
-    stub_edhrec_discovery(top_commanders: mock_commanders) do
-      assert_difference "ScraperExecution.count", 1 do
-        ScrapeEdhrecCommandersJob.perform_now
-      end
-
-      execution = ScraperExecution.last
-      assert_not_nil execution.started_at
-      assert execution.started_at <= Time.current
-    end
+  def perform_job
+    ScrapeEdhrecCommandersJob.perform_now
   end
 
-  test "ScrapeEdhrecCommandersJob sets finished_at when completed" do
+  def execution_model
+    ScraperExecution
+  end
+
+  def job_class
+    ScrapeEdhrecCommandersJob
+  end
+
+  def job_component_name
+    "ScrapeEdhrecCommandersJob"
+  end
+
+  def stub_success
     mock_commanders = build_mock_commanders(3)
-
     stub_edhrec_discovery(top_commanders: mock_commanders) do
-      ScrapeEdhrecCommandersJob.perform_now
-
-      execution = ScraperExecution.last
-      assert_not_nil execution.finished_at
-      assert execution.finished_at >= execution.started_at
-      assert execution.execution_time_seconds.positive?
+      yield
     end
   end
 
-  test "ScrapeEdhrecCommandersJob records success status when all commanders processed" do
+  def stub_error(error)
+    stub_edhrec_fetch_error(error) do
+      yield
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # ScrapeEdhrecCommandersJob: Job-specific execution tracking
+  # ---------------------------------------------------------------------------
+  test "ScrapeEdhrecCommandersJob tracks commander counts" do
     mock_commanders = build_mock_commanders(5)
 
     stub_edhrec_discovery(top_commanders: mock_commanders) do
       ScrapeEdhrecCommandersJob.perform_now
 
       execution = ScraperExecution.last
-      assert_equal "success", execution.status
       assert_equal 5, execution.commanders_attempted
       assert_equal 5, execution.commanders_succeeded
       assert_equal 0, execution.commanders_failed
@@ -67,36 +64,8 @@ class ScraperExecutionLoggingTest < ActiveJob::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # ScrapeEdhrecCommandersJob: Structured JSON logging
+  # ScrapeEdhrecCommandersJob: Job-specific logging
   # ---------------------------------------------------------------------------
-  test "ScrapeEdhrecCommandersJob logs scrape_started event in JSON format" do
-    mock_commanders = build_mock_commanders(2)
-
-    stub_edhrec_discovery(top_commanders: mock_commanders) do
-      ScrapeEdhrecCommandersJob.perform_now
-
-      log_content = @log_output.string
-      assert_match /"event":"scrape_started"/, log_content
-      assert_match /"component":"ScrapeEdhrecCommandersJob"/, log_content
-      assert_match /"timestamp":"#{Time.current.year}/, log_content
-    end
-  end
-
-  test "ScrapeEdhrecCommandersJob logs scrape_completed event with execution summary" do
-    mock_commanders = build_mock_commanders(3)
-
-    stub_edhrec_discovery(top_commanders: mock_commanders) do
-      ScrapeEdhrecCommandersJob.perform_now
-
-      log_content = @log_output.string
-      assert_match /"event":"scrape_completed"/, log_content
-      assert_match /"status":"success"/, log_content
-      assert_match /"commanders_attempted":3/, log_content
-      assert_match /"commanders_succeeded":3/, log_content
-      assert_match /"duration_seconds":/, log_content
-    end
-  end
-
   test "ScrapeEdhrecCommandersJob logs commander_processed event for each commander" do
     mock_commanders = build_mock_commanders(2)
 
@@ -109,37 +78,6 @@ class ScraperExecutionLoggingTest < ActiveJob::TestCase
       assert_match /"commander_name":"Commander 2"/, log_content
       assert_match /"rank":1/, log_content
       assert_match /"rank":2/, log_content
-    end
-  end
-
-  # ---------------------------------------------------------------------------
-  # ScrapeEdhrecCommandersJob: Error logging
-  # ---------------------------------------------------------------------------
-  test "ScrapeEdhrecCommandersJob logs error with full context when EDHREC fetch fails" do
-    stub_edhrec_fetch_error(EdhrecScraper::FetchError.new("Connection timeout")) do
-      assert_raises(EdhrecScraper::FetchError) do
-        ScrapeEdhrecCommandersJob.perform_now
-      end
-
-      log_content = @log_output.string
-      assert_match /"event":"error_occurred"/, log_content
-      assert_match /"error_class":"EdhrecScraper::FetchError"/, log_content
-      assert_match /"error_message":"Connection timeout"/, log_content
-      assert_match /"component":"ScrapeEdhrecCommandersJob"/, log_content
-    end
-  end
-
-  test "ScrapeEdhrecCommandersJob records failure status when error occurs" do
-    stub_edhrec_fetch_error(EdhrecScraper::FetchError.new("Network error")) do
-      assert_raises(EdhrecScraper::FetchError) do
-        ScrapeEdhrecCommandersJob.perform_now
-      end
-
-      execution = ScraperExecution.last
-      assert_equal "failure", execution.status
-      assert_not_nil execution.error_summary
-      assert_match /FetchError/, execution.error_summary
-      assert_match /Network error/, execution.error_summary
     end
   end
 
@@ -170,7 +108,7 @@ class ScraperExecutionLoggingTest < ActiveJob::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # ScrapeCommanderDecklistJob: Structured JSON logging
+  # ScrapeCommanderDecklistJob: Job-specific logging
   # ---------------------------------------------------------------------------
   test "ScrapeCommanderDecklistJob logs decklist_scrape_started event" do
     commander = Commander.create!(
@@ -215,9 +153,6 @@ class ScraperExecutionLoggingTest < ActiveJob::TestCase
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # ScrapeCommanderDecklistJob: Error logging
-  # ---------------------------------------------------------------------------
   test "ScrapeCommanderDecklistJob logs error with commander context when fetch fails" do
     commander = Commander.create!(
       name: "Error Commander",
@@ -244,8 +179,6 @@ class ScraperExecutionLoggingTest < ActiveJob::TestCase
   # Rate limiting logging
   # ---------------------------------------------------------------------------
   test "logs WARN level when rate limit encountered" do
-    mock_commanders = build_mock_commanders(1)
-
     # Simulate rate limit error
     stub_edhrec_rate_limit(retry_after: 60) do
       assert_raises(EdhrecScraper::RateLimitError) do
@@ -257,59 +190,6 @@ class ScraperExecutionLoggingTest < ActiveJob::TestCase
       assert_match /"event":"rate_limit_encountered"/, log_content
       assert_match /"service":"EDHREC"/, log_content
       assert_match /"retry_after_seconds":60/, log_content
-    end
-  end
-
-  # ---------------------------------------------------------------------------
-  # Sensitive data redaction
-  # ---------------------------------------------------------------------------
-  test "does not log sensitive credentials in error messages" do
-    # Set fake API key environment variable
-    original_key = ENV["SCRYFALL_API_KEY"]
-    ENV["SCRYFALL_API_KEY"] = "secret_api_key_123"
-
-    mock_commanders = build_mock_commanders(1)
-
-    stub_edhrec_fetch_error(StandardError.new("Error with SCRYFALL_API_KEY=secret_api_key_123")) do
-      assert_raises(StandardError) do
-        ScrapeEdhrecCommandersJob.perform_now
-      end
-
-      log_content = @log_output.string
-      assert_no_match /secret_api_key_123/, log_content
-      assert_match /\[REDACTED\]/, log_content
-    end
-  ensure
-    ENV["SCRYFALL_API_KEY"] = original_key
-  end
-
-  # ---------------------------------------------------------------------------
-  # ISO 8601 timestamp format
-  # ---------------------------------------------------------------------------
-  test "logs timestamps in ISO 8601 format" do
-    mock_commanders = build_mock_commanders(1)
-
-    stub_edhrec_discovery(top_commanders: mock_commanders) do
-      ScrapeEdhrecCommandersJob.perform_now
-
-      log_content = @log_output.string
-      # ISO 8601 format: 2026-02-08T10:30:45Z or 2026-02-08T10:30:45+00:00
-      assert_match /"timestamp":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/, log_content
-    end
-  end
-
-  # ---------------------------------------------------------------------------
-  # Log levels
-  # ---------------------------------------------------------------------------
-  test "uses appropriate log levels for different events" do
-    mock_commanders = build_mock_commanders(1)
-
-    stub_edhrec_discovery(top_commanders: mock_commanders) do
-      ScrapeEdhrecCommandersJob.perform_now
-
-      log_content = @log_output.string
-      # Should have INFO level for normal operations
-      assert_match /"level":"INFO"/, log_content
     end
   end
 

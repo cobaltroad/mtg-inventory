@@ -1,7 +1,10 @@
 require "test_helper"
 require "webmock/minitest"
+require_relative "../support/execution_logging_test_concern"
 
 class ImageCacheExecutionLoggingTest < ActiveJob::TestCase
+  include ExecutionLoggingTestConcern
+
   setup do
     # Disable VCR for these tests since we're using WebMock stubs directly
     VCR.turn_off!(ignore_cassettes: true)
@@ -11,6 +14,10 @@ class ImageCacheExecutionLoggingTest < ActiveJob::TestCase
     ImageCacheExecution.delete_all
     CollectionItem.delete_all
     User.delete_all
+
+    # Stub card details API call that happens during collection item creation
+    stub_request(:get, "https://api.scryfall.com/cards/test-card-123")
+      .to_return(status: 200, body: { id: "test-card-123", name: "Test Card" }.to_json)
 
     # Create test user and collection item
     @user = User.create!(
@@ -24,56 +31,68 @@ class ImageCacheExecutionLoggingTest < ActiveJob::TestCase
       quantity: 1
     )
     @image_url = "https://cards.scryfall.io/normal/front/test.jpg"
-
-    # Capture logs for assertions
-    @original_logger = Rails.logger
-    @log_output = StringIO.new
-    Rails.logger = Logger.new(@log_output)
-    Rails.logger.level = Logger::INFO
   end
 
   teardown do
-    # Restore original logger
-    Rails.logger = @original_logger
-
     # Re-enable VCR
     VCR.turn_on!
   end
 
   # ---------------------------------------------------------------------------
-  # CacheCardImageJob: Execution record creation
+  # ExecutionLoggingTestConcern interface implementation
   # ---------------------------------------------------------------------------
-  test "CacheCardImageJob creates execution record with started_at" do
+
+  def perform_job
+    CacheCardImageJob.perform_now(@item.id, @image_url)
+  end
+
+  def execution_model
+    ImageCacheExecution
+  end
+
+  def job_class
+    CacheCardImageJob
+  end
+
+  def job_component_name
+    "CacheCardImageJob"
+  end
+
+  def stub_success
     stub_image_cache_service_success do
-      assert_difference "ImageCacheExecution.count", 1 do
-        CacheCardImageJob.perform_now(@item.id, @image_url)
-      end
+      yield
+    end
+  end
+
+  def stub_error(error)
+    stub_image_cache_service_failure(error.message) do
+      yield
+    end
+  end
+
+  def job_raises_on_error?
+    # CacheCardImageJob handles errors gracefully without raising exceptions
+    false
+  end
+
+  # ---------------------------------------------------------------------------
+  # CacheCardImageJob: Job-specific execution record tracking
+  # ---------------------------------------------------------------------------
+  test "CacheCardImageJob records collection_item_id and card_id" do
+    stub_image_cache_service_success do
+      CacheCardImageJob.perform_now(@item.id, @image_url)
 
       execution = ImageCacheExecution.last
-      assert_not_nil execution.started_at
-      assert execution.started_at <= Time.current
       assert_equal @item.id, execution.collection_item_id
       assert_equal @item.card_id, execution.card_id
     end
   end
 
-  test "CacheCardImageJob sets finished_at when completed" do
-    stub_image_cache_service_success do
-      CacheCardImageJob.perform_now(@item.id, @image_url)
-
-      execution = ImageCacheExecution.last
-      assert_not_nil execution.finished_at
-      assert execution.finished_at >= execution.started_at
-      assert execution.execution_time_seconds.positive?
-    end
-  end
-
-  test "CacheCardImageJob records success status when image downloaded" do
+  test "CacheCardImageJob records downloaded status and file size" do
     stub_image_cache_service_success(downloaded: true, file_size: 45678) do
       CacheCardImageJob.perform_now(@item.id, @image_url)
 
       execution = ImageCacheExecution.last
-      assert_equal "success", execution.status
       assert_equal true, execution.downloaded
       assert_equal false, execution.cache_hit
       assert_equal 45678, execution.file_size_bytes
@@ -105,43 +124,17 @@ class ImageCacheExecutionLoggingTest < ActiveJob::TestCase
     assert_match /not found/i, execution.error_message
   end
 
-  test "CacheCardImageJob records failure status when caching fails" do
-    stub_image_cache_service_failure("HTTP 404 Not Found") do
-      CacheCardImageJob.perform_now(@item.id, @image_url)
-
-      execution = ImageCacheExecution.last
-      assert_equal "failure", execution.status
-      assert_equal false, execution.downloaded
-      assert_equal false, execution.cache_hit
-      assert_not_nil execution.error_message
-      assert_match /404/, execution.error_message
-    end
-  end
-
   # ---------------------------------------------------------------------------
-  # CacheCardImageJob: Structured JSON logging
+  # CacheCardImageJob: Job-specific logging
   # ---------------------------------------------------------------------------
-  test "CacheCardImageJob logs cache_started event in JSON format" do
+  test "CacheCardImageJob logs cache_started event with collection_item_id and card_id" do
     stub_image_cache_service_success do
       CacheCardImageJob.perform_now(@item.id, @image_url)
 
       log_content = @log_output.string
       assert_match /"event":"cache_started"/, log_content
-      assert_match /"component":"CacheCardImageJob"/, log_content
       assert_match /"collection_item_id":#{@item.id}/, log_content
       assert_match /"card_id":"test-card-123"/, log_content
-      assert_match /"timestamp":"#{Time.current.year}/, log_content
-    end
-  end
-
-  test "CacheCardImageJob logs cache_completed event with result" do
-    stub_image_cache_service_success(downloaded: true) do
-      CacheCardImageJob.perform_now(@item.id, @image_url)
-
-      log_content = @log_output.string
-      assert_match /"event":"cache_completed"/, log_content
-      assert_match /"status":"success"/, log_content
-      assert_match /"downloaded":true/, log_content
     end
   end
 
@@ -165,22 +158,7 @@ class ImageCacheExecutionLoggingTest < ActiveJob::TestCase
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # CacheCardImageJob: Error logging
-  # ---------------------------------------------------------------------------
-  test "CacheCardImageJob logs error with full context when download fails" do
-    stub_image_cache_service_failure("Connection timeout after 30s") do
-      CacheCardImageJob.perform_now(@item.id, @image_url)
-
-      log_content = @log_output.string
-      # Failures from the service are logged as cache_failed, not error_occurred
-      assert_match /"event":"cache_failed"/, log_content
-      assert_match /"error_message":"Connection timeout after 30s"/, log_content
-      assert_match /"card_id":"test-card-123"/, log_content
-    end
-  end
-
-  test "CacheCardImageJob logs cache_failed event" do
+  test "CacheCardImageJob logs cache_failed event on failure" do
     stub_image_cache_service_failure("HTTP 500 Internal Server Error") do
       CacheCardImageJob.perform_now(@item.id, @image_url)
 
@@ -190,6 +168,9 @@ class ImageCacheExecutionLoggingTest < ActiveJob::TestCase
     end
   end
 
+  # ---------------------------------------------------------------------------
+  # CacheCardImageJob: Non-blocking behavior
+  # ---------------------------------------------------------------------------
   test "CacheCardImageJob does not raise exception on failure" do
     stub_image_cache_service_failure("Network error") do
       # Should not raise - failures are logged but don't block execution
@@ -199,43 +180,16 @@ class ImageCacheExecutionLoggingTest < ActiveJob::TestCase
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # CacheCardImageJob: Sensitive data redaction
-  # ---------------------------------------------------------------------------
-  test "CacheCardImageJob does not log full file system paths in logs" do
-    stub_image_cache_service_failure("Failed to write to /var/app/storage/images/secret/path/file.jpg") do
+  test "CacheCardImageJob records failure status without raising" do
+    stub_image_cache_service_failure("HTTP 404 Not Found") do
       CacheCardImageJob.perform_now(@item.id, @image_url)
 
-      log_content = @log_output.string
-      # Should redact full paths or convert to relative paths
-      # This test assumes redaction is applied
-      assert_no_match %r{/var/app/storage/images/secret/path}, log_content
-    end
-  end
-
-  # ---------------------------------------------------------------------------
-  # CacheCardImageJob: ISO 8601 timestamp format
-  # ---------------------------------------------------------------------------
-  test "CacheCardImageJob logs timestamps in ISO 8601 format" do
-    stub_image_cache_service_success do
-      CacheCardImageJob.perform_now(@item.id, @image_url)
-
-      log_content = @log_output.string
-      # ISO 8601 format: 2026-02-08T10:30:45Z or 2026-02-08T10:30:45+00:00
-      assert_match /"timestamp":"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/, log_content
-    end
-  end
-
-  # ---------------------------------------------------------------------------
-  # CacheCardImageJob: Log levels
-  # ---------------------------------------------------------------------------
-  test "CacheCardImageJob uses appropriate log levels for different events" do
-    stub_image_cache_service_success do
-      CacheCardImageJob.perform_now(@item.id, @image_url)
-
-      log_content = @log_output.string
-      # Should have INFO level for normal operations
-      assert_match /"level":"INFO"/, log_content
+      execution = ImageCacheExecution.last
+      assert_equal "failure", execution.status
+      assert_equal false, execution.downloaded
+      assert_equal false, execution.cache_hit
+      assert_not_nil execution.error_message
+      assert_match /404/, execution.error_message
     end
   end
 
@@ -249,9 +203,6 @@ class ImageCacheExecutionLoggingTest < ActiveJob::TestCase
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # CacheCardImageJob: Non-blocking behavior
-  # ---------------------------------------------------------------------------
   test "CacheCardImageJob failure does not prevent inventory operations" do
     stub_image_cache_service_failure("Network error") do
       # Job should complete without raising, allowing inventory operations to continue
@@ -262,6 +213,19 @@ class ImageCacheExecutionLoggingTest < ActiveJob::TestCase
       # Execution record should still be created
       assert_equal 1, ImageCacheExecution.count
       assert_equal "failure", ImageCacheExecution.last.status
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # CacheCardImageJob: Sensitive data redaction for file paths
+  # ---------------------------------------------------------------------------
+  test "CacheCardImageJob does not log full file system paths" do
+    stub_image_cache_service_failure("Failed to write to /var/app/storage/images/secret/path/file.jpg") do
+      CacheCardImageJob.perform_now(@item.id, @image_url)
+
+      log_content = @log_output.string
+      # Should redact full paths or convert to relative paths
+      assert_no_match %r{/var/app/storage/images/secret/path}, log_content
     end
   end
 
