@@ -131,7 +131,7 @@ describe('InventoryItem - Image Handling', () => {
 describe('InventoryItem - Enhanced Tracking Fields', () => {
 	it('displays finish when present', () => {
 		render(InventoryItem, { props: { item: MOCK_ITEM_FULL } });
-		expect(screen.getByText('foil')).toBeInTheDocument();
+		expect(screen.getByText('Foil')).toBeInTheDocument();
 	});
 
 	it('displays language when present', () => {

@@ -88,7 +88,7 @@
 	let showValidationToast = $state(false);
 
 	// Collapsible optional fields state
-	let showOptionalFields = $state(false);
+	let showOptionalFields = $state(true);
 
 	// Issue #138: Filter finish options based on available finishes for selected printing
 	// Derived value that returns available finishes for the selected printing
@@ -372,6 +372,7 @@
 								<div class="inventory-actions">
 									<!-- Finish Selection -->
 									<div class="form-group">
+										<label class="form-field-label">Finish</label>
 										<div class="finish-options" onclick={(e) => e.stopPropagation()}>
 											{#each availableFinishes as finishOption}
 												<label class="finish-option">
@@ -645,7 +646,8 @@
 		gap: 0.25rem;
 	}
 
-	.form-field label {
+	.form-field label,
+	.form-field-label {
 		font-size: 0.875rem;
 		font-weight: 500;
 		color: #374151;
@@ -788,7 +790,8 @@
 		background: #374151;
 	}
 
-	:global(.dark) .form-field label {
+	:global(.dark) .form-field label,
+	:global(.dark) .form-field-label {
 		color: #d1d5db;
 	}
 

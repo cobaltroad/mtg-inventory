@@ -110,14 +110,24 @@ describe('CRITICAL BUG: Pagination + Item Updates', () => {
 			expect(screen.getByText(/45 cards/i)).toBeInTheDocument();
 		});
 
-		// Find and click the quantity editor for first item
-		const quantityInputs = screen.getAllByRole('spinbutton');
-		const firstItemQuantity = quantityInputs[0];
+		// Find quantity display buttons and click the first one to enter edit mode
+		const quantityDisplays = screen.getAllByTestId('quantity-display');
+		await user.click(quantityDisplays[0]);
+
+		// Wait for edit mode to activate, then find the input
+		await waitFor(() => {
+			expect(screen.getByTestId('quantity-input')).toBeInTheDocument();
+		});
+
+		const quantityInput = screen.getByTestId('quantity-input');
 
 		// Update quantity from 1 to 5
-		await user.clear(firstItemQuantity);
-		await user.type(firstItemQuantity, '5');
-		await user.tab(); // Blur to trigger update
+		await user.clear(quantityInput);
+		await user.type(quantityInput, '5');
+
+		// Click the save button
+		const saveButton = screen.getByTestId('save-btn');
+		await user.click(saveButton);
 
 		await waitFor(() => {
 			expect(global.fetch).toHaveBeenCalled();
@@ -158,11 +168,24 @@ describe('CRITICAL BUG: Pagination + Item Updates', () => {
 			expect(screen.getByText('Next')).toBeInTheDocument();
 		});
 
-		// Update first item quantity
-		const quantityInputs = screen.getAllByRole('spinbutton');
-		await user.clear(quantityInputs[0]);
-		await user.type(quantityInputs[0], '3');
-		await user.tab();
+		// Click quantity display to enter edit mode
+		const quantityDisplays = screen.getAllByTestId('quantity-display');
+		await user.click(quantityDisplays[0]);
+
+		// Wait for edit mode and get the input
+		await waitFor(() => {
+			expect(screen.getByTestId('quantity-input')).toBeInTheDocument();
+		});
+
+		const quantityInput = screen.getByTestId('quantity-input');
+
+		// Update quantity
+		await user.clear(quantityInput);
+		await user.type(quantityInput, '3');
+
+		// Save the changes
+		const saveButton = screen.getByTestId('save-btn');
+		await user.click(saveButton);
 
 		await waitFor(() => {
 			expect(global.fetch).toHaveBeenCalled();

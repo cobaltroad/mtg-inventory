@@ -32,7 +32,7 @@ describe('PriceHistoryChart Component', () => {
 			}
 		],
 		summary: {
-			normal: {
+			nonfoil: {
 				start_price_cents: 1000,
 				end_price_cents: 1500,
 				percentage_change: 50.0,
@@ -205,8 +205,8 @@ describe('PriceHistoryChart Component', () => {
 			const toggles = document.querySelectorAll('.finish-toggle');
 			expect(toggles.length).toBeGreaterThan(0);
 			const toggleTexts = Array.from(toggles).map((t) => t.textContent);
-			expect(toggleTexts).toContain('nonfoil');
-			expect(toggleTexts).toContain('foil');
+			expect(toggleTexts).toContain('Nonfoil');
+			expect(toggleTexts).toContain('Foil');
 		});
 	});
 
@@ -220,7 +220,7 @@ describe('PriceHistoryChart Component', () => {
 
 		await waitFor(() => {
 			// Etched has null data, should not appear
-			const etchedToggle = screen.queryByText('etched');
+			const etchedToggle = screen.queryByText('Etched');
 			expect(etchedToggle).toBeNull();
 		});
 	});
@@ -239,7 +239,7 @@ describe('PriceHistoryChart Component', () => {
 		});
 
 		const toggles = document.querySelectorAll('.finish-toggle');
-		const normalToggle = Array.from(toggles).find((t) => t.textContent === 'nonfoil') as HTMLElement;
+		const normalToggle = Array.from(toggles).find((t) => t.textContent === 'Nonfoil') as HTMLElement;
 
 		// Should be active initially
 		expect(normalToggle.classList.contains('active')).toBe(true);
@@ -298,7 +298,7 @@ describe('PriceHistoryChart Component', () => {
 		const decreasingData = {
 			...mockPriceHistoryData,
 			summary: {
-				normal: {
+				nonfoil: {
 					start_price_cents: 2000,
 					end_price_cents: 1500,
 					percentage_change: -25.0,
@@ -326,7 +326,7 @@ describe('PriceHistoryChart Component', () => {
 		const stableData = {
 			...mockPriceHistoryData,
 			summary: {
-				normal: {
+				nonfoil: {
 					start_price_cents: 1500,
 					end_price_cents: 1500,
 					percentage_change: 0.0,
@@ -386,7 +386,7 @@ describe('PriceHistoryChart Component', () => {
 				}
 			],
 			summary: {
-				normal: {
+				nonfoil: {
 					start_price_cents: 1000,
 					end_price_cents: 1000,
 					percentage_change: 0.0,
@@ -428,7 +428,7 @@ describe('PriceHistoryChart Component', () => {
 				}
 			],
 			summary: {
-				normal: {
+				nonfoil: {
 					start_price_cents: 1000,
 					end_price_cents: 1500,
 					percentage_change: 50.0,
@@ -507,7 +507,7 @@ describe('PriceHistoryChart Component', () => {
 				}
 			],
 			summary: {
-				normal: {
+				nonfoil: {
 					start_price_cents: 1000,
 					end_price_cents: 1500,
 					percentage_change: 50.0,
@@ -538,9 +538,9 @@ describe('PriceHistoryChart Component', () => {
 		await waitFor(() => {
 			const toggles = document.querySelectorAll('.finish-toggle');
 			const toggleTexts = Array.from(toggles).map((t) => t.textContent);
-			expect(toggleTexts).toContain('nonfoil');
-			expect(toggleTexts).toContain('foil');
-			expect(toggleTexts).toContain('etched');
+			expect(toggleTexts).toContain('Nonfoil');
+			expect(toggleTexts).toContain('Foil');
+			expect(toggleTexts).toContain('Etched');
 		});
 	});
 });

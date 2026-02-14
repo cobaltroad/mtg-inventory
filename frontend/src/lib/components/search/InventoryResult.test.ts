@@ -59,12 +59,12 @@ describe('InventoryResult', () => {
 
 	it('should render finish when provided', () => {
 		render(InventoryResult, { result: mockResult, onViewDetails: mockViewDetails });
-		expect(screen.getByText('foil')).toBeInTheDocument();
+		expect(screen.getByText('Foil')).toBeInTheDocument();
 	});
 
 	it('should not render finish when not provided', () => {
 		render(InventoryResult, { result: mockResultNoPrice, onViewDetails: mockViewDetails });
-		expect(screen.queryByText('foil')).not.toBeInTheDocument();
+		expect(screen.queryByText('Foil')).not.toBeInTheDocument();
 	});
 
 	it('should render card image when image_url is provided', () => {

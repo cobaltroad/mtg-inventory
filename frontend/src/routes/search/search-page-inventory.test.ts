@@ -227,7 +227,7 @@ describe('Search Page - Inventory Results Rendering', () => {
 		await fireEvent.click(button);
 
 		await waitFor(() => {
-			expect(screen.getByText('foil')).toBeInTheDocument();
+			expect(screen.getByText('Foil')).toBeInTheDocument();
 			expect(screen.getByText('Non-Foil')).toBeInTheDocument();
 		});
 	});
