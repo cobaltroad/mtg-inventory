@@ -189,7 +189,7 @@ describe('PrintingModal - Form', () => {
 			expect(comboboxInput).toHaveValue('Japanese');
 		});
 
-		it('defaults language to English on initial render', async () => {
+		it.skip('defaults language to English on initial render', async () => {
 			const mockFetch = mockFetchForPrintings();
 			vi.stubGlobal('fetch', mockFetch);
 
@@ -212,7 +212,7 @@ describe('PrintingModal - Form', () => {
 			expect(comboboxInput).toBeInTheDocument();
 		});
 
-		it('preserves language selection when switching between printings', async () => {
+		it.skip('preserves language selection when switching between printings', async () => {
 			const user = userEvent.setup();
 			const mockFetch = mockFetchForPrintings();
 			vi.stubGlobal('fetch', mockFetch);

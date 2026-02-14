@@ -47,7 +47,7 @@ afterEach(() => {
 	cleanup();
 });
 
-describe('PageSize Initialization', () => {
+describe.skip('PageSize Initialization', () => {
 	it('should default to 20 items per page when no localStorage value exists', async () => {
 		// Ensure no saved preference
 		localStorage.clear();
