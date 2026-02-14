@@ -2107,6 +2107,36 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     assert_equal "value-high", body["sort"]
   end
 
+  test "GET /api/inventory sorts foil cards by regular price when foil price is NULL" do
+    # Bug fix: When a foil card has NULL usd_foil_cents, it should fall back to usd_cents for sorting
+    item1 = CollectionItem.create!(user: @user, card_id: "uuid-foil-expensive", collection_type: "inventory", quantity: 1, finish: "foil")
+    item2 = CollectionItem.create!(user: @user, card_id: "uuid-cheap", collection_type: "inventory", quantity: 1, finish: "nonfoil")
+    item3 = CollectionItem.create!(user: @user, card_id: "uuid-foil-medium", collection_type: "inventory", quantity: 1, finish: "foil")
+
+    # Foil cards have NULL foil prices but valid regular prices
+    CardPrice.create!(card_id: "uuid-foil-expensive", fetched_at: 1.hour.ago, usd_cents: 2181, usd_foil_cents: nil)
+    CardPrice.create!(card_id: "uuid-cheap", fetched_at: 1.hour.ago, usd_cents: 1424)
+    CardPrice.create!(card_id: "uuid-foil-medium", fetched_at: 1.hour.ago, usd_cents: 1578, usd_foil_cents: nil)
+
+    stub_scryfall_card_details("uuid-foil-expensive", name: "Deadly Rollick")
+    stub_scryfall_card_details("uuid-cheap", name: "Bearscape")
+    stub_scryfall_card_details("uuid-foil-medium", name: "Heartless Hidetsugu")
+
+    get api_path("/inventory?sort=value-high")
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    items = body["items"]
+
+    # Should sort by regular price when foil price is NULL
+    assert_equal "Deadly Rollick", items[0]["card_name"], "Most expensive should be first"
+    assert_equal 2181, items[0]["total_price_cents"], "Should use usd_cents when usd_foil_cents is NULL"
+    assert_equal "Heartless Hidetsugu", items[1]["card_name"]
+    assert_equal 1578, items[1]["total_price_cents"]
+    assert_equal "Bearscape", items[2]["card_name"]
+    assert_equal 1424, items[2]["total_price_cents"]
+  end
+
   test "GET /api/inventory handles cards without release_at when sorting by release date" do
     CollectionItem.create!(user: @user, card_id: "uuid-with-date", collection_type: "inventory", quantity: 1)
     CollectionItem.create!(user: @user, card_id: "uuid-no-date", collection_type: "inventory", quantity: 1)

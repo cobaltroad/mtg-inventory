@@ -567,8 +567,8 @@ class InventoryController < ApplicationController
         .select("collection_items.*,
           (collection_items.quantity *
             CASE
-              WHEN collection_items.finish = 'foil' THEN COALESCE(latest_price.usd_foil_cents, 0)
-              WHEN collection_items.finish = 'etched' THEN COALESCE(latest_price.usd_etched_cents, 0)
+              WHEN collection_items.finish = 'foil' THEN COALESCE(latest_price.usd_foil_cents, latest_price.usd_cents, 0)
+              WHEN collection_items.finish = 'etched' THEN COALESCE(latest_price.usd_etched_cents, latest_price.usd_cents, 0)
               ELSE COALESCE(latest_price.usd_cents, 0)
             END
           ) AS sort_value")
