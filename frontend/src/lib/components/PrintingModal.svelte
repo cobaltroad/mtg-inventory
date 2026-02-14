@@ -476,20 +476,22 @@
 												/>
 											</div>
 
-											<div class="form-field" style="position: relative; z-index: 9999;">
-												<label class="form-field-label" for="language-select">Language</label>
-												<select
-													id="language-select"
-													bind:value={language}
-													class="form-select"
-													style="position: relative; z-index: 9999;"
-													onclick={(e) => e.stopPropagation()}
-													onmousedown={(e) => e.stopPropagation()}
-												>
-													{#each LANGUAGE_OPTIONS as option}
-														<option value={option.value}>{option.label}</option>
+											<div class="form-group">
+												<label class="form-field-label">Language</label>
+												<div class="language-options" onclick={(e) => e.stopPropagation()}>
+													{#each LANGUAGE_OPTIONS as languageOption}
+														<label class="language-option">
+															<input
+																type="radio"
+																name="language"
+																value={languageOption.value}
+																bind:group={language}
+																checked={language === languageOption.value}
+															/>
+															<span>{languageOption.label}</span>
+														</label>
 													{/each}
-												</select>
+												</div>
 											</div>
 										</div>
 									{/if}
@@ -894,6 +896,68 @@
 		border-radius: 4px;
 	}
 
+	/* Language Options (Radio Group styled as Button Grid) */
+	.language-options {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+		gap: 0.5rem;
+		width: 100%;
+		max-height: 200px;
+		overflow-y: auto;
+		padding: 0.25rem;
+	}
+
+	.language-option {
+		position: relative;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.5rem 0.75rem;
+		border: 1px solid #d1d5db;
+		border-radius: 4px;
+		background: white;
+		transition:
+			background 0.2s,
+			border-color 0.2s,
+			color 0.2s;
+	}
+
+	.language-option input[type='radio'] {
+		position: absolute;
+		opacity: 0;
+		width: 0;
+		height: 0;
+	}
+
+	.language-option span {
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: #374151;
+		user-select: none;
+		text-align: center;
+	}
+
+	.language-option:hover {
+		background: #f9fafb;
+		border-color: #3b82f6;
+	}
+
+	.language-option input[type='radio']:checked + span {
+		color: white;
+	}
+
+	.language-option:has(input[type='radio']:checked) {
+		background: #3b82f6;
+		border-color: #3b82f6;
+	}
+
+	.language-option input[type='radio']:focus + span {
+		outline: 2px solid #3b82f6;
+		outline-offset: 2px;
+		border-radius: 4px;
+	}
+
 	:global(.dark) .drawer-header {
 		border-bottom-color: #374151;
 	}
@@ -933,6 +997,29 @@
 	}
 
 	:global(.dark) .finish-option input[type='radio']:checked + span {
+		color: white;
+	}
+
+	:global(.dark) .language-option {
+		background: #1f2937;
+		border-color: #4b5563;
+	}
+
+	:global(.dark) .language-option span {
+		color: #d1d5db;
+	}
+
+	:global(.dark) .language-option:hover {
+		background: #374151;
+		border-color: #3b82f6;
+	}
+
+	:global(.dark) .language-option:has(input[type='radio']:checked) {
+		background: #3b82f6;
+		border-color: #3b82f6;
+	}
+
+	:global(.dark) .language-option input[type='radio']:checked + span {
 		color: white;
 	}
 
