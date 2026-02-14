@@ -151,7 +151,8 @@ class CollectionItemIntegrationTest < ActionDispatch::IntegrationTest
     get api_path("/inventory")
     assert_response :success
 
-    items = JSON.parse(response.body)
+    body = JSON.parse(response.body)
+    items = body["items"] || body # Handle both paginated and legacy response formats
     card_ids = items.map { |i| i["card_id"] }
     assert_includes card_ids, "mine"
     assert_not_includes card_ids, "theirs"

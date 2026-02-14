@@ -183,10 +183,21 @@
 
 	/**
 	 * Updates sort order and persists to localStorage
+	 * When backend pagination is active, also updates URL to trigger page load
 	 */
 	function handleSortChange(newSort: SortOption) {
 		currentSort = newSort;
 		localStorage.setItem(STORAGE_KEY_SORT, newSort);
+
+		// Update URL for backend pagination (when no filter is applied)
+		if (isBackendPaginated) {
+			const url = new URL($page.url);
+			url.searchParams.set('sort', newSort);
+			url.searchParams.set('page', '1'); // Reset to first page when sort changes
+			url.searchParams.set('per_page', String(pageSize));
+			goto(url.toString(), { keepFocus: true, noScroll: true });
+		}
+		// For client-side sorting, maintain current page (sorting is instant)
 	}
 
 	/**
