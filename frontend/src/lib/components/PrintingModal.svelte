@@ -476,7 +476,8 @@
 												/>
 											</div>
 
-											<div class="form-field">
+											<!-- Language field hidden until issue #170 is fully resolved -->
+											<!-- <div class="form-field">
 												<Combobox
 													id="language"
 													placeholder="Select language..."
@@ -505,7 +506,7 @@
 														</Combobox.Positioner>
 													</Portal>
 												</Combobox>
-											</div>
+											</div> -->
 										</div>
 									{/if}
 

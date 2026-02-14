@@ -128,7 +128,8 @@ describe('PrintingModal - Form', () => {
 			expect(nonfoilRadio).not.toBeChecked();
 		});
 
-		it('displays all language options in dropdown', async () => {
+		// Language dropdown hidden until issue #170 is fully resolved
+	it.skip('displays all language options in dropdown', async () => {
 			const user = userEvent.setup();
 			const mockFetch = mockFetchForPrintings();
 			vi.stubGlobal('fetch', mockFetch);
@@ -161,7 +162,8 @@ describe('PrintingModal - Form', () => {
 			});
 		});
 
-		it('allows selecting different language option', async () => {
+		// Language dropdown hidden until issue #170 is fully resolved
+	it.skip('allows selecting different language option', async () => {
 			const user = userEvent.setup();
 			const mockFetch = mockFetchForPrintings();
 			vi.stubGlobal('fetch', mockFetch);
@@ -250,7 +252,8 @@ describe('PrintingModal - Form', () => {
 			});
 		});
 
-		it('includes language in form submission data', async () => {
+		// Language dropdown hidden until issue #170 is fully resolved
+	it.skip('includes language in form submission data', async () => {
 			const user = userEvent.setup();
 			const mockFetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
 				if (typeof url === 'string' && url.includes('/printings')) {
