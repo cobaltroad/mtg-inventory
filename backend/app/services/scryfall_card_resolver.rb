@@ -22,19 +22,27 @@ class ScryfallCardResolver
   end
 
   # ---------------------------------------------------------------------------
-  # Resolves an array of card names to Scryfall IDs and URIs
+  # Resolves an array of card names to Scryfall data including metadata
   #
   # Arguments:
   #   card_names (Array<String>) - Array of card names to resolve
   #
   # Returns:
-  #   Hash - Mapping of card_name => { id: scryfall_id, uri: scryfall_uri } (or nil if not found)
+  #   Hash - Mapping of card_name => card data hash (or nil if not found)
+  #   Card data includes:
+  #     - :id (String) - Scryfall UUID
+  #     - :uri (String) - Scryfall card page URL
+  #     - :card_type (String, optional) - Type line (e.g., "Creature — Human")
+  #     - :rarity (String, optional) - Rarity (common, uncommon, rare, mythic)
+  #     - :edh_rank (Integer, optional) - EDHREC rank
+  #     - :release_date (String, optional) - Release date (YYYY-MM-DD)
+  #     - :usd_price (String, optional) - USD price
   #
   # Example:
   #   resolve_cards(["Sol Ring", "Lightning Bolt"])
   #   => {
-  #     "Sol Ring" => { id: "abc123", uri: "https://scryfall.com/card/..." },
-  #     "Lightning Bolt" => { id: "def456", uri: "https://scryfall.com/card/..." }
+  #     "Sol Ring" => { id: "abc123", uri: "https://...", card_type: "Artifact", ... },
+  #     "Lightning Bolt" => { id: "def456", uri: "https://...", ... }
   #   }
   # ---------------------------------------------------------------------------
   def self.resolve_cards(card_names)
@@ -121,12 +129,19 @@ class ScryfallCardResolver
 
   # ---------------------------------------------------------------------------
   # Extracts Scryfall data from successful response
+  # Includes fields needed for sorting/filtering: card_type, rarity,
+  # edh_rank, release_date, and usd_price
   # ---------------------------------------------------------------------------
   private_class_method def self.extract_scryfall_id(response)
     data = JSON.parse(response.body)
     {
       id: data["id"],
-      uri: data["scryfall_uri"]
+      uri: data["scryfall_uri"],
+      card_type: data["type_line"],
+      rarity: data["rarity"],
+      edh_rank: data["edhrec_rank"],
+      release_date: data["released_at"],
+      usd_price: data.dig("prices", "usd")
     }
   end
 

@@ -98,6 +98,12 @@ class ScrapeCommanderDecklistJob < ApplicationJob
 
   # ---------------------------------------------------------------------------
   # Build JSONB decklist contents from raw card data
+  # Includes extended metadata for sorting/filtering:
+  # - card_type: Type line (e.g., "Creature — Human")
+  # - rarity: common, uncommon, rare, mythic
+  # - edh_rank: EDHREC popularity rank
+  # - release_date: Release date (YYYY-MM-DD)
+  # - usd_price: USD price
   # ---------------------------------------------------------------------------
   def build_decklist_contents(deck_cards)
     deck_cards.map do |card|
@@ -106,7 +112,12 @@ class ScrapeCommanderDecklistJob < ApplicationJob
         card_name: card[:name],
         card_url: card[:scryfall_uri],
         quantity: 1,
-        is_commander: card[:is_commander]
+        is_commander: card[:is_commander],
+        card_type: card[:card_type],
+        rarity: card[:rarity],
+        edh_rank: card[:edh_rank],
+        release_date: card[:release_date],
+        usd_price: card[:usd_price]
       }
     end
   end

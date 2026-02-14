@@ -216,4 +216,141 @@ class CommandersControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal "Commander not found", body["error"]
   end
+
+  # ---------------------------------------------------------------------------
+  # #show -- expanded card metadata for sorting/filtering
+  # ---------------------------------------------------------------------------
+  test "GET /api/commanders/:id includes expanded card metadata" do
+    commander = Commander.create!(
+      name: "Atraxa, Praetors' Voice",
+      rank: 1,
+      edhrec_url: "https://edhrec.com/commanders/atraxa-praetors-voice",
+      last_scraped_at: Time.zone.parse("2026-02-02T02:00:00Z")
+    )
+
+    decklist = Decklist.create!(
+      commander: commander,
+      contents: [
+        {
+          "card_id" => "abc456-xyz8910",
+          "card_name" => "Atraxa, Praetors' Voice",
+          "card_url" => "https://scryfall.com/card/abc456",
+          "quantity" => 1,
+          "is_commander" => true,
+          "card_type" => "Legendary Creature — Phyrexian Angel Horror",
+          "rarity" => "mythic",
+          "edh_rank" => 1,
+          "release_date" => "2016-11-11",
+          "usd_price" => "39.99"
+        },
+        {
+          "card_id" => "abc123-def456",
+          "card_name" => "Sol Ring",
+          "card_url" => "https://scryfall.com/card/abc123",
+          "quantity" => 1,
+          "card_type" => "Artifact",
+          "rarity" => "uncommon",
+          "edh_rank" => 2,
+          "release_date" => "2023-08-04",
+          "usd_price" => "1.50"
+        },
+        {
+          "card_id" => "xyz789-uvw012",
+          "card_name" => "Command Tower",
+          "card_url" => "https://scryfall.com/card/xyz789",
+          "quantity" => 1,
+          "card_type" => "Land",
+          "rarity" => "common",
+          "edh_rank" => 3,
+          "release_date" => "2023-11-17",
+          "usd_price" => "0.25"
+        }
+      ]
+    )
+
+    get api_path("/commanders/#{commander.id}")
+
+    assert_response :success
+    body = JSON.parse(response.body)
+
+    # Verify first card (commander) has all metadata fields
+    card = body["cards"][0]
+    assert_equal "abc456-xyz8910", card["card_id"]
+    assert_equal "Atraxa, Praetors' Voice", card["card_name"]
+    assert_equal "https://scryfall.com/card/abc456", card["card_url"]
+    assert_equal 1, card["quantity"]
+    assert_equal true, card["is_commander"]
+    assert_equal "Legendary Creature — Phyrexian Angel Horror", card["card_type"]
+    assert_equal "mythic", card["rarity"]
+    assert_equal 1, card["edh_rank"]
+    assert_equal "2016-11-11", card["release_date"]
+    assert_equal "39.99", card["usd_price"]
+
+    # Verify second card has metadata
+    card = body["cards"][1]
+    assert_equal "Sol Ring", card["card_name"]
+    assert_equal "Artifact", card["card_type"]
+    assert_equal "uncommon", card["rarity"]
+    assert_equal 2, card["edh_rank"]
+    assert_equal "2023-08-04", card["release_date"]
+    assert_equal "1.50", card["usd_price"]
+  end
+
+  test "GET /api/commanders/:id handles missing optional metadata gracefully" do
+    commander = Commander.create!(
+      name: "Test Commander",
+      rank: 1,
+      edhrec_url: "https://edhrec.com/commanders/test",
+      last_scraped_at: Time.zone.parse("2026-02-02T02:00:00Z")
+    )
+
+    # Create decklist with cards missing optional metadata
+    decklist = Decklist.create!(
+      commander: commander,
+      contents: [
+        {
+          "card_id" => "abc123",
+          "card_name" => "Card With Minimal Data",
+          "quantity" => 1,
+          "is_commander" => true
+          # Missing: card_type, rarity, edh_rank, release_date, usd_price, card_url
+        },
+        {
+          "card_id" => "def456",
+          "card_name" => "Card With Some Data",
+          "quantity" => 1,
+          "card_type" => "Creature",
+          "usd_price" => "5.00"
+          # Missing: rarity, edh_rank, release_date, card_url
+        }
+      ]
+    )
+
+    get api_path("/commanders/#{commander.id}")
+
+    assert_response :success
+    body = JSON.parse(response.body)
+
+    # Verify first card with minimal data
+    card = body["cards"][0]
+    assert_equal "abc123", card["card_id"]
+    assert_equal "Card With Minimal Data", card["card_name"]
+    assert_equal 1, card["quantity"]
+    assert_equal true, card["is_commander"]
+    assert_nil card["card_type"]
+    assert_nil card["rarity"]
+    assert_nil card["edh_rank"]
+    assert_nil card["release_date"]
+    assert_nil card["usd_price"]
+    assert_nil card["card_url"]
+
+    # Verify second card with partial data
+    card = body["cards"][1]
+    assert_equal "Card With Some Data", card["card_name"]
+    assert_equal "Creature", card["card_type"]
+    assert_equal "5.00", card["usd_price"]
+    assert_nil card["rarity"]
+    assert_nil card["edh_rank"]
+    assert_nil card["release_date"]
+  end
 end
