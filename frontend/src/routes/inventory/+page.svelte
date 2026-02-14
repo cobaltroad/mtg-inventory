@@ -75,6 +75,12 @@
 		if (newTotalPages !== backendTotalPages) backendTotalPages = newTotalPages;
 		backendStats = newStats;
 
+		// Handle completely empty inventory (Issue #171)
+		// When backend reports 0 total items, clear allItems to show empty state
+		if (newTotalCount === 0 && allItems.length > 0) {
+			allItems = [];
+		}
+
 		// Mark initial loading as complete once we've synced data
 		initialLoading = false;
 	});
@@ -131,6 +137,25 @@
 		if (backendPage > 0 && backendPage !== lastSyncedBackendPage) {
 			currentPage = backendPage;
 			lastSyncedBackendPage = backendPage;
+		}
+	});
+
+	// Handle invalid page after deletions (Issue #171)
+	// When we're on a page that no longer exists (e.g., deleted all items on last page),
+	// redirect to the last valid page
+	$effect(() => {
+		// Only handle this for backend pagination with empty results
+		if (
+			isBackendPaginated &&
+			backendTotalPages > 0 &&
+			currentPage > backendTotalPages &&
+			displayItems.length === 0
+		) {
+			// Redirect to the last valid page
+			const url = new URL($page.url);
+			url.searchParams.set('page', String(backendTotalPages));
+			url.searchParams.set('per_page', String(pageSize));
+			goto(url.toString(), { keepFocus: true, noScroll: true });
 		}
 	});
 
