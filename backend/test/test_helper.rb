@@ -17,6 +17,9 @@ require vcr_setup if File.exist?(vcr_setup)
 # Load recurring task helper for tests
 require_relative "support/recurring_task_helper"
 
+# Load card search test helper for CardSearchService tests
+require_relative "support/card_search_test_helper"
+
 # ---------------------------------------------------------------------------
 # Minitest 6 removed Object#stub (it was extracted to a separate gem that
 # treats any value responding to :call as a factory, which breaks stubs on
