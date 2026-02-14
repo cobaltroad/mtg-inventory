@@ -33,6 +33,9 @@ const MOCK_LARGE_INVENTORY = generateMockItems(150); // 150 items for pagination
 // Mock context for search drawer
 const mockContext = new Map([['openSearchDrawer', vi.fn()]]);
 
+// Mock fetch globally for tests that need it
+global.fetch = vi.fn();
+
 beforeEach(() => {
 	vi.clearAllMocks();
 	// Clear localStorage before each test
@@ -830,6 +833,326 @@ describe('Pagination - Accessibility', () => {
 		await waitFor(() => {
 			const nav = screen.getByRole('navigation', { name: /pagination/i });
 			expect(nav).toBeInTheDocument();
+		});
+	});
+});
+
+// ---------------------------------------------------------------------------
+// REGRESSION TESTS - Bug Fixes
+// These tests document historical bugs that have been fixed and ensure they
+// don't reoccur. Each section includes the bug description and fix.
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Regression: 38 Items Edge Case (Issue: Pagination not showing)
+// Bug: With exactly 38 items, pagination controls were not appearing
+// Root Cause: Logic error in showPagination calculation
+// Fix: Corrected comparison to properly show pagination when items > pageSize
+// ---------------------------------------------------------------------------
+describe('Regression - 38 Items Pagination Bug', () => {
+	it('should display pagination controls with exactly 38 items', async () => {
+		const items38 = generateMockItems(38);
+
+		render(InventoryPage, {
+			props: {
+				data: {
+					items: items38
+				}
+			},
+			context: mockContext
+		});
+
+		await waitFor(() => {
+			// With 38 items and default pageSize of 20, pagination MUST appear
+			expect(screen.getByText('Next')).toBeInTheDocument();
+			expect(screen.getByText('Previous')).toBeInTheDocument();
+			expect(screen.getByRole('combobox', { name: /items per page/i })).toBeInTheDocument();
+		});
+	});
+
+	it('should display exactly 20 items on first page with 38 total', async () => {
+		const items38 = generateMockItems(38);
+
+		render(InventoryPage, {
+			props: {
+				data: {
+					items: items38
+				}
+			},
+			context: mockContext
+		});
+
+		await waitFor(() => {
+			const rows = screen.getAllByRole('row');
+			const itemRows = rows.slice(1); // Remove header row
+			expect(itemRows.length).toBe(20);
+		});
+	});
+
+	it('should show remaining 18 items on page 2', async () => {
+		const user = userEvent.setup();
+		const items38 = generateMockItems(38);
+
+		render(InventoryPage, {
+			props: {
+				data: {
+					items: items38
+				}
+			},
+			context: mockContext
+		});
+
+		// Navigate to page 2
+		const nextButton = screen.getByText('Next');
+		await user.click(nextButton);
+
+		await waitFor(() => {
+			const rows = screen.getAllByRole('row');
+			const itemRows = rows.slice(1); // Remove header row
+			expect(itemRows.length).toBe(18); // Remaining items on page 2
+		});
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Regression: Item Updates Losing Pagination (Critical Bug)
+// Bug: Updating item quantity would lose all items except current page
+// Root Cause: onItemsChange was replacing allItems with displayItems (paginated subset)
+// Fix: Update only the specific item in allItems, not replace entire array
+// Example: Had 45 items across 3 pages, after update only 20 remained
+// ---------------------------------------------------------------------------
+describe('Regression - Item Updates Preserve Pagination', () => {
+	// Mock fetch for quantity updates
+	beforeEach(() => {
+		(global.fetch as any).mockImplementation((url: string, options: any) => {
+			if (options?.method === 'PATCH') {
+				const id = parseInt(url.split('/').pop() || '1');
+				const body = JSON.parse(options.body);
+
+				return Promise.resolve({
+					ok: true,
+					json: () =>
+						Promise.resolve({
+							id,
+							card_id: `uuid-${id}`,
+							quantity: body.quantity,
+							card_name: `Test Card ${id}`,
+							set: 'tst',
+							set_name: 'Test Set',
+							collector_number: `${id}`,
+							released_at: '2025-01-01',
+							image_url: `https://example.com/card-${id}.jpg`,
+							acquired_date: null,
+							acquired_price_cents: null,
+							finish: null,
+							language: null,
+							created_at: '2025-01-01T10:00:00Z',
+							updated_at: '2025-01-01T10:00:00Z',
+							user_id: 1,
+							collection_type: 'inventory'
+						})
+				});
+			}
+			return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+		});
+	});
+
+	it('should NOT lose items from other pages when updating quantity', async () => {
+		const user = userEvent.setup();
+		const items45 = generateMockItems(45);
+
+		render(InventoryPage, {
+			props: {
+				data: {
+					items: items45
+				}
+			},
+			context: mockContext
+		});
+
+		await waitFor(() => {
+			expect(screen.getByText(/45 cards/i)).toBeInTheDocument();
+		});
+
+		// Find and update the first item's quantity
+		const quantityDisplays = screen.getAllByTestId('quantity-display');
+		await user.click(quantityDisplays[0]);
+
+		await waitFor(() => {
+			expect(screen.getByTestId('quantity-input')).toBeInTheDocument();
+		});
+
+		const quantityInput = screen.getByTestId('quantity-input');
+		await user.clear(quantityInput);
+		await user.type(quantityInput, '5');
+
+		const saveButton = screen.getByTestId('save-btn');
+		await user.click(saveButton);
+
+		await waitFor(() => {
+			expect(global.fetch).toHaveBeenCalled();
+		});
+
+		// CRITICAL: After update, should STILL have 45 cards total
+		await waitFor(
+			() => {
+				expect(screen.getByText(/45 cards/i)).toBeInTheDocument();
+			},
+			{ timeout: 5000 }
+		);
+	});
+
+	it('should navigate to second page with multi-page inventory after update', async () => {
+		const user = userEvent.setup();
+		const items45 = generateMockItems(45);
+
+		render(InventoryPage, {
+			props: {
+				data: {
+					items: items45
+				}
+			},
+			context: mockContext
+		});
+
+		// Verify we have multiple pages initially
+		await waitFor(() => {
+			expect(screen.getByText('Next')).toBeInTheDocument();
+			const page3Link = screen.getByLabelText(/page 3/i);
+			expect(page3Link).toBeInTheDocument();
+		});
+
+		// Update first item's quantity
+		const quantityDisplays = screen.getAllByTestId('quantity-display');
+		await user.click(quantityDisplays[0]);
+
+		await waitFor(() => {
+			expect(screen.getByTestId('quantity-input')).toBeInTheDocument();
+		});
+
+		const quantityInput = screen.getByTestId('quantity-input');
+		await user.clear(quantityInput);
+		await user.type(quantityInput, '3');
+
+		const saveButton = screen.getByTestId('save-btn');
+		await user.click(saveButton);
+
+		// Wait for update to complete
+		await waitFor(
+			() => {
+				expect(global.fetch).toHaveBeenCalled();
+			},
+			{ timeout: 3000 }
+		);
+
+		// After update, should still be able to navigate to page 2
+		// This verifies that all 45 items still exist
+		const nextButton = screen.getByText('Next');
+		await user.click(nextButton);
+
+		await waitFor(() => {
+			const page2Link = screen.getByLabelText(/page 2/i);
+			expect(page2Link).toHaveAttribute('aria-current', 'page');
+		});
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Regression: PageSize Not Defaulting to 20
+// Bug: PageSize wasn't properly initializing to 20 from localStorage
+// Root Cause: Initial value extraction from localStorage had validation issues
+// Fix: Proper default value handling with fallback to 20
+// Example: User with 51 items saw no pagination until manually changing pageSize
+// ---------------------------------------------------------------------------
+describe('Regression - PageSize Initialization', () => {
+	it('should default to 20 items per page when no localStorage value exists', async () => {
+		localStorage.clear();
+		const items51 = generateMockItems(51);
+
+		render(InventoryPage, {
+			props: {
+				data: {
+					items: items51
+				}
+			},
+			context: mockContext
+		});
+
+		await waitFor(() => {
+			const pageSizeSelect = screen.getByRole('combobox', {
+				name: /items per page/i
+			}) as HTMLSelectElement;
+			expect(pageSizeSelect.value).toBe('20');
+
+			// Pagination should be visible with 51 items
+			expect(screen.getByText('Next')).toBeInTheDocument();
+
+			// Should display first 20 items only
+			const rows = screen.getAllByRole('row');
+			expect(rows.length - 1).toBe(20); // -1 for header
+		});
+	});
+
+	it('should fall back to 20 when localStorage has invalid value', async () => {
+		localStorage.setItem('inventory-page-size', '999');
+		const items51 = generateMockItems(51);
+
+		render(InventoryPage, {
+			props: {
+				data: {
+					items: items51
+				}
+			},
+			context: mockContext
+		});
+
+		await waitFor(() => {
+			const pageSizeSelect = screen.getByRole('combobox', {
+				name: /items per page/i
+			}) as HTMLSelectElement;
+			expect(pageSizeSelect.value).toBe('20');
+			expect(screen.getByText('Next')).toBeInTheDocument();
+		});
+	});
+
+	it('should fall back to 20 when localStorage has non-numeric value', async () => {
+		localStorage.setItem('inventory-page-size', 'invalid');
+		const items51 = generateMockItems(51);
+
+		render(InventoryPage, {
+			props: {
+				data: {
+					items: items51
+				}
+			},
+			context: mockContext
+		});
+
+		await waitFor(() => {
+			const pageSizeSelect = screen.getByRole('combobox', {
+				name: /items per page/i
+			}) as HTMLSelectElement;
+			expect(pageSizeSelect.value).toBe('20');
+		});
+	});
+
+	it('should show pagination immediately with 51 items and default pageSize 20', async () => {
+		localStorage.clear();
+		const items51 = generateMockItems(51);
+
+		render(InventoryPage, {
+			props: {
+				data: {
+					items: items51
+				}
+			},
+			context: mockContext
+		});
+
+		await waitFor(() => {
+			// Pagination MUST appear immediately (51 > 20 = true)
+			expect(screen.getByText('Next')).toBeInTheDocument();
+			expect(screen.getByRole('combobox', { name: /items per page/i })).toBeInTheDocument();
 		});
 	});
 });
