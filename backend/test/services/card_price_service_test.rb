@@ -33,7 +33,9 @@ class CardPriceServiceTest < ActiveSupport::TestCase
     assert_equal 1050, result[:usd_cents]
     assert_equal 2500, result[:usd_foil_cents]
     assert_equal 3075, result[:usd_etched_cents]
-    assert_instance_of Time, result[:fetched_at]
+    # Accept both Time and ActiveSupport::TimeWithZone (Rails default)
+    assert result[:fetched_at].is_a?(Time) || result[:fetched_at].is_a?(ActiveSupport::TimeWithZone),
+           "Expected fetched_at to be Time or TimeWithZone, got #{result[:fetched_at].class}"
   end
 
   test "handles cards with only some prices available" do
@@ -180,7 +182,7 @@ class CardPriceServiceTest < ActiveSupport::TestCase
     # First request: rate limited
     # Second request: rate limited
     # Third request: succeeds
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub = stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
       .to_return(status: 429, body: '{"object":"error","code":"rate_limit"}')
       .then.to_return(status: 429, body: '{"object":"error","code":"rate_limit"}')
       .then.to_return(
@@ -193,16 +195,25 @@ class CardPriceServiceTest < ActiveSupport::TestCase
 
     service = CardPriceService.new(card_id: card_id)
 
-    # Mock sleep to avoid actual delays in tests
+    # Track sleep calls by redefining wait method on this instance
     sleep_calls = []
-    service.stub(:sleep, ->(duration) { sleep_calls << duration }) do
-      result = service.call
-      assert_equal 1000, result[:usd_cents]
+    def service.wait(duration)
+      (@sleep_calls ||= []) << duration
+      # Don't actually sleep in tests
     end
+
+    # Make sleep_calls accessible
+    service.instance_variable_set(:@sleep_calls, sleep_calls)
+
+    result = service.call
+    assert_equal 1000, result[:usd_cents]
 
     # Verify exponential backoff: first wait ~1s, second wait ~2s
     assert_equal 2, sleep_calls.length
     assert sleep_calls[0] < sleep_calls[1], "Should use exponential backoff"
+
+    # Verify API was called 3 times (2 rate limits + 1 success)
+    assert_requested stub, times: 3
   end
 
   # ---------------------------------------------------------------------------
