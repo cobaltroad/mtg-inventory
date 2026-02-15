@@ -94,6 +94,10 @@
 	// IMPORTANT: displayItems is a paginated subset, so we can't just replace allItems
 	// Instead, merge changes by ID to preserve items on other pages
 	function handleItemsChange(updatedItems: typeof allItems) {
+		// Capture the current display count BEFORE mutating allItems,
+		// since displayItems is a $derived that recomputes when allItems changes.
+		const previousDisplayCount = displayItems.length;
+
 		// Create a map of updated items for O(1) lookup
 		const updatedMap = new Map(updatedItems.map((item) => [item.id, item]));
 
@@ -106,6 +110,24 @@
 				const stillExists = updatedMap.has(item.id);
 				return !wasDisplayed || stillExists;
 			});
+
+		// Issue #171: When all items on the current page are deleted but the inventory
+		// is not truly empty, navigate to a valid page instead of showing empty state.
+		// Decrement backendTotalCount optimistically to keep pagination metadata in sync.
+		const deletedCount = previousDisplayCount - updatedItems.length;
+		if (deletedCount > 0 && backendTotalCount > 0) {
+			backendTotalCount = Math.max(0, backendTotalCount - deletedCount);
+			backendTotalPages = Math.max(1, Math.ceil(backendTotalCount / pageSize));
+		}
+
+		if (allItems.length === 0 && backendTotalCount > 0) {
+			// Current page is empty but other pages have items - redirect to last valid page
+			const validPage = Math.max(1, Math.min(effectiveCurrentPage, backendTotalPages));
+			const url = new URL($page.url);
+			url.searchParams.set('page', String(validPage));
+			url.searchParams.set('per_page', String(pageSize));
+			goto(url.toString(), { keepFocus: true, noScroll: true, invalidateAll: true });
+		}
 	}
 
 	// Filtering and sorting state
@@ -254,11 +276,11 @@
 		<div class="header-content">
 			<div class="header-text">
 				<h1 class="page-title">My Inventory</h1>
-				{#if allItems.length > 0 && !loading}
+				{#if (allItems.length > 0 || backendTotalCount > 0) && !loading}
 					<p class="item-count">{itemCountText()}</p>
 				{/if}
 			</div>
-			{#if allItems.length > 0}
+			{#if allItems.length > 0 || backendTotalCount > 0}
 				<button class="search-btn" onclick={openSearchDrawer}>
 					<Search class="h-4 w-4" />
 					Search Cards
@@ -276,9 +298,9 @@
 
 	{#if initialLoading}
 		<LoadingSpinner message="Loading your inventory..." />
-	{:else if !error && allItems.length === 0}
+	{:else if !error && allItems.length === 0 && backendTotalCount === 0}
 		<EmptyInventory />
-	{:else if allItems.length > 0}
+	{:else if allItems.length > 0 || backendTotalCount > 0}
 		{#if backendStats}
 			<InventoryStats stats={backendStats} />
 		{/if}

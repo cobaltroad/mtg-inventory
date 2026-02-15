@@ -574,7 +574,9 @@ describe('Backend Pagination - Edge Cases', () => {
 		});
 	});
 
-	it('handles invalid page number gracefully', async () => {
+	it('handles invalid page number gracefully - does not show empty inventory', async () => {
+		// Issue #171: When backend returns empty items but total_count > 0,
+		// the UI should NOT show "Your inventory is empty" because other pages have items.
 		const mockInvalidPageData = {
 			items: [],
 			page: 999,
@@ -591,10 +593,29 @@ describe('Backend Pagination - Edge Cases', () => {
 		});
 
 		await waitFor(() => {
-			// Should handle empty results gracefully
-			// May show empty state or redirect to valid page
-			const body = document.body;
-			expect(body).toBeInTheDocument();
+			// Should NOT show "Your inventory is empty" because total_count > 0
+			expect(screen.queryByText('Your inventory is empty')).not.toBeInTheDocument();
+		});
+	});
+
+	it('shows empty inventory only when total_count is zero', async () => {
+		const trulyEmptyData = {
+			items: [],
+			page: 1,
+			per_page: 20,
+			total_count: 0,
+			total_pages: 0
+		};
+
+		render(InventoryPage, {
+			props: {
+				data: trulyEmptyData
+			},
+			context: mockContext
+		});
+
+		await waitFor(() => {
+			expect(screen.getByText('Your inventory is empty')).toBeInTheDocument();
 		});
 	});
 });
