@@ -25,9 +25,9 @@ namespace :analytics do
     puts ""
 
     # Show summary statistics
-    total_cards = CardAnalytic.for_source("edhrec").count
-    rare_count = CardAnalytic.for_source("edhrec").where("usage_data->>'rarity' = ?", "rare").count
-    mythic_count = CardAnalytic.for_source("edhrec").where("usage_data->>'rarity' = ?", "mythic").count
+    total_cards = UsageSnapshot.for_source("edhrec").count
+    rare_count = UsageSnapshot.for_source("edhrec").where("usage_data->>'rarity' = ?", "rare").count
+    mythic_count = UsageSnapshot.for_source("edhrec").where("usage_data->>'rarity' = ?", "mythic").count
 
     puts "Summary:"
     puts "  Total unique cards: #{total_cards}"
@@ -38,14 +38,14 @@ namespace :analytics do
     # Sample output
     if total_cards > 0
       puts "Sample cards (first 5):"
-      CardAnalytic.for_source("edhrec").limit(5).each do |card|
+      UsageSnapshot.for_source("edhrec").limit(5).each do |card|
         inclusions_count = card.usage_data.dig("commander_decklist_inclusion")&.count || 0
         puts "  - #{card.card_name} (#{card.usage_metric('rarity')}) - appears in #{inclusions_count} commander decklist(s)"
       end
       puts ""
     end
 
-    puts "✓ Done! Analytics records stored in card_analytics table."
+    puts "✓ Done! Analytics records stored in usage_snapshots table."
     puts ""
   end
 end

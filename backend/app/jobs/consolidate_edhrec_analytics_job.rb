@@ -3,7 +3,7 @@ class ConsolidateEdhrecAnalyticsJob < ApplicationJob
 
   # ---------------------------------------------------------------------------
   # Consolidates rare/mythic cards from EDHREC commander decklists into
-  # the card_analytics table for ML/analytics workflows.
+  # the usage_snapshots table for ML/analytics workflows.
   #
   # This is Phase 1 (Filtering) of the analytics pipeline:
   # - Fetches all commanders ordered by rank
@@ -17,7 +17,7 @@ class ConsolidateEdhrecAnalyticsJob < ApplicationJob
   #
   # AC Requirements:
   # - AC1: Database table with proper schema
-  # - AC2: CardAnalytic model with validations
+  # - AC2: UsageSnapshot model with validations
   # - AC3: Job implementation with filtering, aggregation, upsert
   # - AC4: Array-based records (one record per card_id)
   # - AC6: Error handling for missing data
@@ -117,7 +117,7 @@ class ConsolidateEdhrecAnalyticsJob < ApplicationJob
       # Upsert record (AC3)
       # Note: Using empty string for strategy instead of nil because PostgreSQL
       # NULL values are not considered equal in unique constraints
-      CardAnalytic.upsert(
+      UsageSnapshot.upsert(
         {
           card_id: card_id,
           card_name: data[:card_name],

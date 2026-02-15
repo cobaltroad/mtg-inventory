@@ -1,6 +1,6 @@
-class CreateCardAnalytics < ActiveRecord::Migration[8.1]
+class CreateUsageSnapshots < ActiveRecord::Migration[8.1]
   def change
-    create_table :card_analytics do |t|
+    create_table :usage_snapshots do |t|
       t.string :card_id, null: false
       t.string :card_name, null: false
       t.string :source, null: false
@@ -15,10 +15,10 @@ class CreateCardAnalytics < ActiveRecord::Migration[8.1]
     end
 
     # Indexes for efficient queries
-    add_index :card_analytics, :card_id
-    add_index :card_analytics, :source
-    add_index :card_analytics, [ :card_id, :strategy ], unique: true
-    add_index :card_analytics, :usage_data, using: :gin
-    add_index :card_analytics, :tags, using: :gin
+    add_index :usage_snapshots, :card_id
+    add_index :usage_snapshots, :source
+    add_index :usage_snapshots, [ :card_id, :strategy ], unique: true
+    add_index :usage_snapshots, :usage_data, using: :gin
+    add_index :usage_snapshots, :tags, using: :gin
   end
 end

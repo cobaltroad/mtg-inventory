@@ -1,11 +1,11 @@
 require "test_helper"
 
-class CardAnalyticTest < ActiveSupport::TestCase
+class UsageSnapshotTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
   # Presence validations (AC2)
   # ---------------------------------------------------------------------------
   test "is valid with all required attributes" do
-    analytic = CardAnalytic.new(
+    analytic = UsageSnapshot.new(
       card_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
       card_name: "Rhystic Study",
       source: "edhrec",
@@ -28,7 +28,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
   end
 
   test "is invalid without card_id" do
-    analytic = CardAnalytic.new(
+    analytic = UsageSnapshot.new(
       card_id: nil,
       card_name: "Test Card",
       source: "edhrec",
@@ -40,7 +40,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
   end
 
   test "is invalid without card_name" do
-    analytic = CardAnalytic.new(
+    analytic = UsageSnapshot.new(
       card_id: "test-id",
       card_name: nil,
       source: "edhrec",
@@ -52,7 +52,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
   end
 
   test "is invalid without source" do
-    analytic = CardAnalytic.new(
+    analytic = UsageSnapshot.new(
       card_id: "test-id",
       card_name: "Test Card",
       source: nil,
@@ -67,7 +67,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
   # Source allowlist validation (AC2)
   # ---------------------------------------------------------------------------
   test "is valid with source 'edhrec'" do
-    analytic = CardAnalytic.new(
+    analytic = UsageSnapshot.new(
       card_id: "test-id",
       card_name: "Test Card",
       source: "edhrec",
@@ -78,7 +78,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
   end
 
   test "is invalid with source not in allowlist" do
-    analytic = CardAnalytic.new(
+    analytic = UsageSnapshot.new(
       card_id: "test-id",
       card_name: "Test Card",
       source: "invalid_source",
@@ -93,7 +93,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
   # usage_data structure validation (AC2)
   # ---------------------------------------------------------------------------
   test "is invalid without usage_data" do
-    analytic = CardAnalytic.new(
+    analytic = UsageSnapshot.new(
       card_id: "test-id",
       card_name: "Test Card",
       source: "edhrec",
@@ -105,7 +105,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
   end
 
   test "is invalid when usage_data is not a hash" do
-    analytic = CardAnalytic.new(
+    analytic = UsageSnapshot.new(
       card_id: "test-id",
       card_name: "Test Card",
       source: "edhrec",
@@ -117,7 +117,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
   end
 
   test "is invalid when usage_data lacks commander_decklist_inclusion" do
-    analytic = CardAnalytic.new(
+    analytic = UsageSnapshot.new(
       card_id: "test-id",
       card_name: "Test Card",
       source: "edhrec",
@@ -129,7 +129,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
   end
 
   test "is invalid when commander_decklist_inclusion is not an array" do
-    analytic = CardAnalytic.new(
+    analytic = UsageSnapshot.new(
       card_id: "test-id",
       card_name: "Test Card",
       source: "edhrec",
@@ -145,7 +145,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
   end
 
   test "is invalid when usage_data lacks rarity" do
-    analytic = CardAnalytic.new(
+    analytic = UsageSnapshot.new(
       card_id: "test-id",
       card_name: "Test Card",
       source: "edhrec",
@@ -157,7 +157,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
   end
 
   test "is invalid when usage_data lacks type" do
-    analytic = CardAnalytic.new(
+    analytic = UsageSnapshot.new(
       card_id: "test-id",
       card_name: "Test Card",
       source: "edhrec",
@@ -172,7 +172,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
   # Uniqueness constraint (AC1, AC4)
   # ---------------------------------------------------------------------------
   test "is invalid when another analytic exists with same card_id and strategy" do
-    CardAnalytic.create!(
+    UsageSnapshot.create!(
       card_id: "test-id",
       card_name: "Test Card",
       source: "edhrec",
@@ -181,7 +181,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
       computed_at: Time.current
     )
 
-    duplicate = CardAnalytic.new(
+    duplicate = UsageSnapshot.new(
       card_id: "test-id",
       card_name: "Test Card Updated",
       source: "edhrec",
@@ -194,7 +194,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
   end
 
   test "allows two analytics with same card_id but different strategy" do
-    CardAnalytic.create!(
+    UsageSnapshot.create!(
       card_id: "test-id",
       card_name: "Test Card",
       source: "edhrec",
@@ -203,7 +203,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
       computed_at: Time.current
     )
 
-    second = CardAnalytic.new(
+    second = UsageSnapshot.new(
       card_id: "test-id",
       card_name: "Test Card",
       source: "edhrec",
@@ -218,7 +218,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
   # Scopes (AC2)
   # ---------------------------------------------------------------------------
   test "for_source scope returns analytics for given source" do
-    edhrec_analytic = CardAnalytic.create!(
+    edhrec_analytic = UsageSnapshot.create!(
       card_id: "edhrec-card",
       card_name: "EDHREC Card",
       source: "edhrec",
@@ -226,12 +226,12 @@ class CardAnalyticTest < ActiveSupport::TestCase
       computed_at: Time.current
     )
 
-    results = CardAnalytic.for_source("edhrec")
+    results = UsageSnapshot.for_source("edhrec")
     assert_includes results, edhrec_analytic
   end
 
   test "by_strategy scope returns analytics for given strategy" do
-    strategy_analytic = CardAnalytic.create!(
+    strategy_analytic = UsageSnapshot.create!(
       card_id: "strategy-card",
       card_name: "Strategy Card",
       source: "edhrec",
@@ -240,12 +240,12 @@ class CardAnalyticTest < ActiveSupport::TestCase
       computed_at: Time.current
     )
 
-    results = CardAnalytic.by_strategy("test_strategy")
+    results = UsageSnapshot.by_strategy("test_strategy")
     assert_includes results, strategy_analytic
   end
 
   test "with_tag scope returns analytics containing given tag" do
-    tagged_analytic = CardAnalytic.create!(
+    tagged_analytic = UsageSnapshot.create!(
       card_id: "tagged-card",
       card_name: "Tagged Card",
       source: "edhrec",
@@ -254,13 +254,13 @@ class CardAnalyticTest < ActiveSupport::TestCase
       computed_at: Time.current
     )
 
-    results = CardAnalytic.with_tag("staple")
+    results = UsageSnapshot.with_tag("staple")
     assert_includes results, tagged_analytic
 
-    results = CardAnalytic.with_tag("removal")
+    results = UsageSnapshot.with_tag("removal")
     assert_includes results, tagged_analytic
 
-    results = CardAnalytic.with_tag("nonexistent")
+    results = UsageSnapshot.with_tag("nonexistent")
     assert_not_includes results, tagged_analytic
   end
 
@@ -268,7 +268,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
   # Helper methods (AC2)
   # ---------------------------------------------------------------------------
   test "usage_metric returns specific metric from usage_data" do
-    analytic = CardAnalytic.create!(
+    analytic = UsageSnapshot.create!(
       card_id: "metric-card",
       card_name: "Metric Card",
       source: "edhrec",
@@ -290,7 +290,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
   end
 
   test "all_rarities returns unique rarities from commander_decklist_inclusion" do
-    analytic = CardAnalytic.create!(
+    analytic = UsageSnapshot.create!(
       card_id: "rarity-card",
       card_name: "Rarity Card",
       source: "edhrec",
@@ -307,7 +307,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
   end
 
   test "card_type returns type from usage_data" do
-    analytic = CardAnalytic.create!(
+    analytic = UsageSnapshot.create!(
       card_id: "type-card",
       card_name: "Type Card",
       source: "edhrec",
@@ -324,7 +324,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
 
   test "card_type returns nil when type is not present" do
     # Create analytic without type for testing
-    analytic = CardAnalytic.new(
+    analytic = UsageSnapshot.new(
       card_id: "no-type-card",
       card_name: "No Type Card",
       source: "edhrec",
@@ -345,7 +345,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
   # Array-based records (AC4)
   # ---------------------------------------------------------------------------
   test "supports multiple commanders in commander_decklist_inclusion array" do
-    analytic = CardAnalytic.create!(
+    analytic = UsageSnapshot.create!(
       card_id: "multi-commander-card",
       card_name: "Multi Commander Card",
       source: "edhrec",

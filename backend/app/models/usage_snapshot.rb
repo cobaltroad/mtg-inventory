@@ -1,4 +1,4 @@
-class CardAnalytic < ApplicationRecord
+class UsageSnapshot < ApplicationRecord
   # ---------------------------------------------------------------------------
   # Validations (AC2)
   # ---------------------------------------------------------------------------

@@ -54,7 +54,7 @@ class AnalyticsRakeTest < ActiveSupport::TestCase
     assert_match(/Mythic Test Card/, output)
 
     # Verify records were created
-    assert_equal 2, CardAnalytic.for_source("edhrec").count
+    assert_equal 2, UsageSnapshot.for_source("edhrec").count
   end
 
   test "consolidate_edhrec task is idempotent" do
@@ -64,6 +64,6 @@ class AnalyticsRakeTest < ActiveSupport::TestCase
     capture_io { Rake::Task["analytics:consolidate_edhrec"].invoke }
 
     # Should still have same count
-    assert_equal 2, CardAnalytic.for_source("edhrec").count
+    assert_equal 2, UsageSnapshot.for_source("edhrec").count
   end
 end
