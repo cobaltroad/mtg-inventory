@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_14_052351) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_15_181218) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -40,6 +40,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_14_052351) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "card_analytics", force: :cascade do |t|
+    t.string "card_id", null: false
+    t.string "card_name", null: false
+    t.datetime "computed_at"
+    t.datetime "created_at", null: false
+    t.decimal "score", precision: 9, scale: 4
+    t.string "source", null: false
+    t.string "strategy"
+    t.text "summary"
+    t.text "tags", default: [], array: true
+    t.datetime "updated_at", null: false
+    t.jsonb "usage_data", default: {}, null: false
+    t.index ["card_id", "strategy"], name: "index_card_analytics_on_card_id_and_strategy", unique: true
+    t.index ["card_id"], name: "index_card_analytics_on_card_id"
+    t.index ["source"], name: "index_card_analytics_on_source"
+    t.index ["tags"], name: "index_card_analytics_on_tags", using: :gin
+    t.index ["usage_data"], name: "index_card_analytics_on_usage_data", using: :gin
   end
 
   create_table "card_prices", force: :cascade do |t|
