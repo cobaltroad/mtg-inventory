@@ -2,6 +2,10 @@ require "test_helper"
 require "webmock/minitest"
 
 class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
+  def api_path(path)
+    "#{ENV.fetch('PUBLIC_API_PATH', '/api')}#{path}"
+  end
+
   def setup
     CollectionItem.delete_all
     PriceAlert.delete_all
@@ -82,7 +86,7 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
       dismissed: true
     )
 
-    get "/projects/mtg/api/price_alerts"
+    get api_path("/price_alerts")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -99,7 +103,7 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "index returns empty array when no active alerts exist" do
-    get "/projects/mtg/api/price_alerts"
+    get api_path("/price_alerts")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -127,7 +131,7 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
       percentage_change: 30.0
     )
 
-    get "/projects/mtg/api/price_alerts"
+    get api_path("/price_alerts")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -156,7 +160,7 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
       created_at: 1.hour.ago
     )
 
-    get "/projects/mtg/api/price_alerts"
+    get api_path("/price_alerts")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -178,7 +182,7 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
       )
     end
 
-    get "/projects/mtg/api/price_alerts"
+    get api_path("/price_alerts")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -201,7 +205,7 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
       percentage_change: 30.0
     )
 
-    patch "/projects/mtg/api/price_alerts/#{alert.id}/dismiss"
+    patch api_path("/price_alerts/#{alert.id}/dismiss")
 
     assert_response :success
     alert.reload
@@ -210,7 +214,7 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "dismiss returns 404 for non-existent alert" do
-    patch "/projects/mtg/api/price_alerts/99999/dismiss"
+    patch api_path("/price_alerts/99999/dismiss")
 
     assert_response :not_found
   end
@@ -228,7 +232,7 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
       percentage_change: 30.0
     )
 
-    patch "/projects/mtg/api/price_alerts/#{alert.id}/dismiss"
+    patch api_path("/price_alerts/#{alert.id}/dismiss")
 
     assert_response :forbidden
     alert.reload
