@@ -167,8 +167,8 @@ Run jobs manually using rake tasks (useful for testing/maintenance):
 
 ```bash
 # Using Docker with rake tasks (recommended - shows real-time progress)
-docker compose exec backend rails jobs:scrape_commanders        # Discovery only
-docker compose exec backend rails jobs:scrape_commander_decklist[COMMANDER_ID]  # Single commander
+docker compose exec backend rails jobs:scrape_commanders                       # Discovery only
+docker compose exec backend rails jobs:scrape_commander_decklist[COMMANDER_ID] # Single commander
 docker compose exec backend rails jobs:update_prices
 docker compose exec backend rails jobs:clear_finished
 
@@ -187,9 +187,9 @@ docker compose exec backend rails jobs:clear_stuck   # Remove stuck jobs (CAUTIO
 
 # Using Rails console for more control (logs to file only)
 docker compose exec backend rails console
-> ScrapeEdhrecCommandersJob.perform_now         # Discovery phase (schedules decklist jobs)
-> ScrapeCommanderDecklistJob.perform_now(cmd)   # Scrape single commander decklist
-> SolidQueue::Job.last(5)                        # Check recent jobs
+> ScrapeEdhrecCommandersJob.perform_now            # Discovery phase (schedules decklist jobs)
+> ScrapeCommanderDecklistJob.perform_now(cmd_id)   # Scrape single commander decklist
+> SolidQueue::Job.last(5)                           # Check recent jobs
 ```
 
 **Note:** Rake tasks broadcast progress to your console, showing commander names and status in real-time. Using Rails console/runner directly only logs to the log file.
