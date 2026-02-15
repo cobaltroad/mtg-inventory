@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_14_052351) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_15_191902) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -285,6 +285,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_14_052351) do
     t.index ["expires_at"], name: "index_solid_queue_semaphores_on_expires_at"
     t.index ["key", "value"], name: "index_solid_queue_semaphores_on_key_and_value"
     t.index ["key"], name: "index_solid_queue_semaphores_on_key", unique: true
+  end
+
+  create_table "usage_snapshots", force: :cascade do |t|
+    t.string "card_id", null: false
+    t.string "card_name", null: false
+    t.datetime "computed_at"
+    t.datetime "created_at", null: false
+    t.decimal "score", precision: 9, scale: 4
+    t.string "source", null: false
+    t.string "strategy"
+    t.text "summary"
+    t.text "tags", default: [], array: true
+    t.datetime "updated_at", null: false
+    t.jsonb "usage_data", default: {}, null: false
+    t.index ["card_id", "strategy"], name: "index_usage_snapshots_on_card_id_and_strategy", unique: true
+    t.index ["card_id"], name: "index_usage_snapshots_on_card_id"
+    t.index ["source"], name: "index_usage_snapshots_on_source"
+    t.index ["tags"], name: "index_usage_snapshots_on_tags", using: :gin
+    t.index ["usage_data"], name: "index_usage_snapshots_on_usage_data", using: :gin
   end
 
   create_table "users", force: :cascade do |t|
