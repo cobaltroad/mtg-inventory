@@ -36,12 +36,25 @@ class SearchService
     "search:decklists:#{normalized_query}"
   end
 
+  # Builds a tsquery string with OR logic for multiple terms
+  # Example: "sol vault" => "sol | vault"
+  def build_or_tsquery(query)
+    terms = query.strip.split(/\s+/).map(&:strip).reject(&:empty?)
+    return "" if terms.empty?
+
+    # Join terms with | for OR logic
+    terms.join(" | ")
+  end
+
   def perform_search
     # Use PostgreSQL full-text search on the vector column
+    # Convert query to OR logic: split terms and join with |
+    tsquery = build_or_tsquery(@query)
     sanitized_query = ActiveRecord::Base.connection.quote(@query)
+
     decklists = Decklist
       .joins(:commander)
-      .where("decklists.vector @@ plainto_tsquery('english', ?)", @query)
+      .where("decklists.vector @@ to_tsquery('english', ?)", tsquery)
       .includes(:commander, :partner)
       .select("decklists.*, ts_rank(decklists.vector, plainto_tsquery('english', #{sanitized_query})) AS search_rank")
       .order("search_rank DESC")
