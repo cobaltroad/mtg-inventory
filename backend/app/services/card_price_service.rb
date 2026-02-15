@@ -72,6 +72,7 @@ class CardPriceService
   # Fetches card prices from the Scryfall API with retry logic
   def fetch_prices_from_scryfall
     attempt = 0
+    max_attempts = MAX_RETRIES
 
     begin
       attempt += 1
@@ -83,13 +84,23 @@ class CardPriceService
 
       card_data = parse_json_response(response)
       format_price_data(card_data)
-    rescue SocketError, Errno::ECONNREFUSED, Errno::EHOSTUNREACH => e
-      if attempt < MAX_RETRIES
+    rescue RateLimitError => e
+      if attempt < max_attempts
         sleep_duration = INITIAL_BACKOFF * (BACKOFF_MULTIPLIER ** (attempt - 1))
-        sleep(sleep_duration)
+        Rails.logger.info("Rate limit hit for card #{@card_id}, retrying in #{sleep_duration}s (attempt #{attempt}/#{max_attempts})")
+        wait(sleep_duration)
         retry
       else
-        Rails.logger.error("Critical: Failed to fetch prices for card #{@card_id} after #{MAX_RETRIES} attempts: #{e.message}")
+        Rails.logger.error("Rate limit exceeded after #{max_attempts} retries for card #{@card_id}")
+        raise RateLimitError, "Scryfall API rate limit exceeded. Please try again later."
+      end
+    rescue SocketError, Errno::ECONNREFUSED, Errno::EHOSTUNREACH => e
+      if attempt < max_attempts
+        sleep_duration = INITIAL_BACKOFF * (BACKOFF_MULTIPLIER ** (attempt - 1))
+        wait(sleep_duration)
+        retry
+      else
+        Rails.logger.error("Critical network error: Failed to fetch prices for card #{@card_id} after #{max_attempts} attempts: #{e.message}")
         raise NetworkError, "Network error while connecting to Scryfall API: #{e.message}"
       end
     rescue Net::OpenTimeout, Net::ReadTimeout => e
@@ -128,7 +139,8 @@ class CardPriceService
     request
   end
 
-  # Handles HTTP response status codes with retry logic for rate limits
+  # Handles HTTP response status codes
+  # Note: Rate limit (429) retry logic is handled in fetch_prices_from_scryfall
   def handle_response_status(response)
     case response.code.to_i
     when 200
@@ -136,8 +148,8 @@ class CardPriceService
     when 404
       # Not found - handled by caller
     when 429
-      Rails.logger.error("Rate limit exceeded for card #{@card_id}")
-      raise RateLimitError, "Scryfall API rate limit exceeded. Please try again later."
+      Rails.logger.warn("Rate limit exceeded for card #{@card_id}")
+      raise RateLimitError, "Scryfall API rate limit exceeded"
     else
       raise InvalidResponseError, "Scryfall API returned unexpected status: #{response.code}"
     end
@@ -176,5 +188,11 @@ class CardPriceService
     return nil if price_string.nil?
 
     (price_string.to_f * 100).round
+  end
+
+  # Waits for the specified duration (wrapper around sleep for testability)
+  # @param duration [Numeric] The number of seconds to wait
+  def wait(duration)
+    sleep(duration)
   end
 end
