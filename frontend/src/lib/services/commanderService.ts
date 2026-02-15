@@ -13,12 +13,19 @@ export interface Commander {
 }
 
 /**
- * Card data structure in a decklist
+ * Card data structure in a decklist with extended metadata for sorting/filtering
  */
 export interface DecklistCard {
 	card_id: string;
 	card_name: string;
+	card_url?: string;
 	quantity: number;
+	is_commander?: boolean;
+	card_type?: string;
+	rarity?: string;
+	edh_rank?: number;
+	release_date?: string;
+	usd_price?: string;
 }
 
 /**

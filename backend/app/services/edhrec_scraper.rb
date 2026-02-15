@@ -167,6 +167,12 @@ class EdhrecScraper
   #   - :category (String) - Card category (e.g., "Creatures", "Lands")
   #   - :is_commander (Boolean) - Whether this card is a commander
   #   - :scryfall_id (String or nil) - Scryfall ID if resolved, nil otherwise
+  #   - :scryfall_uri (String or nil) - Scryfall page URL
+  #   - :card_type (String or nil) - Type line (e.g., "Creature — Human")
+  #   - :rarity (String or nil) - Rarity (common, uncommon, rare, mythic)
+  #   - :edh_rank (Integer or nil) - EDHREC popularity rank
+  #   - :release_date (String or nil) - Release date (YYYY-MM-DD)
+  #   - :usd_price (String or nil) - USD price
   #
   # Raises:
   #   - FetchError: Network errors or HTTP failures
@@ -315,7 +321,8 @@ class EdhrecScraper
   end
 
   # ---------------------------------------------------------------------------
-  # Enriches card data with Scryfall IDs and URIs
+  # Enriches card data with Scryfall metadata for sorting/filtering
+  # Includes: IDs, URIs, card_type, rarity, edh_rank, release_date, usd_price
   # ---------------------------------------------------------------------------
   private_class_method def self.enrich_cards_with_scryfall_ids(cards)
     card_names = cards.map { |c| c[:name] }
@@ -326,9 +333,19 @@ class EdhrecScraper
       if card_info
         card[:scryfall_id] = card_info[:id]
         card[:scryfall_uri] = card_info[:uri]
+        card[:card_type] = card_info[:card_type]
+        card[:rarity] = card_info[:rarity]
+        card[:edh_rank] = card_info[:edh_rank]
+        card[:release_date] = card_info[:release_date]
+        card[:usd_price] = card_info[:usd_price]
       else
         card[:scryfall_id] = nil
         card[:scryfall_uri] = nil
+        card[:card_type] = nil
+        card[:rarity] = nil
+        card[:edh_rank] = nil
+        card[:release_date] = nil
+        card[:usd_price] = nil
       end
     end
   end

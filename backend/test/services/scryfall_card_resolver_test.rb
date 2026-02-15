@@ -174,6 +174,101 @@ class ScryfallCardResolverTest < ActiveSupport::TestCase
     assert_match(/warn.*rate limit.*429/i, logs)
   end
 
+  # ---------------------------------------------------------------------------
+  # Extended card metadata tests (for sorting/filtering)
+  # ---------------------------------------------------------------------------
+
+  test "resolve_cards includes card_type, rarity, edh_rank, release_date, and usd_price" do
+    stub_request(:get, "https://api.scryfall.com/cards/named")
+      .with(query: { "fuzzy" => "Atraxa, Praetors' Voice" })
+      .to_return(
+        status: 200,
+        body: {
+          id: "atraxa-id",
+          name: "Atraxa, Praetors' Voice",
+          scryfall_uri: "https://scryfall.com/card/cmr/1/atraxa",
+          type_line: "Legendary Creature — Phyrexian Angel Horror",
+          rarity: "mythic",
+          edhrec_rank: 1,
+          released_at: "2016-11-11",
+          prices: {
+            usd: "39.99",
+            usd_foil: "45.50",
+            eur: "35.00"
+          }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    result = ScryfallCardResolver.resolve_cards(["Atraxa, Praetors' Voice"])
+    card = result["Atraxa, Praetors' Voice"]
+
+    assert_equal "atraxa-id", card[:id]
+    assert_equal "https://scryfall.com/card/cmr/1/atraxa", card[:uri]
+    assert_equal "Legendary Creature — Phyrexian Angel Horror", card[:card_type]
+    assert_equal "mythic", card[:rarity]
+    assert_equal 1, card[:edh_rank]
+    assert_equal "2016-11-11", card[:release_date]
+    assert_equal "39.99", card[:usd_price]
+  end
+
+  test "resolve_cards handles missing optional metadata gracefully" do
+    stub_request(:get, "https://api.scryfall.com/cards/named")
+      .with(query: { "fuzzy" => "Basic Land" })
+      .to_return(
+        status: 200,
+        body: {
+          id: "basic-land-id",
+          name: "Plains",
+          scryfall_uri: "https://scryfall.com/card/basic/1/plains",
+          type_line: "Basic Land — Plains",
+          rarity: "common",
+          released_at: "2023-08-04",
+          prices: {
+            usd: "0.10"
+          }
+          # Missing: edhrec_rank (not applicable to basic lands)
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    result = ScryfallCardResolver.resolve_cards(["Basic Land"])
+    card = result["Basic Land"]
+
+    assert_equal "basic-land-id", card[:id]
+    assert_equal "Basic Land — Plains", card[:card_type]
+    assert_equal "common", card[:rarity]
+    assert_nil card[:edh_rank] # Should be nil when missing
+    assert_equal "2023-08-04", card[:release_date]
+    assert_equal "0.10", card[:usd_price]
+  end
+
+  test "resolve_cards handles missing price gracefully" do
+    stub_request(:get, "https://api.scryfall.com/cards/named")
+      .with(query: { "fuzzy" => "No Price Card" })
+      .to_return(
+        status: 200,
+        body: {
+          id: "no-price-id",
+          name: "No Price Card",
+          scryfall_uri: "https://scryfall.com/card/set/1/no-price",
+          type_line: "Creature",
+          rarity: "rare",
+          edhrec_rank: 100,
+          released_at: "2023-01-01",
+          prices: {
+            usd: nil # Price not available
+          }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    result = ScryfallCardResolver.resolve_cards(["No Price Card"])
+    card = result["No Price Card"]
+
+    assert_nil card[:usd_price]
+  end
+
   private
 
   def stub_scryfall_card(card_name, scryfall_id, scryfall_uri)
