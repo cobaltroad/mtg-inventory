@@ -50,7 +50,7 @@ class InventoryController < ApplicationController
                else
                  20
                end
-    page = (params[:page] || 1).to_i
+    requested_page = (params[:page] || 1).to_i
 
     # Check if denormalized fields are populated for sorting
     # If any items have NULL denormalized fields needed for sorting, fall back to old behavior
@@ -62,14 +62,21 @@ class InventoryController < ApplicationController
       preload_prices(all_items_with_images)
       all_items_enriched = enrich_with_card_details(all_items_with_images)
       sorted_items = apply_sort(all_items_enriched, sort_option)
-      pagy, enriched_items = pagy_array(sorted_items, page: page, limit: per_page)
+      pagy, enriched_items = pagy_array(sorted_items, page: requested_page, limit: per_page)
     else
       # Optimized path: sort at DB, paginate, then enrich only paginated items
       sorted_relation = apply_database_sort(base_items, sort_option)
-      pagy, paginated_relation = pagy(sorted_relation, page: page, limit: per_page)
+      pagy, paginated_relation = pagy(sorted_relation, page: requested_page, limit: per_page)
       paginated_items_db = paginated_relation.includes(cached_image_attachment: :blob).to_a
       preload_prices(paginated_items_db)
       enriched_items = enrich_with_card_details(paginated_items_db)
+    end
+
+    # Handle overflow: if requested page exceeds total pages, return empty results
+    # This ensures clients can detect when they're past the last page
+    # Pagy clamps to last page by default, so we need to check against the requested page
+    if requested_page > pagy.pages && pagy.count > 0
+      enriched_items = []
     end
 
     # Calculate stats for entire inventory using SQL aggregates

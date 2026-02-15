@@ -210,9 +210,18 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET /api/inventory uses cached card details to minimize API calls" do
-    CollectionItem.create!(user: @user, card_id: "uuid-cached", collection_type: "inventory", quantity: 1)
-
     stub = stub_scryfall_card_details("uuid-cached")
+
+    # Create item with denormalized fields populated to skip sync_card_metadata callback
+    CollectionItem.create!(
+      user: @user,
+      card_id: "uuid-cached",
+      collection_type: "inventory",
+      quantity: 1,
+      card_name: "Black Lotus",
+      set_name: "Limited Edition Alpha",
+      released_at: Date.parse("1993-08-05")
+    )
 
     # First request should hit Scryfall API
     get api_path("/inventory")
