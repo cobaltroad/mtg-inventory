@@ -46,7 +46,7 @@ class PriceAlertServiceTest < ActiveSupport::TestCase
     assert_equal 100, alert.old_price_cents
     assert_equal 120, alert.new_price_cents
     assert_equal 20.0, alert.percentage_change.to_f
-    assert_equal "nonfoil", alert.treatment
+    assert_equal "nonfoil", alert.finish
   end
 
   test "does not create alert for increase below 20% threshold" do
@@ -162,7 +162,7 @@ class PriceAlertServiceTest < ActiveSupport::TestCase
 
     assert_equal 1, alerts.count
     alert = alerts.first
-    assert_equal "foil", alert.treatment
+    assert_equal "foil", alert.finish
     assert_equal 200, alert.old_price_cents
     assert_equal 250, alert.new_price_cents
   end
@@ -192,7 +192,7 @@ class PriceAlertServiceTest < ActiveSupport::TestCase
 
     assert_equal 1, alerts.count
     alert = alerts.first
-    assert_equal "etched", alert.treatment
+    assert_equal "etched", alert.finish
   end
 
   # ---------------------------------------------------------------------------
