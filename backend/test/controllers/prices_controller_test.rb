@@ -1,6 +1,10 @@
 require "test_helper"
 
 class PricesControllerTest < ActionDispatch::IntegrationTest
+  def api_path(path)
+    "#{ENV.fetch('PUBLIC_API_PATH', '/api')}#{path}"
+  end
+
   setup do
     CollectionItem.delete_all
     User.delete_all
@@ -23,7 +27,7 @@ class PricesControllerTest < ActionDispatch::IntegrationTest
     )
 
     assert_enqueued_with(job: UpdateCardPricesJob) do
-      post api_prices_update_url
+      post api_path("/prices/update")
     end
 
     assert_response :accepted
@@ -39,7 +43,7 @@ class PricesControllerTest < ActionDispatch::IntegrationTest
     CollectionItem.delete_all
 
     assert_no_enqueued_jobs do
-      post api_prices_update_url
+      post api_path("/prices/update")
     end
 
     assert_response :ok
@@ -64,7 +68,7 @@ class PricesControllerTest < ActionDispatch::IntegrationTest
       collection_type: "wishlist"
     )
 
-    post api_prices_update_url
+    post api_path("/prices/update")
 
     assert_response :accepted
 
@@ -74,7 +78,7 @@ class PricesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "should return proper content type" do
-    post api_prices_update_url
+    post api_path("/prices/update")
 
     assert_equal "application/json; charset=utf-8", response.content_type
   end
