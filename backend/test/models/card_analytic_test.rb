@@ -11,6 +11,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
       source: "edhrec",
       usage_data: {
         "rarity" => "rare",
+        "type" => "Enchantment",
         "commander_decklist_inclusion" => [
           {
             "commander_rank" => 1,
@@ -31,7 +32,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
       card_id: nil,
       card_name: "Test Card",
       source: "edhrec",
-      usage_data: { "rarity" => "rare", "commander_decklist_inclusion" => [] },
+      usage_data: { "rarity" => "rare", "type" => "Creature", "commander_decklist_inclusion" => [] },
       computed_at: Time.current
     )
     assert analytic.invalid?
@@ -43,7 +44,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
       card_id: "test-id",
       card_name: nil,
       source: "edhrec",
-      usage_data: { "rarity" => "rare", "commander_decklist_inclusion" => [] },
+      usage_data: { "rarity" => "rare", "type" => "Land", "commander_decklist_inclusion" => [] },
       computed_at: Time.current
     )
     assert analytic.invalid?
@@ -55,7 +56,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
       card_id: "test-id",
       card_name: "Test Card",
       source: nil,
-      usage_data: { "rarity" => "rare", "commander_decklist_inclusion" => [] },
+      usage_data: { "rarity" => "rare", "type" => "Sorcery", "commander_decklist_inclusion" => [] },
       computed_at: Time.current
     )
     assert analytic.invalid?
@@ -70,7 +71,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
       card_id: "test-id",
       card_name: "Test Card",
       source: "edhrec",
-      usage_data: { "rarity" => "rare", "commander_decklist_inclusion" => [] },
+      usage_data: { "rarity" => "rare", "type" => "Instant", "commander_decklist_inclusion" => [] },
       computed_at: Time.current
     )
     assert analytic.valid?, analytic.errors.full_messages.inspect
@@ -81,7 +82,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
       card_id: "test-id",
       card_name: "Test Card",
       source: "invalid_source",
-      usage_data: { "rarity" => "rare", "commander_decklist_inclusion" => [] },
+      usage_data: { "rarity" => "rare", "type" => "Artifact", "commander_decklist_inclusion" => [] },
       computed_at: Time.current
     )
     assert analytic.invalid?
@@ -120,7 +121,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
       card_id: "test-id",
       card_name: "Test Card",
       source: "edhrec",
-      usage_data: { "rarity" => "rare" },
+      usage_data: { "rarity" => "rare", "type" => "Land" },
       computed_at: Time.current
     )
     assert analytic.invalid?
@@ -134,6 +135,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
       source: "edhrec",
       usage_data: {
         "rarity" => "rare",
+        "type" => "Creature",
         "commander_decklist_inclusion" => "not_an_array"
       },
       computed_at: Time.current
@@ -147,11 +149,23 @@ class CardAnalyticTest < ActiveSupport::TestCase
       card_id: "test-id",
       card_name: "Test Card",
       source: "edhrec",
-      usage_data: { "commander_decklist_inclusion" => [] },
+      usage_data: { "type" => "Planeswalker", "commander_decklist_inclusion" => [] },
       computed_at: Time.current
     )
     assert analytic.invalid?
     assert_includes analytic.errors[:usage_data], "must contain rarity"
+  end
+
+  test "is invalid when usage_data lacks type" do
+    analytic = CardAnalytic.new(
+      card_id: "test-id",
+      card_name: "Test Card",
+      source: "edhrec",
+      usage_data: { "rarity" => "rare", "commander_decklist_inclusion" => [] },
+      computed_at: Time.current
+    )
+    assert analytic.invalid?
+    assert_includes analytic.errors[:usage_data], "must contain type"
   end
 
   # ---------------------------------------------------------------------------
@@ -163,7 +177,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
       card_name: "Test Card",
       source: "edhrec",
       strategy: "test_strategy",
-      usage_data: { "rarity" => "rare", "commander_decklist_inclusion" => [] },
+      usage_data: { "rarity" => "rare", "type" => "Artifact", "commander_decklist_inclusion" => [] },
       computed_at: Time.current
     )
 
@@ -172,7 +186,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
       card_name: "Test Card Updated",
       source: "edhrec",
       strategy: "test_strategy",
-      usage_data: { "rarity" => "mythic", "commander_decklist_inclusion" => [] },
+      usage_data: { "rarity" => "mythic", "type" => "Creature", "commander_decklist_inclusion" => [] },
       computed_at: Time.current
     )
     assert duplicate.invalid?
@@ -185,7 +199,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
       card_name: "Test Card",
       source: "edhrec",
       strategy: "strategy_one",
-      usage_data: { "rarity" => "rare", "commander_decklist_inclusion" => [] },
+      usage_data: { "rarity" => "rare", "type" => "Enchantment", "commander_decklist_inclusion" => [] },
       computed_at: Time.current
     )
 
@@ -194,7 +208,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
       card_name: "Test Card",
       source: "edhrec",
       strategy: "strategy_two",
-      usage_data: { "rarity" => "mythic", "commander_decklist_inclusion" => [] },
+      usage_data: { "rarity" => "mythic", "type" => "Enchantment", "commander_decklist_inclusion" => [] },
       computed_at: Time.current
     )
     assert second.valid?, second.errors.full_messages.inspect
@@ -208,7 +222,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
       card_id: "edhrec-card",
       card_name: "EDHREC Card",
       source: "edhrec",
-      usage_data: { "rarity" => "rare", "commander_decklist_inclusion" => [] },
+      usage_data: { "rarity" => "rare", "type" => "Sorcery", "commander_decklist_inclusion" => [] },
       computed_at: Time.current
     )
 
@@ -222,7 +236,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
       card_name: "Strategy Card",
       source: "edhrec",
       strategy: "test_strategy",
-      usage_data: { "rarity" => "rare", "commander_decklist_inclusion" => [] },
+      usage_data: { "rarity" => "rare", "type" => "Instant", "commander_decklist_inclusion" => [] },
       computed_at: Time.current
     )
 
@@ -236,7 +250,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
       card_name: "Tagged Card",
       source: "edhrec",
       tags: [ "staple", "removal" ],
-      usage_data: { "rarity" => "rare", "commander_decklist_inclusion" => [] },
+      usage_data: { "rarity" => "rare", "type" => "Instant", "commander_decklist_inclusion" => [] },
       computed_at: Time.current
     )
 
@@ -260,6 +274,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
       source: "edhrec",
       usage_data: {
         "rarity" => "mythic",
+        "type" => "Planeswalker",
         "commander_decklist_inclusion" => [
           { "commander_rank" => 5, "edh_rank" => 100 }
         ]
@@ -268,6 +283,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
     )
 
     assert_equal "mythic", analytic.usage_metric("rarity")
+    assert_equal "Planeswalker", analytic.usage_metric("type")
     assert_equal [{ "commander_rank" => 5, "edh_rank" => 100 }],
                  analytic.usage_metric("commander_decklist_inclusion")
     assert_nil analytic.usage_metric("nonexistent_key")
@@ -280,6 +296,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
       source: "edhrec",
       usage_data: {
         "rarity" => "rare",
+        "type" => "Artifact",
         "commander_decklist_inclusion" => []
       },
       computed_at: Time.current
@@ -287,6 +304,41 @@ class CardAnalyticTest < ActiveSupport::TestCase
 
     # Single rarity
     assert_equal [ "rare" ], analytic.all_rarities
+  end
+
+  test "card_type returns type from usage_data" do
+    analytic = CardAnalytic.create!(
+      card_id: "type-card",
+      card_name: "Type Card",
+      source: "edhrec",
+      usage_data: {
+        "rarity" => "mythic",
+        "type" => "Planeswalker",
+        "commander_decklist_inclusion" => []
+      },
+      computed_at: Time.current
+    )
+
+    assert_equal "Planeswalker", analytic.card_type
+  end
+
+  test "card_type returns nil when type is not present" do
+    # Create analytic without type for testing
+    analytic = CardAnalytic.new(
+      card_id: "no-type-card",
+      card_name: "No Type Card",
+      source: "edhrec",
+      usage_data: {
+        "rarity" => "rare",
+        "commander_decklist_inclusion" => []
+      },
+      computed_at: Time.current
+    )
+
+    # Skip validation to test the helper method directly
+    analytic.save(validate: false)
+
+    assert_nil analytic.card_type
   end
 
   # ---------------------------------------------------------------------------
@@ -299,6 +351,7 @@ class CardAnalyticTest < ActiveSupport::TestCase
       source: "edhrec",
       usage_data: {
         "rarity" => "mythic",
+        "type" => "Creature",
         "commander_decklist_inclusion" => [
           {
             "commander_rank" => 1,

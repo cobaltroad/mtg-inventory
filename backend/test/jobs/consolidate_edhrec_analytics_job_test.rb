@@ -32,6 +32,7 @@ class ConsolidateEdhrecAnalyticsJobTest < ActiveSupport::TestCase
         {
           card_id: "rare-card-1",
           card_name: "Rhystic Study",
+          card_type: "Enchantment",
           rarity: "rare",
           edh_rank: 265,
           quantity: 1
@@ -39,6 +40,7 @@ class ConsolidateEdhrecAnalyticsJobTest < ActiveSupport::TestCase
         {
           card_id: "mythic-card-1",
           card_name: "Smothering Tithe",
+          card_type: "Enchantment",
           rarity: "mythic",
           edh_rank: 100,
           quantity: 1
@@ -46,6 +48,7 @@ class ConsolidateEdhrecAnalyticsJobTest < ActiveSupport::TestCase
         {
           card_id: "common-card-1",
           card_name: "Sol Ring",
+          card_type: "Artifact",
           rarity: "common",
           edh_rank: 1,
           quantity: 1
@@ -60,6 +63,7 @@ class ConsolidateEdhrecAnalyticsJobTest < ActiveSupport::TestCase
         {
           card_id: "rare-card-1",
           card_name: "Rhystic Study",
+          card_type: "Enchantment",
           rarity: "rare",
           edh_rank: 265,
           quantity: 1
@@ -67,6 +71,7 @@ class ConsolidateEdhrecAnalyticsJobTest < ActiveSupport::TestCase
         {
           card_id: "mythic-card-2",
           card_name: "Cyclonic Rift",
+          card_type: "Instant",
           rarity: "mythic",
           edh_rank: 50,
           quantity: 1
@@ -74,6 +79,7 @@ class ConsolidateEdhrecAnalyticsJobTest < ActiveSupport::TestCase
         {
           card_id: "uncommon-card-1",
           card_name: "Command Tower",
+          card_type: "Land",
           rarity: "uncommon",
           edh_rank: 5,
           quantity: 1
@@ -88,6 +94,7 @@ class ConsolidateEdhrecAnalyticsJobTest < ActiveSupport::TestCase
         {
           card_id: "mythic-card-1",
           card_name: "Smothering Tithe",
+          card_type: "Enchantment",
           rarity: "mythic",
           edh_rank: 100,
           quantity: 1
@@ -124,6 +131,7 @@ class ConsolidateEdhrecAnalyticsJobTest < ActiveSupport::TestCase
     assert_equal "Rhystic Study", rhystic.card_name
     assert_equal "edhrec", rhystic.source
     assert_equal "rare", rhystic.usage_data["rarity"]
+    assert_equal "Enchantment", rhystic.usage_data["type"]
 
     # Should have 2 commanders in the inclusion array
     inclusions = rhystic.usage_data["commander_decklist_inclusion"]
@@ -170,6 +178,7 @@ class ConsolidateEdhrecAnalyticsJobTest < ActiveSupport::TestCase
     cyclonic = CardAnalytic.find_by(card_id: "mythic-card-2")
     assert_not_nil cyclonic
     assert_equal "Cyclonic Rift", cyclonic.card_name
+    assert_equal "Instant", cyclonic.usage_data["type"]
 
     inclusions = cyclonic.usage_data["commander_decklist_inclusion"]
     assert_equal 1, inclusions.length
@@ -185,6 +194,7 @@ class ConsolidateEdhrecAnalyticsJobTest < ActiveSupport::TestCase
     assert_not_nil smothering
     assert_equal "Smothering Tithe", smothering.card_name
     assert_equal "mythic", smothering.usage_data["rarity"]
+    assert_equal "Enchantment", smothering.usage_data["type"]
 
     inclusions = smothering.usage_data["commander_decklist_inclusion"]
     assert_equal 2, inclusions.length
@@ -338,6 +348,7 @@ class ConsolidateEdhrecAnalyticsJobTest < ActiveSupport::TestCase
         {
           card_id: "nil-rarity-card",
           card_name: "Card With Nil Rarity",
+          card_type: "Creature",
           rarity: nil,
           edh_rank: 500,
           quantity: 1
@@ -345,6 +356,7 @@ class ConsolidateEdhrecAnalyticsJobTest < ActiveSupport::TestCase
         {
           card_id: "blank-rarity-card",
           card_name: "Card With Blank Rarity",
+          card_type: "Artifact",
           rarity: "",
           edh_rank: 501,
           quantity: 1
@@ -359,6 +371,94 @@ class ConsolidateEdhrecAnalyticsJobTest < ActiveSupport::TestCase
     # Cards with nil/blank rarity should be skipped
     assert_nil CardAnalytic.find_by(card_id: "nil-rarity-card")
     assert_nil CardAnalytic.find_by(card_id: "blank-rarity-card")
+  end
+
+  test "handles cards missing card_type field gracefully" do
+    commander_missing_type = Commander.create!(
+      name: "Missing Type Commander",
+      rank: 95,
+      edhrec_url: "https://edhrec.com/commanders/missing-type"
+    )
+    Decklist.create!(
+      commander: commander_missing_type,
+      partner: nil,
+      contents: [
+        {
+          card_id: "missing-type-card",
+          card_name: "Card Without Type",
+          # card_type field is missing
+          rarity: "rare",
+          edh_rank: 500,
+          quantity: 1
+        }
+      ]
+    )
+
+    assert_nothing_raised do
+      ConsolidateEdhrecAnalyticsJob.perform_now
+    end
+
+    # Card without type should still be processed but with nil/empty type
+    card = CardAnalytic.find_by(card_id: "missing-type-card")
+    assert_not_nil card
+    assert card.usage_data["type"].blank?
+  end
+
+  test "handles cards with nil or blank card_type" do
+    commander_nil_type = Commander.create!(
+      name: "Nil Type Commander",
+      rank: 94,
+      edhrec_url: "https://edhrec.com/commanders/nil-type"
+    )
+    Decklist.create!(
+      commander: commander_nil_type,
+      partner: nil,
+      contents: [
+        {
+          card_id: "nil-type-card",
+          card_name: "Card With Nil Type",
+          card_type: nil,
+          rarity: "rare",
+          edh_rank: 500,
+          quantity: 1
+        },
+        {
+          card_id: "blank-type-card",
+          card_name: "Card With Blank Type",
+          card_type: "",
+          rarity: "mythic",
+          edh_rank: 501,
+          quantity: 1
+        }
+      ]
+    )
+
+    assert_nothing_raised do
+      ConsolidateEdhrecAnalyticsJob.perform_now
+    end
+
+    # Cards with nil/blank type should still be processed
+    nil_type_card = CardAnalytic.find_by(card_id: "nil-type-card")
+    assert_not_nil nil_type_card
+    assert nil_type_card.usage_data["type"].blank?
+
+    blank_type_card = CardAnalytic.find_by(card_id: "blank-type-card")
+    assert_not_nil blank_type_card
+    assert blank_type_card.usage_data["type"].blank?
+  end
+
+  test "extracts card type from decklist contents" do
+    ConsolidateEdhrecAnalyticsJob.perform_now
+
+    # Verify different card types are extracted correctly
+    rhystic = CardAnalytic.find_by(card_id: "rare-card-1")
+    assert_equal "Enchantment", rhystic.usage_data["type"]
+
+    cyclonic = CardAnalytic.find_by(card_id: "mythic-card-2")
+    assert_equal "Instant", cyclonic.usage_data["type"]
+
+    smothering = CardAnalytic.find_by(card_id: "mythic-card-1")
+    assert_equal "Enchantment", smothering.usage_data["type"]
   end
 
   # ---------------------------------------------------------------------------

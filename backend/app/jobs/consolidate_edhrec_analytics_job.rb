@@ -76,6 +76,7 @@ class ConsolidateEdhrecAnalyticsJob < ApplicationJob
 
       card_id = card["card_id"] || card[:card_id]
       card_name = card["card_name"] || card[:card_name]
+      card_type = card["card_type"] || card[:card_type]
       edh_rank = card["edh_rank"] || card[:edh_rank]
 
       # Skip cards without required fields (AC6)
@@ -86,6 +87,7 @@ class ConsolidateEdhrecAnalyticsJob < ApplicationJob
         card_id: card_id,
         card_name: card_name,
         rarity: rarity,
+        card_type: card_type,
         inclusions: []
       }
 
@@ -108,6 +110,7 @@ class ConsolidateEdhrecAnalyticsJob < ApplicationJob
       # Build usage_data structure (AC3)
       usage_data = {
         rarity: data[:rarity],
+        type: data[:card_type],
         commander_decklist_inclusion: data[:inclusions]
       }
 

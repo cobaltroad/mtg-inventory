@@ -36,6 +36,13 @@ class CardAnalytic < ApplicationRecord
     rarity ? [ rarity ] : []
   end
 
+  # Returns the card type from the stored data
+  # For EDHREC source, this returns the type field (e.g., "Creature", "Enchantment")
+  # @return [String, nil] The card type or nil if not found
+  def card_type
+    usage_metric("type")
+  end
+
   private
 
   # ---------------------------------------------------------------------------
@@ -67,9 +74,15 @@ class CardAnalytic < ApplicationRecord
       return
     end
 
-    # Check for rarity
-    unless usage_data.key?("rarity") || usage_data.key?(:rarity)
-      errors.add(:usage_data, "must contain rarity")
+    # Check for required fields
+    validate_required_field("rarity", "must contain rarity")
+    validate_required_field("type", "must contain type")
+  end
+
+  # Helper method to validate required fields in usage_data
+  def validate_required_field(field_name, error_message)
+    unless usage_data.key?(field_name) || usage_data.key?(field_name.to_sym)
+      errors.add(:usage_data, error_message)
     end
   end
 end
