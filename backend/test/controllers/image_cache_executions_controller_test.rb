@@ -1,6 +1,10 @@
 require "test_helper"
 
 class ImageCacheExecutionsControllerTest < ActionDispatch::IntegrationTest
+  def api_path(path)
+    "#{ENV.fetch('PUBLIC_API_PATH', '/api')}#{path}"
+  end
+
   setup do
     # Clear existing data
     ImageCacheExecution.delete_all
@@ -54,7 +58,7 @@ class ImageCacheExecutionsControllerTest < ActionDispatch::IntegrationTest
   # GET /api/admin/image_cache_executions - index
   # ---------------------------------------------------------------------------
   test "GET index returns all executions ordered by most recent first" do
-    get "/api/admin/image_cache_executions"
+    get api_path("/admin/image_cache_executions")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -68,7 +72,7 @@ class ImageCacheExecutionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET index returns executions with all expected fields" do
-    get "/api/admin/image_cache_executions"
+    get api_path("/admin/image_cache_executions")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -90,7 +94,7 @@ class ImageCacheExecutionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET index filters by status parameter" do
-    get "/api/admin/image_cache_executions?status=success"
+    get api_path("/admin/image_cache_executions?status=success")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -101,7 +105,7 @@ class ImageCacheExecutionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET index filters by card_id parameter" do
-    get "/api/admin/image_cache_executions?card_id=card-abc-123"
+    get api_path("/admin/image_cache_executions?card_id=card-abc-123")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -112,7 +116,7 @@ class ImageCacheExecutionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET index filters by collection_item_id parameter" do
-    get "/api/admin/image_cache_executions?collection_item_id=101"
+    get api_path("/admin/image_cache_executions?collection_item_id=101")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -123,7 +127,7 @@ class ImageCacheExecutionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET index filters by cache_hit parameter" do
-    get "/api/admin/image_cache_executions?cache_hit=true"
+    get api_path("/admin/image_cache_executions?cache_hit=true")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -136,7 +140,7 @@ class ImageCacheExecutionsControllerTest < ActionDispatch::IntegrationTest
   test "GET index filters by start_date parameter" do
     start_date = 2.days.ago.to_date.to_s
 
-    get "/api/admin/image_cache_executions?start_date=#{start_date}"
+    get api_path("/admin/image_cache_executions?start_date=#{start_date}")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -149,7 +153,7 @@ class ImageCacheExecutionsControllerTest < ActionDispatch::IntegrationTest
   test "GET index filters by end_date parameter" do
     end_date = 2.days.ago.to_date.to_s
 
-    get "/api/admin/image_cache_executions?end_date=#{end_date}"
+    get api_path("/admin/image_cache_executions?end_date=#{end_date}")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -160,7 +164,7 @@ class ImageCacheExecutionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET index respects limit parameter" do
-    get "/api/admin/image_cache_executions?limit=2"
+    get api_path("/admin/image_cache_executions?limit=2")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -169,7 +173,7 @@ class ImageCacheExecutionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET index enforces maximum limit of 100" do
-    get "/api/admin/image_cache_executions?limit=500"
+    get api_path("/admin/image_cache_executions?limit=500")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -189,7 +193,7 @@ class ImageCacheExecutionsControllerTest < ActionDispatch::IntegrationTest
       )
     end
 
-    get "/api/admin/image_cache_executions"
+    get api_path("/admin/image_cache_executions")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -198,7 +202,7 @@ class ImageCacheExecutionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET index returns timestamps in ISO 8601 format" do
-    get "/api/admin/image_cache_executions"
+    get api_path("/admin/image_cache_executions")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -213,7 +217,7 @@ class ImageCacheExecutionsControllerTest < ActionDispatch::IntegrationTest
   # GET /api/admin/image_cache_executions/:id - show
   # ---------------------------------------------------------------------------
   test "GET show returns single execution by id" do
-    get "/api/admin/image_cache_executions/#{@execution1.id}"
+    get api_path("/admin/image_cache_executions/#{@execution1.id}")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -226,7 +230,7 @@ class ImageCacheExecutionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET show returns 404 for non-existent execution" do
-    get "/api/admin/image_cache_executions/99999"
+    get api_path("/admin/image_cache_executions/99999")
 
     assert_response :not_found
     json = JSON.parse(response.body)
@@ -235,7 +239,7 @@ class ImageCacheExecutionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET show returns all execution fields including error_message" do
-    get "/api/admin/image_cache_executions/#{@execution3.id}"
+    get api_path("/admin/image_cache_executions/#{@execution3.id}")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -252,7 +256,7 @@ class ImageCacheExecutionsControllerTest < ActionDispatch::IntegrationTest
   # GET /api/admin/image_cache_executions/stats - stats
   # ---------------------------------------------------------------------------
   test "GET stats returns aggregate statistics" do
-    get "/api/admin/image_cache_executions/stats"
+    get api_path("/admin/image_cache_executions/stats")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -270,7 +274,7 @@ class ImageCacheExecutionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET stats calculates totals correctly" do
-    get "/api/admin/image_cache_executions/stats"
+    get api_path("/admin/image_cache_executions/stats")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -282,7 +286,7 @@ class ImageCacheExecutionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET stats calculates success rate" do
-    get "/api/admin/image_cache_executions/stats"
+    get api_path("/admin/image_cache_executions/stats")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -292,7 +296,7 @@ class ImageCacheExecutionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET stats calculates cache hit rate" do
-    get "/api/admin/image_cache_executions/stats"
+    get api_path("/admin/image_cache_executions/stats")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -304,7 +308,7 @@ class ImageCacheExecutionsControllerTest < ActionDispatch::IntegrationTest
   test "GET stats returns zero values when no executions exist" do
     ImageCacheExecution.delete_all
 
-    get "/api/admin/image_cache_executions/stats"
+    get api_path("/admin/image_cache_executions/stats")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -319,14 +323,14 @@ class ImageCacheExecutionsControllerTest < ActionDispatch::IntegrationTest
   # Error handling
   # ---------------------------------------------------------------------------
   test "GET index handles invalid date format gracefully" do
-    get "/api/admin/image_cache_executions?start_date=invalid-date"
+    get api_path("/admin/image_cache_executions?start_date=invalid-date")
 
     # Should return error or empty result, not crash
     assert_response :success # or :bad_request depending on implementation
   end
 
   test "GET index handles invalid status filter gracefully" do
-    get "/api/admin/image_cache_executions?status=invalid_status"
+    get api_path("/admin/image_cache_executions?status=invalid_status")
 
     assert_response :success
     json = JSON.parse(response.body)
@@ -336,7 +340,7 @@ class ImageCacheExecutionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET index handles invalid boolean filter gracefully" do
-    get "/api/admin/image_cache_executions?cache_hit=invalid"
+    get api_path("/admin/image_cache_executions?cache_hit=invalid")
 
     assert_response :success
     # Should handle gracefully, possibly returning all or none
