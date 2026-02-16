@@ -10,14 +10,16 @@ namespace :cards do
 
     # Fetch and write Game Changers list
     begin
-      puts "Fetching Game Changers list from Moxfield..."
+      puts "Fetching Game Changers list from Wizards..."
       game_changers = CardListFetcher.fetch_game_changers
-      CardListWriter.write("game_changers", game_changers, CardListFetcher::MOXFIELD_GAME_CHANGERS_URL)
+      CardListWriter.write("game_changers", game_changers, CardListFetcher::WIZARDS_GAME_CHANGERS_URL)
       puts "✓ Wrote #{game_changers.size} Game Changers to config/card_lists/game_changers.yml"
       puts ""
     rescue CardListFetcher::FetchError, CardListFetcher::ParseError, CardListWriter::WriteError => e
       puts "✗ Error fetching/writing Game Changers list:"
       puts "  #{e.class}: #{e.message}"
+      puts "  NOTE: Game Changers list uses JavaScript rendering. Consider manual maintenance."
+      puts "  See config/card_lists/game_changers.yml for current list."
       puts ""
       success = false
     end

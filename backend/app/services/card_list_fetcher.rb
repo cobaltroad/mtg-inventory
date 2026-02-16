@@ -8,7 +8,8 @@ class CardListFetcher
   class ParseError < StandardError; end
 
   # API endpoints
-  MOXFIELD_GAME_CHANGERS_URL = "https://moxfield.com/commanderbrackets/gamechangers"
+  # Note: Fragment (#gamechangers) is client-side only, not sent to server
+  WIZARDS_GAME_CHANGERS_URL = "https://magic.wizards.com/en/formats/commander"
   SCRYFALL_RESERVED_LIST_URL = "https://api.scryfall.com/cards/search?q=is:reserved"
 
   # User-Agent for polite crawling (used for Scryfall API)
@@ -31,17 +32,19 @@ class CardListFetcher
 
   class << self
     # ---------------------------------------------------------------------------
-    # Fetch Game Changers list from Moxfield
+    # Fetch Game Changers list from official Wizards source
     #
     # Returns: Array of card names (String), normalized and sorted alphabetically
     # Raises: FetchError on network errors, ParseError on parsing failures
     # ---------------------------------------------------------------------------
     def fetch_game_changers
-      html = fetch_url(MOXFIELD_GAME_CHANGERS_URL, headers: BROWSER_HEADERS)
-      card_names = parse_moxfield_html(html)
+      html = fetch_url(WIZARDS_GAME_CHANGERS_URL, headers: BROWSER_HEADERS)
+      card_names = parse_wizards_html(html)
 
       if card_names.empty?
-        raise ParseError, "No card names found in Moxfield HTML structure"
+        raise ParseError, "No card names found in Wizards HTML structure. " \
+                         "The page likely uses JavaScript rendering (client-side only). " \
+                         "Consider maintaining config/card_lists/game_changers.yml manually."
       end
 
       normalize_and_sort(card_names)
@@ -124,16 +127,9 @@ class CardListFetcher
       when 200
         response.body
       when 403
-        # Moxfield uses Cloudflare bot protection which blocks automated requests
-        # even with proper browser headers. For Moxfield, manual YAML maintenance
-        # is recommended until an API becomes available.
-        if url.include?("moxfield.com")
-          raise FetchError, "Moxfield blocked the request (403 Forbidden) - Cloudflare bot protection is active. " \
-                           "Consider maintaining config/card_lists/game_changers.yml manually. " \
-                           "See https://magic.wizards.com/en/news for official Game Changers updates."
-        else
-          raise FetchError, "Access forbidden (403): #{url}"
-        end
+        raise FetchError, "Access forbidden (403): #{url}. " \
+                         "Consider maintaining config/card_lists/game_changers.yml manually. " \
+                         "See https://magic.wizards.com/en/formats/commander for official list."
       when 404
         raise FetchError, "Resource not found (404): #{url}"
       when 500..599
@@ -144,21 +140,22 @@ class CardListFetcher
     end
 
     # ---------------------------------------------------------------------------
-    # Parse Moxfield HTML to extract card names
+    # Parse Wizards HTML to extract card names
     #
-    # The Moxfield page uses a React-based interface with embedded JSON data.
+    # The Wizards page may use various structures for displaying the Game Changers list.
     # We'll try multiple parsing strategies:
-    # 1. Look for JSON embedded in script tags (similar to EDHREC's __NEXT_DATA__)
-    # 2. Parse HTML elements with card-related classes/attributes
-    # 3. Look for structured data (JSON-LD, microdata)
+    # 1. Look for lists after the #gamechangers anchor
+    # 2. Look for JSON embedded in script tags
+    # 3. Parse HTML elements with card-related classes/attributes
+    # 4. Look for structured data (JSON-LD, microdata)
     #
     # Arguments:
-    #   html (String) - The HTML content from Moxfield
+    #   html (String) - The HTML content from Wizards
     #
     # Returns: Array of card names (may contain duplicates and unnormalized names)
     # Raises: ParseError if no cards can be extracted
     # ---------------------------------------------------------------------------
-    def parse_moxfield_html(html)
+    def parse_wizards_html(html)
       doc = Nokogiri::HTML(html)
       card_names = []
 

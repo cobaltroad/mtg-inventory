@@ -12,7 +12,7 @@ class CardListFetcherTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
 
   test "fetch_game_changers returns array of card names" do
-    stub_moxfield_game_changers
+    stub_wizards_game_changers
 
     result = CardListFetcher.fetch_game_changers
 
@@ -21,7 +21,7 @@ class CardListFetcherTest < ActiveSupport::TestCase
   end
 
   test "fetch_game_changers returns normalized card names" do
-    stub_moxfield_game_changers
+    stub_wizards_game_changers
 
     result = CardListFetcher.fetch_game_changers
 
@@ -33,7 +33,7 @@ class CardListFetcherTest < ActiveSupport::TestCase
   end
 
   test "fetch_game_changers returns alphabetically sorted list" do
-    stub_moxfield_game_changers
+    stub_wizards_game_changers
 
     result = CardListFetcher.fetch_game_changers
 
@@ -41,7 +41,7 @@ class CardListFetcherTest < ActiveSupport::TestCase
   end
 
   test "fetch_game_changers includes known game changer cards" do
-    stub_moxfield_game_changers
+    stub_wizards_game_changers
 
     result = CardListFetcher.fetch_game_changers
 
@@ -53,7 +53,7 @@ class CardListFetcherTest < ActiveSupport::TestCase
   end
 
   test "fetch_game_changers removes duplicate card names" do
-    stub_moxfield_game_changers_with_duplicates
+    stub_wizards_game_changers_with_duplicates
 
     result = CardListFetcher.fetch_game_changers
 
@@ -61,7 +61,7 @@ class CardListFetcherTest < ActiveSupport::TestCase
   end
 
   test "fetch_game_changers handles unicode characters correctly" do
-    stub_moxfield_game_changers_with_unicode
+    stub_wizards_game_changers_with_unicode
 
     result = CardListFetcher.fetch_game_changers
 
@@ -70,7 +70,7 @@ class CardListFetcherTest < ActiveSupport::TestCase
   end
 
   test "fetch_game_changers handles double-faced cards by using front face" do
-    stub_moxfield_game_changers_with_dfc
+    stub_wizards_game_changers_with_dfc
 
     result = CardListFetcher.fetch_game_changers
 
@@ -84,7 +84,7 @@ class CardListFetcherTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
 
   test "fetch_game_changers raises FetchError on network timeout" do
-    stub_request(:get, "https://moxfield.com/commanderbrackets/gamechangers")
+    stub_request(:get, "https://magic.wizards.com/en/formats/commander")
       .to_timeout
 
     error = assert_raises(CardListFetcher::FetchError) do
@@ -95,7 +95,7 @@ class CardListFetcherTest < ActiveSupport::TestCase
   end
 
   test "fetch_game_changers raises FetchError on 404 status" do
-    stub_request(:get, "https://moxfield.com/commanderbrackets/gamechangers")
+    stub_request(:get, "https://magic.wizards.com/en/formats/commander")
       .to_return(status: 404, body: "Not Found")
 
     error = assert_raises(CardListFetcher::FetchError) do
@@ -106,7 +106,7 @@ class CardListFetcherTest < ActiveSupport::TestCase
   end
 
   test "fetch_game_changers raises FetchError on 500 status" do
-    stub_request(:get, "https://moxfield.com/commanderbrackets/gamechangers")
+    stub_request(:get, "https://magic.wizards.com/en/formats/commander")
       .to_return(status: 500, body: "Internal Server Error")
 
     error = assert_raises(CardListFetcher::FetchError) do
@@ -117,7 +117,7 @@ class CardListFetcherTest < ActiveSupport::TestCase
   end
 
   test "fetch_game_changers raises ParseError when HTML structure is invalid" do
-    stub_request(:get, "https://moxfield.com/commanderbrackets/gamechangers")
+    stub_request(:get, "https://magic.wizards.com/en/formats/commander")
       .to_return(status: 200, body: "<html><body>No card data here</body></html>")
 
     error = assert_raises(CardListFetcher::ParseError) do
@@ -136,9 +136,9 @@ class CardListFetcherTest < ActiveSupport::TestCase
       "Connection" => "keep-alive"
     }
 
-    stub = stub_request(:get, "https://moxfield.com/commanderbrackets/gamechangers")
+    stub = stub_request(:get, "https://magic.wizards.com/en/formats/commander")
       .with(headers: expected_headers)
-      .to_return(status: 200, body: build_moxfield_html(["Mana Crypt"]))
+      .to_return(status: 200, body: build_wizards_html(["Mana Crypt"]))
 
     CardListFetcher.fetch_game_changers
 
@@ -297,11 +297,11 @@ class CardListFetcherTest < ActiveSupport::TestCase
   private
 
   # ---------------------------------------------------------------------------
-  # Test Helpers - Moxfield Stubs
+  # Test Helpers - Wizards Stubs
   # ---------------------------------------------------------------------------
 
-  def stub_moxfield_game_changers
-    html = build_moxfield_html([
+  def stub_wizards_game_changers
+    html = build_wizards_html([
       "Dockside Extortionist",
       "Jeweled Lotus",
       "Mana Crypt",
@@ -309,44 +309,44 @@ class CardListFetcherTest < ActiveSupport::TestCase
       "Sol Ring"
     ])
 
-    stub_request(:get, "https://moxfield.com/commanderbrackets/gamechangers")
+    stub_request(:get, "https://magic.wizards.com/en/formats/commander")
       .to_return(status: 200, body: html, headers: { "Content-Type" => "text/html" })
   end
 
-  def stub_moxfield_game_changers_with_duplicates
-    html = build_moxfield_html([
+  def stub_wizards_game_changers_with_duplicates
+    html = build_wizards_html([
       "Dockside Extortionist",
       "Jeweled Lotus",
       "Jeweled Lotus",  # Duplicate
       "Mana Crypt"
     ])
 
-    stub_request(:get, "https://moxfield.com/commanderbrackets/gamechangers")
+    stub_request(:get, "https://magic.wizards.com/en/formats/commander")
       .to_return(status: 200, body: html)
   end
 
-  def stub_moxfield_game_changers_with_unicode
-    html = build_moxfield_html([
+  def stub_wizards_game_changers_with_unicode
+    html = build_wizards_html([
       "Juzám Djinn",
       "Dockside Extortionist"
     ])
 
-    stub_request(:get, "https://moxfield.com/commanderbrackets/gamechangers")
+    stub_request(:get, "https://magic.wizards.com/en/formats/commander")
       .to_return(status: 200, body: html)
   end
 
-  def stub_moxfield_game_changers_with_dfc
+  def stub_wizards_game_changers_with_dfc
     # Moxfield might include double-faced cards with // separator
-    html = build_moxfield_html([
+    html = build_wizards_html([
       "Delver of Secrets // Insectile Aberration",
       "Dockside Extortionist"
     ])
 
-    stub_request(:get, "https://moxfield.com/commanderbrackets/gamechangers")
+    stub_request(:get, "https://magic.wizards.com/en/formats/commander")
       .to_return(status: 200, body: html)
   end
 
-  def build_moxfield_html(card_names)
+  def build_wizards_html(card_names)
     # Build a minimal HTML structure that mimics Moxfield's page
     # The actual structure will need to be adjusted based on real page inspection
     cards_html = card_names.map do |name|

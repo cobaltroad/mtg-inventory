@@ -5,14 +5,15 @@ class CardListFetcherIntegrationTest < ActiveSupport::TestCase
   # Run with cassettes deleted to re-record: rm -rf test/fixtures/vcr_cassettes/card_list_*
 
   # ---------------------------------------------------------------------------
-  # Moxfield Game Changers Integration Tests
+  # Wizards Game Changers Integration Tests
   # ---------------------------------------------------------------------------
 
-  test "fetch_game_changers retrieves real data from Moxfield" do
-    skip "Moxfield blocks automated requests with Cloudflare bot protection (403). " \
-         "Use manual YAML file maintenance instead. See config/card_lists/game_changers.yml"
+  test "fetch_game_changers retrieves real data from Wizards official source" do
+    skip "Wizards.com uses JavaScript to render the Game Changers list (client-side only). " \
+         "The HTML response doesn't contain the card data. " \
+         "Use manual YAML file: config/card_lists/game_changers.yml"
 
-    VCR.use_cassette("card_list_fetcher/moxfield_game_changers") do
+    VCR.use_cassette("card_list_fetcher/wizards_game_changers") do
       result = CardListFetcher.fetch_game_changers
 
       # Basic structure validation
@@ -94,12 +95,12 @@ class CardListFetcherIntegrationTest < ActiveSupport::TestCase
   # Error Handling with Real Responses
   # ---------------------------------------------------------------------------
 
-  test "handles Moxfield HTML structure correctly" do
-    skip "Moxfield blocks automated requests with Cloudflare bot protection (403)"
+  test "handles Wizards HTML structure correctly" do
+    skip "Wizards.com uses JavaScript rendering - no cards in initial HTML response"
 
-    VCR.use_cassette("card_list_fetcher/moxfield_game_changers") do
+    VCR.use_cassette("card_list_fetcher/wizards_game_changers") do
       # This test verifies we can parse the actual HTML structure
-      # If Moxfield changes their HTML, this test will fail and we'll know to update the parser
+      # If Wizards changes their HTML, this test will fail and we'll know to update the parser
       assert_nothing_raised do
         CardListFetcher.fetch_game_changers
       end
