@@ -23,6 +23,12 @@ test:
     schedule: every 2 days at 7am
     args: []
 
+  weekly_edhrec_analytics:
+    class: ConsolidateEdhrecAnalyticsJob
+    queue: default
+    schedule: every sunday at 6am
+    args: []
+
 development:
   # Run commander scrape weekly on Saturday at 8am in development
   weekly_commander_scrape:
@@ -36,6 +42,13 @@ development:
     class: UpdateCardPricesJob
     queue: default
     schedule: every 2 days at 7am
+    args: []
+
+  # Consolidate EDHREC analytics after commander scraping completes (~20 hours after discovery)
+  weekly_edhrec_analytics:
+    class: ConsolidateEdhrecAnalyticsJob
+    queue: default
+    schedule: every sunday at 6am
     args: []
 
 production:
@@ -53,4 +66,10 @@ production:
     class: ScrapeEdhrecCommandersJob
     queue: default
     schedule: every sunday at 8am
+    args: []
+
+  weekly_edhrec_analytics:
+    class: ConsolidateEdhrecAnalyticsJob
+    queue: default
+    schedule: every monday at 6am
     args: []

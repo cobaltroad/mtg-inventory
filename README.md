@@ -55,15 +55,17 @@ Jobs are configured in `backend/config/recurring.yml`:
 |-----|----------|-------------|
 | **ScrapeEdhrecCommandersJob** | Every Saturday 8am (dev)<br>Every Sunday 8am (prod) | **Discovery Phase**: Fetches top 20 EDH commanders from EDHREC. Schedules individual decklist jobs 1 hour apart. |
 | **ScrapeCommanderDecklistJob** | Dynamically scheduled<br>(1 hour apart) | **Decklist Phase**: Scrapes an individual commander's decklist and imports cards. |
+| **ConsolidateEdhrecAnalyticsJob** | Every Sunday 6am (dev)<br>Every Monday 6am (prod) | **Analytics Phase**: Consolidates rare/mythic cards from all commander decklists into the usage_snapshots table. Runs after all commander scraping completes (~22 hours after discovery job). |
 | **UpdateCardPricesJob** | Every 2 days at 7am (dev)<br>Every day at 7am (prod) | **Batched Price Updates**: Processes 20 cards per run, automatically reschedules for next batch 15 minutes later. Spreads load over ~4 hours for typical collections. |
 | **clear_solid_queue_finished_jobs** | Every hour at :12 (prod) | Cleans up completed job records older than 1 day |
 
 ### Distributed Scraping Architecture
 
-The commander scraping system uses a **two-phase distributed approach**:
+The commander scraping system uses a **three-phase distributed approach**:
 
 1. **Weekly Discovery** - `ScrapeEdhrecCommandersJob` fetches the top 20 commanders list and creates/updates commander records
 2. **Distributed Decklist Scraping** - Individual `ScrapeCommanderDecklistJob` jobs are scheduled **1 hour apart**, spreading the load over ~20 hours
+3. **Analytics Consolidation** - `ConsolidateEdhrecAnalyticsJob` aggregates rare/mythic cards from all commander decklists into the usage_snapshots table for ML/analytics workflows
 
 **Rate Limiting** (enforced by `RateLimiter` service):
 - EDHREC requests: minimum 2 second delay
@@ -80,6 +82,7 @@ Run jobs manually using rake tasks (shows real-time progress):
 # Commander scraping
 docker compose exec backend rails jobs:scrape_commanders        # Discovery only
 docker compose exec backend rails jobs:scrape_commander_decklist[COMMANDER_ID]  # Single commander
+docker compose exec backend rails analytics:consolidate_edhrec  # Consolidate analytics
 docker compose exec backend rails jobs:all                      # All scheduled jobs
 
 # Price updates
@@ -96,6 +99,7 @@ docker compose exec backend rails jobs:stats                    # View queue sta
 docker compose exec backend rails console
 > ScrapeEdhrecCommandersJob.perform_now
 > ScrapeCommanderDecklistJob.perform_now(commander)
+> ConsolidateEdhrecAnalyticsJob.perform_now
 > SolidQueue::Job.last(5)  # Check recent jobs
 ```
 

@@ -127,15 +127,17 @@ Jobs are configured in `backend/config/recurring.yml` and run automatically:
 |-----|----------|-------------|
 | **ScrapeEdhrecCommandersJob** | Every Saturday 8am (dev)<br>Every Sunday 8am (prod) | **Discovery Phase**: Fetches top 20 EDH commanders from EDHREC (list only, no decklists). Schedules individual `ScrapeCommanderDecklistJob` jobs 1 hour apart. |
 | **ScrapeCommanderDecklistJob** | Dynamically scheduled<br>(1 hour apart per commander) | **Decklist Phase**: Scrapes an individual commander's decklist from EDHREC and imports cards. Scheduled automatically by the discovery job to distribute load over ~20 hours. |
+| **ConsolidateEdhrecAnalyticsJob** | Every Sunday 6am (dev)<br>Every Monday 6am (prod) | **Analytics Phase**: Consolidates rare/mythic cards from all commander decklists into the usage_snapshots table. Runs after all commander scraping completes (~22 hours after discovery job). |
 | **UpdateCardPricesJob** | Every 2 days at 7am | **Batched Price Updates**: Processes 20 cards per execution, then reschedules itself 15 minutes later if more cards remain. This spreads the load over time to respect Scryfall API rate limits. |
 | **clear_solid_queue_finished_jobs** | Every hour at :12 (prod) | Cleans up completed job records older than 1 day |
 
 ### Distributed Scraping Architecture
 
-The commander scraping system uses a **two-phase distributed approach** to respect EDHREC's rate limits:
+The commander scraping system uses a **three-phase distributed approach** to respect EDHREC's rate limits:
 
 1. **Weekly Discovery** (Sunday 8am) - `ScrapeEdhrecCommandersJob` fetches the top 20 commanders list and creates/updates commander records **without** scraping decklists
 2. **Distributed Decklist Scraping** - Individual `ScrapeCommanderDecklistJob` jobs are scheduled **1 hour apart**, spreading the load over ~20 hours throughout the week
+3. **Analytics Consolidation** (Monday 6am) - `ConsolidateEdhrecAnalyticsJob` aggregates rare/mythic cards from all commander decklists into the usage_snapshots table for ML/analytics workflows
 
 **Rate Limiting** (enforced by `RateLimiter` service):
 - EDHREC requests: minimum 2 second delay between requests
@@ -169,6 +171,7 @@ Run jobs manually using rake tasks (useful for testing/maintenance):
 # Using Docker with rake tasks (recommended - shows real-time progress)
 docker compose exec backend rails jobs:scrape_commanders                       # Discovery only
 docker compose exec backend rails jobs:scrape_commander_decklist[COMMANDER_ID] # Single commander
+docker compose exec backend rails analytics:consolidate_edhrec                 # Consolidate analytics
 docker compose exec backend rails jobs:update_prices
 docker compose exec backend rails jobs:clear_finished
 
@@ -189,6 +192,7 @@ docker compose exec backend rails jobs:clear_stuck   # Remove stuck jobs (CAUTIO
 docker compose exec backend rails console
 > ScrapeEdhrecCommandersJob.perform_now            # Discovery phase (schedules decklist jobs)
 > ScrapeCommanderDecklistJob.perform_now(cmd_id)   # Scrape single commander decklist
+> ConsolidateEdhrecAnalyticsJob.perform_now        # Consolidate analytics
 > SolidQueue::Job.last(5)                           # Check recent jobs
 ```
 
