@@ -199,23 +199,78 @@ describe('sortInventory - Release Date', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Tests: sortInventory - Value
+// Tests: sortInventory - Value (Unit Price)
 // ---------------------------------------------------------------------------
-describe('sortInventory - Value', () => {
-	it('sorts by value highest to lowest', () => {
+describe('sortInventory - Value (Unit Price)', () => {
+	it('sorts by unit value highest to lowest', () => {
 		const result = sortInventory(MOCK_ITEMS, 'value-high');
-		expect(result[0].total_price_cents).toBe(1000000); // Black Lotus - $10,000
-		expect(result[1].total_price_cents).toBe(5000); // Ancient Tomb - $50
-		expect(result[2].total_price_cents).toBe(1000); // Mox Pearl - $10
-		expect(result[3].total_price_cents).toBe(150); // Zombie Token - $1.50
+		// Should sort by unit_price_cents, not total_price_cents
+		expect(result[0].unit_price_cents).toBe(500000); // Black Lotus - $5,000 per card
+		expect(result[1].unit_price_cents).toBe(5000); // Ancient Tomb - $50 per card
+		expect(result[2].unit_price_cents).toBe(200); // Mox Pearl - $2 per card
+		expect(result[3].unit_price_cents).toBe(50); // Zombie Token - $0.50 per card
 	});
 
-	it('sorts by value lowest to highest', () => {
+	it('sorts by unit value lowest to highest', () => {
 		const result = sortInventory(MOCK_ITEMS, 'value-low');
-		expect(result[0].total_price_cents).toBe(150); // Zombie Token - $1.50
-		expect(result[1].total_price_cents).toBe(1000); // Mox Pearl - $10
-		expect(result[2].total_price_cents).toBe(5000); // Ancient Tomb - $50
-		expect(result[3].total_price_cents).toBe(1000000); // Black Lotus - $10,000
+		// Should sort by unit_price_cents, not total_price_cents
+		expect(result[0].unit_price_cents).toBe(50); // Zombie Token - $0.50 per card
+		expect(result[1].unit_price_cents).toBe(200); // Mox Pearl - $2 per card
+		expect(result[2].unit_price_cents).toBe(5000); // Ancient Tomb - $50 per card
+		expect(result[3].unit_price_cents).toBe(500000); // Black Lotus - $5,000 per card
+	});
+
+	it('sorts by unit value, not total value (edge case)', () => {
+		// Create items where unit value order differs from total value order
+		const edgeCaseItems: InventoryItem[] = [
+			{
+				...MOCK_ITEMS[0],
+				id: 10,
+				card_name: 'Bulk Common',
+				quantity: 100,
+				unit_price_cents: 10, // $0.10 each
+				total_price_cents: 1000 // $10.00 total (100 x $0.10)
+			},
+			{
+				...MOCK_ITEMS[0],
+				id: 11,
+				card_name: 'Rare Card',
+				quantity: 1,
+				unit_price_cents: 500, // $5.00 each
+				total_price_cents: 500 // $5.00 total (1 x $5.00)
+			}
+		];
+
+		const resultHigh = sortInventory(edgeCaseItems, 'value-high');
+		// Rare Card should come first (higher unit value)
+		// even though Bulk Common has higher total value
+		expect(resultHigh[0].card_name).toBe('Rare Card');
+		expect(resultHigh[0].unit_price_cents).toBe(500);
+		expect(resultHigh[1].card_name).toBe('Bulk Common');
+		expect(resultHigh[1].unit_price_cents).toBe(10);
+
+		const resultLow = sortInventory(edgeCaseItems, 'value-low');
+		// Bulk Common should come first (lower unit value)
+		expect(resultLow[0].card_name).toBe('Bulk Common');
+		expect(resultLow[0].unit_price_cents).toBe(10);
+		expect(resultLow[1].card_name).toBe('Rare Card');
+		expect(resultLow[1].unit_price_cents).toBe(500);
+	});
+
+	it('handles items with missing unit prices', () => {
+		const itemsWithMissing = [
+			...MOCK_ITEMS,
+			{
+				...MOCK_ITEMS[0],
+				id: 5,
+				card_name: 'No Price Card',
+				unit_price_cents: null,
+				total_price_cents: null
+			}
+		];
+		const result = sortInventory(itemsWithMissing, 'value-high');
+		// Items with null unit prices should be sorted to the end (treated as 0)
+		expect(result[result.length - 1].unit_price_cents).toBeNull();
 	});
 });
 

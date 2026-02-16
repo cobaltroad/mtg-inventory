@@ -60,15 +60,15 @@ export function sortInventory(items: InventoryItem[], sortOption: SortOption): I
 
 		case 'value-high':
 			return sorted.sort((a, b) => {
-				const aValue = a.total_price_cents ?? 0;
-				const bValue = b.total_price_cents ?? 0;
+				const aValue = a.unit_price_cents ?? 0;
+				const bValue = b.unit_price_cents ?? 0;
 				return bValue - aValue;
 			});
 
 		case 'value-low':
 			return sorted.sort((a, b) => {
-				const aValue = a.total_price_cents ?? 0;
-				const bValue = b.total_price_cents ?? 0;
+				const aValue = a.unit_price_cents ?? 0;
+				const bValue = b.unit_price_cents ?? 0;
 				return aValue - bValue;
 			});
 
