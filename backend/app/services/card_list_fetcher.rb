@@ -123,6 +123,17 @@ class CardListFetcher
       case response.code.to_i
       when 200
         response.body
+      when 403
+        # Moxfield uses Cloudflare bot protection which blocks automated requests
+        # even with proper browser headers. For Moxfield, manual YAML maintenance
+        # is recommended until an API becomes available.
+        if url.include?("moxfield.com")
+          raise FetchError, "Moxfield blocked the request (403 Forbidden) - Cloudflare bot protection is active. " \
+                           "Consider maintaining config/card_lists/game_changers.yml manually. " \
+                           "See https://magic.wizards.com/en/news for official Game Changers updates."
+        else
+          raise FetchError, "Access forbidden (403): #{url}"
+        end
       when 404
         raise FetchError, "Resource not found (404): #{url}"
       when 500..599
