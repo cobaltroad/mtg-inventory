@@ -1,0 +1,38 @@
+---
+# Commander Brackets - Game Changers List
+#
+# This list is manually maintained because both Moxfield and Wizards.com use
+# JavaScript to render the Game Changers list, making automated fetching impractical.
+#
+# MAINTENANCE INSTRUCTIONS:
+# - Check https://magic.wizards.com/en/formats/commander for official updates
+# - Updates are infrequent (usually with major announcements)
+# - Last known updates: February 9, 2026
+#
+# RECENT CHANGES:
+# - February 9, 2026: Added Farewell and Biorhythm
+# - October 21, 2025: Removed 10 cards including Food Chain and Deflecting Swat
+#
+# NOTE: This is a partial list based on known Game Changers. For the complete
+# and current list, always check the official Wizards source.
+
+cards:
+  - "Ancient Tomb"
+  - "Arcane Signet"
+  - "Biorhythm"
+  - "Carpet of Flowers"
+  - "Dockside Extortionist"
+  - "Farewell"
+  - "Fierce Guardianship"
+  - "Jeweled Lotus"
+  - "Mana Crypt"
+  - "Mana Drain"
+  - "Mana Vault"
+  - "Mystic Remora"
+  - "Rhystic Study"
+  - "Smothering Tithe"
+  - "Sol Ring"
+
+last_updated: "2026-02-16"
+source: "https://magic.wizards.com/en/formats/commander"
+notes: "Manually maintained partial list. See maintenance instructions above for updates."
