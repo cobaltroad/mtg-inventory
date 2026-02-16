@@ -127,9 +127,17 @@ class CardListFetcherTest < ActiveSupport::TestCase
     assert_match(/parse|extract|structure/i, error.message)
   end
 
-  test "fetch_game_changers includes polite User-Agent header" do
+  test "fetch_game_changers includes browser headers to avoid 403 errors" do
+    # Moxfield blocks requests without proper browser headers
+    expected_headers = {
+      "User-Agent" => /Mozilla.*Chrome.*Safari/,  # Browser-like User-Agent
+      "Accept" => /text\/html/,
+      "Accept-Language" => /en/,
+      "Connection" => "keep-alive"
+    }
+
     stub = stub_request(:get, "https://moxfield.com/commanderbrackets/gamechangers")
-      .with(headers: { "User-Agent" => "MTG-Inventory-Bot/1.0 (https://github.com/cobaltroad/mtg-inventory)" })
+      .with(headers: expected_headers)
       .to_return(status: 200, body: build_moxfield_html(["Mana Crypt"]))
 
     CardListFetcher.fetch_game_changers

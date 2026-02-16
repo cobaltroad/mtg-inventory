@@ -11,8 +11,20 @@ class CardListFetcher
   MOXFIELD_GAME_CHANGERS_URL = "https://moxfield.com/commanderbrackets/gamechangers"
   SCRYFALL_RESERVED_LIST_URL = "https://api.scryfall.com/cards/search?q=is:reserved"
 
-  # User-Agent for polite crawling
+  # User-Agent for polite crawling (used for Scryfall API)
   USER_AGENT = "MTG-Inventory-Bot/1.0 (https://github.com/cobaltroad/mtg-inventory)"
+
+  # Browser headers for sites that block automated requests (e.g., Moxfield)
+  # These mimic a legitimate browser to avoid 403 errors
+  BROWSER_HEADERS = {
+    "User-Agent" => "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept" => "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "Accept-Language" => "en-US,en;q=0.5",
+    "Accept-Encoding" => "gzip, deflate, br",
+    "DNT" => "1",
+    "Connection" => "keep-alive",
+    "Upgrade-Insecure-Requests" => "1"
+  }.freeze
 
   # HTTP timeout in seconds
   HTTP_TIMEOUT = 10
@@ -25,7 +37,7 @@ class CardListFetcher
     # Raises: FetchError on network errors, ParseError on parsing failures
     # ---------------------------------------------------------------------------
     def fetch_game_changers
-      html = fetch_url(MOXFIELD_GAME_CHANGERS_URL)
+      html = fetch_url(MOXFIELD_GAME_CHANGERS_URL, headers: BROWSER_HEADERS)
       card_names = parse_moxfield_html(html)
 
       if card_names.empty?
@@ -83,14 +95,23 @@ class CardListFetcher
     #
     # Arguments:
     #   url (String) - The URL to fetch
+    #   headers (Hash) - Optional custom headers (defaults to simple User-Agent)
     #
     # Returns: String - The response body
     # Raises: FetchError on HTTP errors
     # ---------------------------------------------------------------------------
-    def fetch_url(url)
+    def fetch_url(url, headers: nil)
       uri = URI(url)
       request = Net::HTTP::Get.new(uri)
-      request["User-Agent"] = USER_AGENT
+
+      # Apply headers
+      if headers
+        headers.each do |key, value|
+          request[key] = value
+        end
+      else
+        request["User-Agent"] = USER_AGENT
+      end
 
       response = Net::HTTP.start(uri.hostname, uri.port,
                                   use_ssl: uri.scheme == "https",
