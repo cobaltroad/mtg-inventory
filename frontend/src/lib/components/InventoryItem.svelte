@@ -48,7 +48,12 @@
 		<h3 class="font-beleren card-name">{item.card_name}</h3>
 		<div class="card-info">
 			<span class="set-info">{item.set_name} ({item.set.toUpperCase()})</span>
-			<span class="collector-number">#{item.collector_number}</span>
+			<span class="collector-number"
+				>#{item.collector_number}{#if item.finish === 'foil' || item.finish === 'etched'}<span
+						class="foil-star"
+						title="{capitalizeFirstLetter(item.finish)} finish">★</span
+					>{/if}</span
+			>
 		</div>
 		<div class="quantity">Quantity: <strong>{item.quantity}</strong></div>
 		{#if item.finish || item.language}
@@ -148,6 +153,16 @@
 
 	.collector-number {
 		color: #9ca3af;
+	}
+
+	.foil-star {
+		margin-left: 0.25rem;
+		color: #f59e0b;
+		font-size: 1rem;
+	}
+
+	:global(.dark) .foil-star {
+		color: #fbbf24;
 	}
 
 	.quantity {

@@ -41,7 +41,12 @@
 		<div class="set-info">
 			<span class="set-name">{result.set_name}</span>
 			<span class="set-code">({result.set.toUpperCase()})</span>
-			<span class="collector-number">#{result.collector_number}</span>
+			<span class="collector-number"
+				>#{result.collector_number}{#if result.finish === 'foil' || result.finish === 'etched'}<span
+						class="foil-star"
+						title="{capitalizeFirstLetter(result.finish)} finish">★</span
+					>{/if}</span
+			>
 		</div>
 
 		<div class="quantity-finish">
@@ -187,6 +192,16 @@
 
 	:global(.dark) .collector-number {
 		color: rgb(156 163 175);
+	}
+
+	.foil-star {
+		margin-left: 0.25rem;
+		color: #f59e0b;
+		font-size: 1rem;
+	}
+
+	:global(.dark) .foil-star {
+		color: #fbbf24;
 	}
 
 	.quantity-finish {

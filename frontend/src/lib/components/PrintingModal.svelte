@@ -43,16 +43,16 @@
 	// Language options for enhanced tracking
 	const LANGUAGE_OPTIONS = [
 		{ value: 'English', abbr: 'EN' },
-		{ value: 'Japanese', abbr: 'JA' },
+		{ value: 'Japanese', abbr: 'JP' },
 		{ value: 'German', abbr: 'DE' },
 		{ value: 'French', abbr: 'FR' },
-		{ value: 'Spanish', abbr: 'ES' },
+		{ value: 'Spanish', abbr: 'SP' },
 		{ value: 'Italian', abbr: 'IT' },
 		{ value: 'Portuguese', abbr: 'PT' },
 		{ value: 'Russian', abbr: 'RU' },
-		{ value: 'Korean', abbr: 'KO' },
-		{ value: 'Chinese Simplified', abbr: 'ZHS' },
-		{ value: 'Chinese Traditional', abbr: 'ZHT' }
+		{ value: 'Korean', abbr: 'KR' },
+		{ value: 'Chinese Simplified', abbr: 'CS' },
+		{ value: 'Chinese Traditional', abbr: 'CT' }
 	];
 
 	// Combobox state and collection for language selection

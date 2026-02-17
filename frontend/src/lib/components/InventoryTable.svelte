@@ -184,9 +184,12 @@
 						<td>
 							<div class="card-name-cell">
 								<span class="font-beleren card-name">{item.card_name}</span>
-								<span class="collector-number"
-									>{item.set.toUpperCase()} {item.collector_number}</span
-								>
+								<span class="collector-number">
+									{item.set.toUpperCase()} {item.collector_number}{#if item.finish === 'foil' || item.finish === 'etched'}<span
+										class="foil-star"
+										title="{capitalizeFirstLetter(item.finish)} finish">★</span
+									>{/if}
+								</span>
 							</div>
 						</td>
 						<td>
@@ -431,6 +434,16 @@
 
 	:global(.dark) .collector-number {
 		color: #9ca3af;
+	}
+
+	.foil-star {
+		margin-left: 0.25rem;
+		color: #f59e0b;
+		font-size: 1rem;
+	}
+
+	:global(.dark) .foil-star {
+		color: #fbbf24;
 	}
 
 	.set-cell {
