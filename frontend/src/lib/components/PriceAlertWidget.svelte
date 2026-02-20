@@ -164,12 +164,12 @@
 							<!-- Dismiss button -->
 							<button
 								type="button"
-								class="btn-icon rounded-md transition-all bg-surface-300 text-surface-900 hover:bg-error-500 hover:text-white dark:bg-surface-700 dark:text-surface-100 dark:hover:bg-error-500"
+								class="p-1 rounded-md transition-colors bg-surface-300 hover:bg-error-500 dark:bg-surface-700 dark:hover:bg-error-500"
 								onclick={() => dismissAlert(alert.id)}
 								aria-label={`Dismiss ${alert.card_name || 'alert'}`}
 								title="Dismiss this alert"
 							>
-								<X size={20} />
+								<X class="text-surface-900 hover:text-white dark:text-surface-100" size={16} />
 							</button>
 						</div>
 					</div>
