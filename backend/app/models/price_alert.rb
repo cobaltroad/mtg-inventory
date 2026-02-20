@@ -28,7 +28,6 @@ class PriceAlert < ApplicationRecord
   # Scopes
   # ---------------------------------------------------------------------------
 
-  scope :active, -> { where(dismissed: false) }
   scope :for_user, ->(user) { where(user: user) }
   scope :recent, -> { order(created_at: :desc) }
 
