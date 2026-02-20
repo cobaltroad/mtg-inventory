@@ -156,47 +156,9 @@ class PriceAlertTest < ActiveSupport::TestCase
     assert_includes alert.errors[:new_price_cents], "must be greater than or equal to 0"
   end
 
-  test "should default dismissed to false" do
-    alert = PriceAlert.create!(
-      user: @user,
-      card_id: @card_id,
-      alert_type: "price_increase",
-      old_price_cents: 100,
-      new_price_cents: 150,
-      percentage_change: 50.0
-    )
-    assert_equal false, alert.dismissed
-  end
-
   # ---------------------------------------------------------------------------
   # Scopes
   # ---------------------------------------------------------------------------
-
-  test "active scope should return non-dismissed alerts" do
-    dismissed_alert = PriceAlert.create!(
-      user: @user,
-      card_id: "card-1",
-      alert_type: "price_increase",
-      old_price_cents: 100,
-      new_price_cents: 150,
-      percentage_change: 50.0,
-      dismissed: true
-    )
-
-    active_alert = PriceAlert.create!(
-      user: @user,
-      card_id: "card-2",
-      alert_type: "price_increase",
-      old_price_cents: 100,
-      new_price_cents: 150,
-      percentage_change: 50.0,
-      dismissed: false
-    )
-
-    active_alerts = PriceAlert.active
-    assert_includes active_alerts, active_alert
-    assert_not_includes active_alerts, dismissed_alert
-  end
 
   test "for_user scope should return alerts for specific user" do
     other_user = User.create!(email: "other@example.com", name: "Other User")
@@ -254,7 +216,7 @@ class PriceAlertTest < ActiveSupport::TestCase
   # Instance Methods
   # ---------------------------------------------------------------------------
 
-  test "dismiss! should mark alert as dismissed" do
+  test "dismiss! should permanently delete the alert" do
     alert = PriceAlert.create!(
       user: @user,
       card_id: @card_id,
@@ -264,15 +226,15 @@ class PriceAlertTest < ActiveSupport::TestCase
       percentage_change: 50.0
     )
 
-    assert_equal false, alert.dismissed
-    assert_nil alert.dismissed_at
+    alert_id = alert.id
 
     alert.dismiss!
-    alert.reload
 
-    assert_equal true, alert.dismissed
-    assert_not_nil alert.dismissed_at
-    assert_in_delta Time.current, alert.dismissed_at, 1.second
+    # Alert should no longer exist in database
+    assert_nil PriceAlert.find_by(id: alert_id)
+    assert_raises(ActiveRecord::RecordNotFound) do
+      alert.reload
+    end
   end
 
   test "price_increase? should return true for price increase alerts" do
