@@ -64,6 +64,6 @@ export function getFinishDisplayName(finish?: string | null, promoTypes?: string
  * @param text - The text to capitalize
  * @returns Text with first letter capitalized
  */
-function capitalizeFirstLetter(text: string): string {
+export function capitalizeFirstLetter(text: string): string {
 	return text.charAt(0).toUpperCase() + text.slice(1);
 }

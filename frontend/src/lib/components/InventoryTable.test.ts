@@ -307,7 +307,8 @@ describe('InventoryTable Component - Finish Type Display', () => {
 		const halofoilItem: InventoryItem[] = [
 			{
 				...mockItems[0],
-				finish: 'halofoil'
+				finish: 'foil',
+				promo_types: ['halofoil']
 			}
 		];
 		const { container } = render(InventoryTable, { props: { items: halofoilItem } });
@@ -320,7 +321,8 @@ describe('InventoryTable Component - Finish Type Display', () => {
 		const rainbowfoilItem: InventoryItem[] = [
 			{
 				...mockItems[0],
-				finish: 'rainbowfoil'
+				finish: 'foil',
+				promo_types: ['rainbowfoil']
 			}
 		];
 		const { container } = render(InventoryTable, { props: { items: rainbowfoilItem } });
@@ -333,7 +335,8 @@ describe('InventoryTable Component - Finish Type Display', () => {
 		const surgefoilItem: InventoryItem[] = [
 			{
 				...mockItems[0],
-				finish: 'surgefoil'
+				finish: 'foil',
+				promo_types: ['surgefoil']
 			}
 		];
 		const { container } = render(InventoryTable, { props: { items: surgefoilItem } });
@@ -372,7 +375,8 @@ describe('InventoryTable Component - Finish Type Display', () => {
 		const halofoilItem: InventoryItem[] = [
 			{
 				...mockItems[0],
-				finish: 'halofoil'
+				finish: 'foil',
+				promo_types: ['halofoil']
 			}
 		];
 		const { container } = render(InventoryTable, { props: { items: halofoilItem } });
@@ -384,7 +388,8 @@ describe('InventoryTable Component - Finish Type Display', () => {
 		const rainbowfoilItem: InventoryItem[] = [
 			{
 				...mockItems[0],
-				finish: 'rainbowfoil'
+				finish: 'foil',
+				promo_types: ['rainbowfoil']
 			}
 		];
 		const { container } = render(InventoryTable, { props: { items: rainbowfoilItem } });
@@ -396,7 +401,8 @@ describe('InventoryTable Component - Finish Type Display', () => {
 		const surgefoilItem: InventoryItem[] = [
 			{
 				...mockItems[0],
-				finish: 'surgefoil'
+				finish: 'foil',
+				promo_types: ['surgefoil']
 			}
 		];
 		const { container } = render(InventoryTable, { props: { items: surgefoilItem } });

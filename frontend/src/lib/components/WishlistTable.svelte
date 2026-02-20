@@ -1,7 +1,11 @@
 <script lang="ts">
 	import type { InventoryItem } from '$lib/types/inventory';
 	import { formatCurrency } from '$lib/utils/format';
-	import { shouldShowFinishIndicator, getFinishDisplayName } from '$lib/utils/finishDisplay';
+	import {
+		shouldShowFinishIndicator,
+		getFinishDisplayName,
+		capitalizeFirstLetter
+	} from '$lib/utils/finishDisplay';
 	import QuantityEditor from './QuantityEditor.svelte';
 	import RemoveConfirmation from './RemoveConfirmation.svelte';
 	import Toast from './Toast.svelte';

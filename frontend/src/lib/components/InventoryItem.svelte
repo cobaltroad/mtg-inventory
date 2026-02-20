@@ -1,6 +1,10 @@
 <script lang="ts">
 	import type { InventoryItem as InventoryItemType } from '$lib/types/inventory';
-	import { shouldShowFinishIndicator, getFinishDisplayName } from '$lib/utils/finishDisplay';
+	import {
+		shouldShowFinishIndicator,
+		getFinishDisplayName,
+		capitalizeFirstLetter
+	} from '$lib/utils/finishDisplay';
 
 	interface Props {
 		item: InventoryItemType;

@@ -147,7 +147,7 @@ describe('InventoryResult - Finish Type Display', () => {
 	});
 
 	it('should render star indicator for halofoil finish', () => {
-		const halofoilResult = { ...mockResult, finish: 'halofoil' };
+		const halofoilResult = { ...mockResult, finish: 'foil', promo_types: ['halofoil'] };
 		const { container } = render(InventoryResult, {
 			result: halofoilResult,
 			onViewDetails: mockViewDetailsFinish
@@ -158,7 +158,7 @@ describe('InventoryResult - Finish Type Display', () => {
 	});
 
 	it('should render star indicator for rainbowfoil finish', () => {
-		const rainbowfoilResult = { ...mockResult, finish: 'rainbowfoil' };
+		const rainbowfoilResult = { ...mockResult, finish: 'foil', promo_types: ['rainbowfoil'] };
 		const { container } = render(InventoryResult, {
 			result: rainbowfoilResult,
 			onViewDetails: mockViewDetailsFinish
@@ -169,7 +169,7 @@ describe('InventoryResult - Finish Type Display', () => {
 	});
 
 	it('should render star indicator for surgefoil finish', () => {
-		const surgefoilResult = { ...mockResult, finish: 'surgefoil' };
+		const surgefoilResult = { ...mockResult, finish: 'foil', promo_types: ['surgefoil'] };
 		const { container } = render(InventoryResult, {
 			result: surgefoilResult,
 			onViewDetails: mockViewDetailsFinish
@@ -202,7 +202,7 @@ describe('InventoryResult - Finish Type Display', () => {
 	});
 
 	it('should display "Halofoil" tooltip', () => {
-		const halofoilResult = { ...mockResult, finish: 'halofoil' };
+		const halofoilResult = { ...mockResult, finish: 'foil', promo_types: ['halofoil'] };
 		const { container } = render(InventoryResult, {
 			result: halofoilResult,
 			onViewDetails: mockViewDetailsFinish
@@ -212,7 +212,7 @@ describe('InventoryResult - Finish Type Display', () => {
 	});
 
 	it('should display "Rainbowfoil" tooltip', () => {
-		const rainbowfoilResult = { ...mockResult, finish: 'rainbowfoil' };
+		const rainbowfoilResult = { ...mockResult, finish: 'foil', promo_types: ['rainbowfoil'] };
 		const { container } = render(InventoryResult, {
 			result: rainbowfoilResult,
 			onViewDetails: mockViewDetailsFinish
@@ -222,7 +222,7 @@ describe('InventoryResult - Finish Type Display', () => {
 	});
 
 	it('should display "Surgefoil" tooltip', () => {
-		const surgefoilResult = { ...mockResult, finish: 'surgefoil' };
+		const surgefoilResult = { ...mockResult, finish: 'foil', promo_types: ['surgefoil'] };
 		const { container } = render(InventoryResult, {
 			result: surgefoilResult,
 			onViewDetails: mockViewDetailsFinish

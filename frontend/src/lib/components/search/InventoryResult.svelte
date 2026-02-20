@@ -1,7 +1,11 @@
 <script lang="ts">
 	import type { InventoryResult } from '$lib/types/search';
 	import { formatPrice } from '$lib/utils/priceFormatter';
-	import { shouldShowFinishIndicator, getFinishDisplayName } from '$lib/utils/finishDisplay';
+	import {
+		shouldShowFinishIndicator,
+		getFinishDisplayName,
+		capitalizeFirstLetter
+	} from '$lib/utils/finishDisplay';
 
 	interface Props {
 		result: InventoryResult;
