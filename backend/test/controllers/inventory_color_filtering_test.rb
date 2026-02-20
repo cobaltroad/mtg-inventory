@@ -325,6 +325,22 @@ class InventoryColorFilteringTest < ActionDispatch::IntegrationTest
     assert_equal 2, items.size, "Empty colors parameter should return all cards"
   end
 
+  test "GET /api/inventory with colors=[] returns all cards (edge case)" do
+    white_card = CollectionItem.create!(user: @user, card_id: "white_1", collection_type: "inventory", quantity: 1)
+    blue_card = CollectionItem.create!(user: @user, card_id: "blue_1", collection_type: "inventory", quantity: 1)
+    multicolor_card = CollectionItem.create!(user: @user, card_id: "multi_1", collection_type: "inventory", quantity: 1)
+
+    stub_card_with_colors("white_1", name: "Plains", colors: ["W"])
+    stub_card_with_colors("blue_1", name: "Island", colors: ["U"])
+    stub_card_with_colors("multi_1", name: "Azorius Signet", colors: ["W", "U"])
+
+    get api_path("/inventory?colors=[]")
+
+    assert_response :success
+    items = parse_inventory_response
+    assert_equal 3, items.size, "colors=[] should return all cards (no filter applied)"
+  end
+
   # ---------------------------------------------------------------------------
   # Edge Cases and Validation Tests
   # ---------------------------------------------------------------------------

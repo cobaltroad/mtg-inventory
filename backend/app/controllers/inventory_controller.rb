@@ -641,6 +641,9 @@ class InventoryController < ApplicationController
   def apply_color_filters(items, colors_param)
     return items if colors_param.blank?
 
+    # Handle edge case where frontend sends "[]" as string
+    return items if colors_param == "[]"
+
     # Parse colors parameter - supports comma-separated values
     requested_colors = colors_param.to_s.split(",").map(&:strip).map(&:upcase)
 
