@@ -20,10 +20,6 @@
 
 	// Fallback for missing image
 	const hasImage = $derived(!!result.image_url);
-
-	function capitalizeFirstLetter(text: string): string {
-		return text.charAt(0).toUpperCase() + text.slice(1);
-	}
 </script>
 
 <div class="inventory-result">
@@ -49,7 +45,7 @@
 			<span class="collector-number"
 				>#{result.collector_number}{#if shouldShowFinishIndicator(result.finish, result.promo_types)}<span
 						class="foil-star"
-						title="{getFinishDisplayName(result.finish, result.promo_types)}">★</span
+						title={getFinishDisplayName(result.finish, result.promo_types)}>★</span
 					>{/if}</span
 			>
 		</div>
