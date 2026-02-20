@@ -14,10 +14,7 @@ export type SpecialFinishType = (typeof SPECIAL_FINISH_TYPES)[number];
  * @param promoTypes - Array of promo types from Scryfall API
  * @returns true if the card has a special finish that should display an indicator
  */
-export function shouldShowFinishIndicator(
-	finish?: string | null,
-	promoTypes?: string[]
-): boolean {
+export function shouldShowFinishIndicator(finish?: string | null, promoTypes?: string[]): boolean {
 	// Check promo_types first for special finish types
 	if (promoTypes && promoTypes.length > 0) {
 		const hasSpecialFinish = promoTypes.some((type) =>

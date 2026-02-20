@@ -37,10 +37,7 @@ export interface FilterOptions {
  * @param options - Filter options to apply
  * @returns Filtered array with commanders always included
  */
-export function filterDecklistCards(
-	cards: DecklistCard[],
-	options: FilterOptions
-): DecklistCard[] {
+export function filterDecklistCards(cards: DecklistCard[], options: FilterOptions): DecklistCard[] {
 	// If no filters are applied, return all cards
 	if (Object.keys(options).length === 0) {
 		return cards;
@@ -120,11 +117,7 @@ function passesBasicLandFilter(card: DecklistCard, hideBasicLands?: boolean): bo
  * If no price filter is specified, all cards pass
  * Cards without a price are excluded when a price filter is active
  */
-function passesPriceRangeFilter(
-	card: DecklistCard,
-	minPrice?: number,
-	maxPrice?: number
-): boolean {
+function passesPriceRangeFilter(card: DecklistCard, minPrice?: number, maxPrice?: number): boolean {
 	// If no price filter is set, pass all cards
 	if (minPrice === undefined && maxPrice === undefined) {
 		return true;

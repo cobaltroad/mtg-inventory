@@ -69,7 +69,10 @@
 		// When backend per_page changes, sync to local pageSize if valid
 		// This handles deep linking with URL parameters (e.g., ?per_page=50)
 		// Use untrack() only when reading pageSize to avoid creating a circular dependency
-		if (newPerPage > 0 && PAGE_SIZE_OPTIONS.includes(newPerPage as typeof PAGE_SIZE_OPTIONS[number])) {
+		if (
+			newPerPage > 0 &&
+			PAGE_SIZE_OPTIONS.includes(newPerPage as (typeof PAGE_SIZE_OPTIONS)[number])
+		) {
 			const currentPageSize = untrack(() => pageSize);
 			if (newPerPage !== currentPageSize) {
 				pageSize = newPerPage;
@@ -152,7 +155,7 @@
 			if (savedPageSize) {
 				const parsed = parseInt(savedPageSize, 10);
 				// Validate that the saved page size is a valid option
-				if (PAGE_SIZE_OPTIONS.includes(parsed as typeof PAGE_SIZE_OPTIONS[number])) {
+				if (PAGE_SIZE_OPTIONS.includes(parsed as (typeof PAGE_SIZE_OPTIONS)[number])) {
 					pageSize = parsed;
 				}
 			}
@@ -173,9 +176,7 @@
 	// Backend pagination: we have metadata AND we don't have all items locally
 	// (total_count > items we have, indicating there are more items on the server)
 	let isBackendPaginated = $derived(
-		backendTotalCount > 0 &&
-			!currentFilter &&
-			backendTotalCount > allItems.length
+		backendTotalCount > 0 && !currentFilter && backendTotalCount > allItems.length
 	);
 
 	// Apply pagination
@@ -190,9 +191,7 @@
 	// Pagination visibility and total count
 	// Use backend total when using backend pagination
 	// Otherwise use local filtered count for client-side pagination
-	let effectiveTotalCount = $derived(
-		isBackendPaginated ? backendTotalCount : filteredItems.length
-	);
+	let effectiveTotalCount = $derived(isBackendPaginated ? backendTotalCount : filteredItems.length);
 	let showPagination = $derived(effectiveTotalCount > pageSize);
 
 	// Count display - use backend total count when available, fallback to local count

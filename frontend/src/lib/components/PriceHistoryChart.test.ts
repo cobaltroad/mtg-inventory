@@ -239,7 +239,9 @@ describe('PriceHistoryChart Component', () => {
 		});
 
 		const toggles = document.querySelectorAll('.finish-toggle');
-		const normalToggle = Array.from(toggles).find((t) => t.textContent === 'Nonfoil') as HTMLElement;
+		const normalToggle = Array.from(toggles).find(
+			(t) => t.textContent === 'Nonfoil'
+		) as HTMLElement;
 
 		// Should be active initially
 		expect(normalToggle.classList.contains('active')).toBe(true);

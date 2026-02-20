@@ -1179,8 +1179,7 @@ describe('PrintingModal - Form Fields', () => {
 				if (typeof url === 'string' && url.includes('/printings')) {
 					return Promise.resolve({
 						ok: true,
-						json: () =>
-							Promise.resolve({ printings: [PRINTING_NONFOIL_ONLY, PRINTING_FOIL_ONLY] })
+						json: () => Promise.resolve({ printings: [PRINTING_NONFOIL_ONLY, PRINTING_FOIL_ONLY] })
 					});
 				}
 				return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });

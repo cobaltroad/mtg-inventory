@@ -186,10 +186,11 @@
 							<div class="card-name-cell">
 								<span class="font-beleren card-name">{item.card_name}</span>
 								<span class="collector-number">
-									{item.set.toUpperCase()} {item.collector_number}{#if shouldShowFinishIndicator(item.finish, item.promo_types)}<span
-										class="foil-star"
-										title="{getFinishDisplayName(item.finish, item.promo_types)}">★</span
-									>{/if}
+									{item.set.toUpperCase()}
+									{item.collector_number}{#if shouldShowFinishIndicator(item.finish, item.promo_types)}<span
+											class="foil-star"
+											title={getFinishDisplayName(item.finish, item.promo_types)}>★</span
+										>{/if}
 								</span>
 							</div>
 						</td>

@@ -53,11 +53,7 @@
 			<button onclick={() => fetchInventoryStats()} class="retry-button">Retry</button>
 		</div>
 	{:else}
-		<ReportsStats
-			totalValueCents={totalValueCents}
-			cardsOverTenDollars={cardsOverTenDollars}
-			totalSets={totalSets}
-		/>
+		<ReportsStats {totalValueCents} {cardsOverTenDollars} {totalSets} />
 	{/if}
 </div>
 

@@ -1,15 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import {
-	sortDecklistCards,
-	type SortOption,
-	type DecklistCard
-} from './decklistSorting';
+import { sortDecklistCards, type SortOption, type DecklistCard } from './decklistSorting';
 
 describe('sortDecklistCards', () => {
 	// Sample test data
 	const commander: DecklistCard = {
 		card_id: 'cmd-1',
-		card_name: 'Atraxa, Praetors\' Voice',
+		card_name: "Atraxa, Praetors' Voice",
 		quantity: 1,
 		is_commander: true,
 		card_type: 'Legendary Creature — Phyrexian Angel Horror',
@@ -79,7 +75,7 @@ describe('sortDecklistCards', () => {
 			const cards = [solRing, commander, commandTower];
 			const sorted = sortDecklistCards(cards, 'alphabetical');
 
-			expect(sorted[0].card_name).toBe('Atraxa, Praetors\' Voice');
+			expect(sorted[0].card_name).toBe("Atraxa, Praetors' Voice");
 			expect(sorted[1].card_name).toBe('Command Tower');
 			expect(sorted[2].card_name).toBe('Sol Ring');
 		});
@@ -108,7 +104,7 @@ describe('sortDecklistCards', () => {
 			const cards = [commandTower, commander, solRing, expensiveCard];
 			const sorted = sortDecklistCards(cards, 'value');
 
-			expect(sorted[0].card_name).toBe('Atraxa, Praetors\' Voice'); // Commander first
+			expect(sorted[0].card_name).toBe("Atraxa, Praetors' Voice"); // Commander first
 			expect(sorted[1].card_name).toBe('Expensive Artifact'); // 99.99
 			expect(sorted[2].card_name).toBe('Sol Ring'); // 1.50
 			expect(sorted[3].card_name).toBe('Command Tower'); // 0.25
@@ -118,7 +114,7 @@ describe('sortDecklistCards', () => {
 			const cards = [cardNoPrice, solRing, commander];
 			const sorted = sortDecklistCards(cards, 'value');
 
-			expect(sorted[0].card_name).toBe('Atraxa, Praetors\' Voice');
+			expect(sorted[0].card_name).toBe("Atraxa, Praetors' Voice");
 			expect(sorted[1].card_name).toBe('Sol Ring');
 			expect(sorted[2].card_name).toBe('No Price Card');
 		});
@@ -129,7 +125,7 @@ describe('sortDecklistCards', () => {
 			const cards = [commandTower, commander, solRing, expensiveCard];
 			const sorted = sortDecklistCards(cards, 'edh-rank');
 
-			expect(sorted[0].card_name).toBe('Atraxa, Praetors\' Voice'); // Commander
+			expect(sorted[0].card_name).toBe("Atraxa, Praetors' Voice"); // Commander
 			expect(sorted[1].card_name).toBe('Sol Ring'); // Rank 2
 			expect(sorted[2].card_name).toBe('Command Tower'); // Rank 3
 			expect(sorted[3].card_name).toBe('Expensive Artifact'); // Rank 100
@@ -139,12 +135,11 @@ describe('sortDecklistCards', () => {
 			const cards = [cardNoRank, solRing, commander];
 			const sorted = sortDecklistCards(cards, 'edh-rank');
 
-			expect(sorted[0].card_name).toBe('Atraxa, Praetors\' Voice');
+			expect(sorted[0].card_name).toBe("Atraxa, Praetors' Voice");
 			expect(sorted[1].card_name).toBe('Sol Ring');
 			expect(sorted[2].card_name).toBe('No Rank Card');
 		});
 	});
-
 
 	describe('type grouping', () => {
 		it('groups by card type with commander first', () => {
@@ -178,7 +173,6 @@ describe('sortDecklistCards', () => {
 			expect(sorted[2].card_name).toBe('No Type'); // No type goes last
 		});
 	});
-
 
 	describe('commander-first invariant', () => {
 		it('always places commanders first regardless of sort option', () => {

@@ -10,11 +10,46 @@
 
 	// MTG color definitions with mana symbols
 	const colors = [
-		{ code: 'W', name: 'White', symbol: 'W', bg: 'bg-amber-50', border: 'border-amber-300', activeBg: 'bg-amber-200' },
-		{ code: 'U', name: 'Blue', symbol: 'U', bg: 'bg-blue-50', border: 'border-blue-400', activeBg: 'bg-blue-200' },
-		{ code: 'B', name: 'Black', symbol: 'B', bg: 'bg-gray-50', border: 'border-gray-800', activeBg: 'bg-gray-300' },
-		{ code: 'R', name: 'Red', symbol: 'R', bg: 'bg-red-50', border: 'border-red-500', activeBg: 'bg-red-200' },
-		{ code: 'G', name: 'Green', symbol: 'G', bg: 'bg-green-50', border: 'border-green-500', activeBg: 'bg-green-200' }
+		{
+			code: 'W',
+			name: 'White',
+			symbol: 'W',
+			bg: 'bg-amber-50',
+			border: 'border-amber-300',
+			activeBg: 'bg-amber-200'
+		},
+		{
+			code: 'U',
+			name: 'Blue',
+			symbol: 'U',
+			bg: 'bg-blue-50',
+			border: 'border-blue-400',
+			activeBg: 'bg-blue-200'
+		},
+		{
+			code: 'B',
+			name: 'Black',
+			symbol: 'B',
+			bg: 'bg-gray-50',
+			border: 'border-gray-800',
+			activeBg: 'bg-gray-300'
+		},
+		{
+			code: 'R',
+			name: 'Red',
+			symbol: 'R',
+			bg: 'bg-red-50',
+			border: 'border-red-500',
+			activeBg: 'bg-red-200'
+		},
+		{
+			code: 'G',
+			name: 'Green',
+			symbol: 'G',
+			bg: 'bg-green-50',
+			border: 'border-green-500',
+			activeBg: 'bg-green-200'
+		}
 	] as const;
 
 	const specialFilters = [
@@ -178,7 +213,9 @@
 	/* Color-specific styling */
 	.mana-w {
 		color: #f9fafb;
-		text-shadow: 0 0 2px #d97706, 0 1px 2px rgba(0, 0, 0, 0.3);
+		text-shadow:
+			0 0 2px #d97706,
+			0 1px 2px rgba(0, 0, 0, 0.3);
 	}
 
 	.color-button:has(.mana-w) {

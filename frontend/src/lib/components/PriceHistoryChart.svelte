@@ -345,9 +345,7 @@
 				{#if isVisible}
 					<div class="summary-card">
 						<div class="summary-header">
-							<span class="finish-name"
-								>{finish.charAt(0).toUpperCase() + finish.slice(1)}</span
-							>
+							<span class="finish-name">{finish.charAt(0).toUpperCase() + finish.slice(1)}</span>
 							<span class="percentage-change {getDirectionColor(s.direction)}">
 								{getDirectionIndicator(s.direction)}{s.percentage_change > 0
 									? '+'

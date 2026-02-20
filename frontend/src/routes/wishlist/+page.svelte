@@ -68,7 +68,7 @@
 		const savedPageSize = localStorage.getItem(STORAGE_KEY_PAGE_SIZE);
 		if (savedPageSize) {
 			const parsed = parseInt(savedPageSize, 10);
-			if (PAGE_SIZE_OPTIONS.includes(parsed as typeof PAGE_SIZE_OPTIONS[number])) {
+			if (PAGE_SIZE_OPTIONS.includes(parsed as (typeof PAGE_SIZE_OPTIONS)[number])) {
 				return parsed;
 			}
 		}

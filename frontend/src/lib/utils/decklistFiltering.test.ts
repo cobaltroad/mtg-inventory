@@ -5,7 +5,7 @@ describe('filterDecklistCards', () => {
 	// Sample test data
 	const commander: DecklistCard = {
 		card_id: 'cmd-1',
-		card_name: 'Atraxa, Praetors\' Voice',
+		card_name: "Atraxa, Praetors' Voice",
 		quantity: 1,
 		is_commander: true,
 		card_type: 'Legendary Creature — Phyrexian Angel Horror',
@@ -108,7 +108,7 @@ describe('filterDecklistCards', () => {
 
 			// Commander should still be visible
 			expect(filtered.some((c) => c.is_commander)).toBe(true);
-			expect(filtered.find((c) => c.is_commander)?.card_name).toBe('Atraxa, Praetors\' Voice');
+			expect(filtered.find((c) => c.is_commander)?.card_name).toBe("Atraxa, Praetors' Voice");
 		});
 
 		it('includes commanders even with strict price filter', () => {

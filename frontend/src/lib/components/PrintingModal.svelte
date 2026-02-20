@@ -430,7 +430,8 @@
 														bind:group={finish}
 														checked={finish === finishOption}
 													/>
-													<span>{finishOption.charAt(0).toUpperCase() + finishOption.slice(1)}</span>
+													<span>{finishOption.charAt(0).toUpperCase() + finishOption.slice(1)}</span
+													>
 												</label>
 											{/each}
 										</div>
@@ -776,7 +777,9 @@
 		border: 1px solid #d1d5db;
 		border-radius: 4px;
 		background: white;
-		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+		box-shadow:
+			0 4px 6px -1px rgba(0, 0, 0, 0.1),
+			0 2px 4px -1px rgba(0, 0, 0, 0.06);
 	}
 
 	:global(.combobox-item) {

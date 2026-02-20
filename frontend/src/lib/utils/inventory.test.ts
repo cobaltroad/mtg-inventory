@@ -266,4 +266,3 @@ describe('sortInventory - Date Added', () => {
 		expect(result[3].created_at).toBe('2025-01-17T10:00:00Z');
 	});
 });
-

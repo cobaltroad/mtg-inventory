@@ -56,7 +56,7 @@
 			<span class="collector-number"
 				>#{item.collector_number}{#if shouldShowFinishIndicator(item.finish, item.promo_types)}<span
 						class="foil-star"
-						title="{getFinishDisplayName(item.finish, item.promo_types)}">★</span
+						title={getFinishDisplayName(item.finish, item.promo_types)}>★</span
 					>{/if}</span
 			>
 		</div>

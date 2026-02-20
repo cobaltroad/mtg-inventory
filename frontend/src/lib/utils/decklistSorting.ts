@@ -26,18 +26,13 @@ export type SortOption = 'alphabetical' | 'value' | 'edh-rank' | 'type';
  * @param sortBy - Sort option to apply
  * @returns Sorted array with commanders first
  */
-export function sortDecklistCards(
-	cards: DecklistCard[],
-	sortBy: SortOption
-): DecklistCard[] {
+export function sortDecklistCards(cards: DecklistCard[], sortBy: SortOption): DecklistCard[] {
 	// Separate commanders from non-commanders
 	const commanders = cards.filter((card) => card.is_commander);
 	const nonCommanders = cards.filter((card) => !card.is_commander);
 
 	// Sort commanders alphabetically (for partner commanders)
-	const sortedCommanders = [...commanders].sort((a, b) =>
-		a.card_name.localeCompare(b.card_name)
-	);
+	const sortedCommanders = [...commanders].sort((a, b) => a.card_name.localeCompare(b.card_name));
 
 	// Sort non-commanders based on option
 	let sortedNonCommanders: DecklistCard[];
@@ -131,4 +126,3 @@ function sortByType(cards: DecklistCard[]): DecklistCard[] {
 		return a.card_name.localeCompare(b.card_name);
 	});
 }
-

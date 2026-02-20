@@ -36,6 +36,7 @@ npm run dev
 ```
 
 The development server runs on:
+
 - **Local**: `http://localhost:5173`
 - **Docker**: `http://localhost:3001`
 
@@ -90,10 +91,10 @@ The frontend proxies API requests through `hooks.server.ts` to handle CORS and e
 ```typescript
 // hooks.server.ts
 export async function handle({ event, resolve }) {
-  if (event.url.pathname.startsWith('/api')) {
-    // Proxy to backend
-  }
-  return resolve(event);
+	if (event.url.pathname.startsWith('/api')) {
+		// Proxy to backend
+	}
+	return resolve(event);
 }
 ```
 
@@ -118,8 +119,8 @@ When multiple widgets load simultaneously (e.g., dashboard), append `?uu` to ski
 ```typescript
 // For concurrent requests (prevents race conditions)
 const [inventory, alerts] = await Promise.all([
-  fetch(`${base}/api/inventory?uu`),
-  fetch(`${base}/api/price_alerts?uu`)
+	fetch(`${base}/api/inventory?uu`),
+	fetch(`${base}/api/price_alerts?uu`)
 ]);
 
 // With existing query params, use &uu
@@ -132,21 +133,21 @@ Always handle errors with user-friendly messages:
 
 ```typescript
 try {
-  const response = await fetch(`${base}/api/inventory`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  });
+	const response = await fetch(`${base}/api/inventory`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(data)
+	});
 
-  if (!response.ok) {
-    throw new Error('Failed to add item');
-  }
+	if (!response.ok) {
+		throw new Error('Failed to add item');
+	}
 
-  const result = await response.json();
-  // Handle success
+	const result = await response.json();
+	// Handle success
 } catch (err) {
-  console.error('Error:', err);
-  // Show user-friendly error message
+	console.error('Error:', err);
+	// Show user-friendly error message
 }
 ```
 
@@ -158,13 +159,11 @@ This project uses a **utility-first approach** with Skeleton UI v4 and Tailwind 
 
 ```svelte
 <!-- Native HTML with Tailwind classes -->
-<button class="btn variant-filled-primary">
-  Click Me
-</button>
+<button class="variant-filled-primary btn"> Click Me </button>
 
 <div class="card p-4">
-  <h2 class="h2">Card Title</h2>
-  <p>Card content</p>
+	<h2 class="h2">Card Title</h2>
+	<p>Card content</p>
 </div>
 ```
 
@@ -180,12 +179,12 @@ Using **Lucide Svelte** for icons:
 
 ```svelte
 <script lang="ts">
-  import { Plus, Trash2, Edit } from 'lucide-svelte';
+	import { Plus, Trash2, Edit } from 'lucide-svelte';
 </script>
 
 <button>
-  <Plus size={16} />
-  Add Item
+	<Plus size={16} />
+	Add Item
 </button>
 ```
 
@@ -222,7 +221,7 @@ let doubled = $derived(count * 2);
 
 // Effects
 $effect(() => {
-  console.log('Count changed:', count);
+	console.log('Count changed:', count);
 });
 
 // Props (in components)
@@ -233,25 +232,23 @@ let { title, items = [] } = $props();
 
 ```svelte
 <script lang="ts">
-  // Local component state
-  let isLoading = $state(false);
-  let items = $state<Card[]>([]);
+	// Local component state
+	let isLoading = $state(false);
+	let items = $state<Card[]>([]);
 
-  // Derived values
-  let totalValue = $derived(
-    items.reduce((sum, item) => sum + item.price, 0)
-  );
+	// Derived values
+	let totalValue = $derived(items.reduce((sum, item) => sum + item.price, 0));
 
-  // Load data
-  async function loadItems() {
-    isLoading = true;
-    try {
-      const response = await fetch(`${base}/api/inventory?uu`);
-      items = await response.json();
-    } finally {
-      isLoading = false;
-    }
-  }
+	// Load data
+	async function loadItems() {
+		isLoading = true;
+		try {
+			const response = await fetch(`${base}/api/inventory?uu`);
+			items = await response.json();
+		} finally {
+			isLoading = false;
+		}
+	}
 </script>
 ```
 
@@ -289,10 +286,10 @@ import { describe, it, expect } from 'vitest';
 import MyComponent from './MyComponent.svelte';
 
 describe('MyComponent', () => {
-  it('renders correctly', () => {
-    render(MyComponent, { props: { title: 'Test' } });
-    expect(screen.getByText('Test')).toBeInTheDocument();
-  });
+	it('renders correctly', () => {
+		render(MyComponent, { props: { title: 'Test' } });
+		expect(screen.getByText('Test')).toBeInTheDocument();
+	});
 });
 ```
 
@@ -318,18 +315,18 @@ npm run check:watch
 ```typescript
 // Define interfaces in lib/types/
 export interface Card {
-  id: string;
-  name: string;
-  price: number;
+	id: string;
+	name: string;
+	price: number;
 }
 
 // Use in components
 import type { Card } from '$lib/types/card';
 
 let card: Card = $state({
-  id: '1',
-  name: 'Black Lotus',
-  price: 10000
+	id: '1',
+	name: 'Black Lotus',
+	price: 10000
 });
 ```
 
@@ -352,6 +349,7 @@ npm run format
 - **TypeScript**: Type safety
 
 Configuration files:
+
 - `.prettierrc` - Prettier config
 - `eslint.config.js` - ESLint config
 - `tsconfig.json` - TypeScript config
@@ -381,9 +379,9 @@ Using `@sveltejs/adapter-node` for Node.js deployment:
 import adapter from '@sveltejs/adapter-node';
 
 export default {
-  kit: {
-    adapter: adapter()
-  }
+	kit: {
+		adapter: adapter()
+	}
 };
 ```
 
@@ -402,13 +400,9 @@ export default {
 
 ```svelte
 <!-- Good accessibility -->
-<button
-  class="btn"
-  aria-label="Delete card from inventory"
-  onclick={handleDelete}
->
-  <Trash2 size={16} aria-hidden="true" />
-  <span class="sr-only">Delete</span>
+<button class="btn" aria-label="Delete card from inventory" onclick={handleDelete}>
+	<Trash2 size={16} aria-hidden="true" />
+	<span class="sr-only">Delete</span>
 </button>
 ```
 
@@ -418,14 +412,14 @@ export default {
 
 ```svelte
 <script lang="ts">
-  // Dynamic imports for code splitting
-  const HeavyComponent = import('./HeavyComponent.svelte');
+	// Dynamic imports for code splitting
+	const HeavyComponent = import('./HeavyComponent.svelte');
 </script>
 
 {#await HeavyComponent}
-  <p>Loading...</p>
+	<p>Loading...</p>
 {:then Component}
-  <Component.default />
+	<Component.default />
 {/await}
 ```
 
@@ -441,20 +435,24 @@ export default {
 ### Common Issues
 
 **Vite HMR not working:**
+
 - Check that the dev server is running
 - Clear browser cache
 - Restart dev server
 
 **TypeScript errors:**
+
 ```bash
 npm run check
 ```
 
 **Build failures:**
+
 - Check `package.json` dependencies
 - Clear `node_modules` and reinstall: `rm -rf node_modules && npm install`
 
 **API proxy not working:**
+
 - Verify backend is running on port 3000
 - Check `hooks.server.ts` configuration
 - Inspect network tab in browser DevTools

@@ -68,4 +68,3 @@ export function sortInventory(items: InventoryItem[], sortOption: SortOption): I
 			return sorted;
 	}
 }
-
