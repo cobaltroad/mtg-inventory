@@ -289,4 +289,40 @@
 		appearance: textfield;
 		-moz-appearance: textfield;
 	}
+
+	@media (max-width: 640px) {
+		.quantity-display {
+			min-width: 4.5rem;
+			padding: 0.625rem 1rem;
+			font-size: 1rem;
+			min-height: 44px;
+		}
+
+		.quantity-value {
+			font-size: 1rem;
+		}
+
+		.quantity-input {
+			width: 5rem;
+			padding: 0.625rem 0.75rem;
+			font-size: 1rem;
+			min-height: 44px;
+		}
+
+		.button-group {
+			gap: 0.5rem;
+		}
+
+		.icon-btn {
+			width: 2.75rem;
+			height: 2.75rem;
+			min-width: 2.75rem;
+			min-height: 2.75rem;
+		}
+
+		.icon-btn :global(svg) {
+			width: 20px;
+			height: 20px;
+		}
+	}
 </style>

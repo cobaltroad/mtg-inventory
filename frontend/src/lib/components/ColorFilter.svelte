@@ -319,21 +319,36 @@
 	/* Responsive adjustments */
 	@media (max-width: 640px) {
 		.color-buttons {
-			gap: 0.375rem;
+			gap: 0.5rem;
 		}
 
 		.color-button {
-			width: 2.25rem;
-			height: 2.25rem;
+			width: 2.75rem;
+			height: 2.75rem;
+			min-width: 2.75rem;
+			min-height: 2.75rem;
 		}
 
 		.mana-symbol {
-			font-size: 1rem;
+			font-size: 1.125rem;
+		}
+
+		.divider {
+			display: none;
 		}
 
 		.special-filter {
-			min-width: 4rem;
-			height: 2.25rem;
+			min-width: 2.75rem;
+			height: 2.75rem;
+			min-height: 2.75rem;
+			border-radius: 50%;
+		}
+
+		.clear-all-button {
+			width: 2.75rem;
+			height: 2.75rem;
+			min-width: 2.75rem;
+			min-height: 2.75rem;
 		}
 	}
 </style>

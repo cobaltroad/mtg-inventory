@@ -315,6 +315,15 @@
 
 		.btn {
 			width: 100%;
+			min-height: 44px;
+			font-size: 1rem;
+		}
+
+		.close-btn {
+			width: 2.75rem;
+			height: 2.75rem;
+			min-width: 2.75rem;
+			min-height: 2.75rem;
 		}
 	}
 </style>

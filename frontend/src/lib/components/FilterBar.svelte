@@ -260,4 +260,28 @@
 	:global(.dark) .no-results {
 		color: #9ca3af;
 	}
+
+	@media (max-width: 640px) {
+		.filter-container {
+			width: 100%;
+		}
+
+		.filter-button {
+			width: 100%;
+			justify-content: center;
+			min-height: 44px;
+		}
+
+		.dropdown {
+			width: 100%;
+			left: 0;
+			right: 0;
+			max-height: 60vh;
+		}
+
+		.set-option {
+			padding: 1rem 0.75rem;
+			min-height: 44px;
+		}
+	}
 </style>
