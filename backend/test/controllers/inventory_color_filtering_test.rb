@@ -202,6 +202,42 @@ class InventoryColorFilteringTest < ActionDispatch::IntegrationTest
     assert_includes card_ids, "eldrazi_1"
   end
 
+  test "GET /api/inventory?colors=colorless excludes double-faced cards with color identity" do
+    # Double-faced cards have null colors but non-empty color_identity
+    colorless_artifact = CollectionItem.create!(user: @user, card_id: "colorless_1", collection_type: "inventory", quantity: 1)
+    dfc_blue = CollectionItem.create!(user: @user, card_id: "dfc_blue", collection_type: "inventory", quantity: 1)
+
+    stub_card_with_colors("colorless_1", name: "Sol Ring", colors: [])
+    # Simulate double-faced card with null colors but U color_identity
+    stub_request(:get, "https://api.scryfall.com/cards/dfc_blue")
+      .to_return(
+        status: 200,
+        body: {
+          id: "dfc_blue",
+          name: "Test DFC // Blue Side",
+          set: "TST",
+          set_name: "Test Set",
+          collector_number: "1",
+          colors: nil,
+          color_identity: ["U"],
+          released_at: "2024-01-01",
+          image_uris: {
+            normal: "https://cards.scryfall.io/normal/front/test.jpg"
+          }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    get api_path("/inventory?colors=colorless")
+
+    assert_response :success
+    items = parse_inventory_response
+    assert_equal 1, items.size, "Should return only truly colorless cards"
+    assert_equal "colorless_1", items.first["card_id"]
+    card_ids = items.map { |item| item["card_id"] }
+    assert_not_includes card_ids, "dfc_blue", "DFC with color identity should be excluded"
+  end
+
   # ---------------------------------------------------------------------------
   # AC4: Multiple Color Filters (OR Logic) Tests
   # ---------------------------------------------------------------------------
