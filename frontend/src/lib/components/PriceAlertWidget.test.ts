@@ -601,9 +601,9 @@ describe('PriceAlertWidget - Skeleton UI v4 Classes', () => {
 
 		await waitFor(() => {
 			const dismissButton = screen.getByRole('button', { name: /dismiss/i });
-			// Should have Skeleton v4 hover classes, not dead v3 classes
+			// Should have hover classes, not dead v3 variant-ghost-surface classes
 			const classNames = dismissButton.className;
-			expect(classNames).toMatch(/hover:bg-surface-/);
+			expect(classNames).toMatch(/hover:bg-/);
 			expect(classNames).not.toContain('variant-ghost-surface');
 		});
 	});

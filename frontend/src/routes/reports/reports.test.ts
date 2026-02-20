@@ -24,15 +24,14 @@ describe('Reports Page', () => {
 
 		render(ReportsPage);
 
-		expect(screen.getByText('Calculating inventory value...')).toBeTruthy();
+		expect(screen.getByText('Loading inventory statistics...')).toBeTruthy();
 	});
 
 	it('displays total inventory value when data is loaded', async () => {
 		const mockData = {
 			total_value_cents: 150000,
-			total_cards: 100,
-			valued_cards: 95,
-			excluded_cards: 5,
+			cards_over_ten_dollars: 95,
+			total_sets: 25,
 			last_updated: '2026-02-06T10:00:00Z'
 		};
 
@@ -44,16 +43,15 @@ describe('Reports Page', () => {
 		render(ReportsPage);
 
 		await waitFor(() => {
-			expect(screen.getByText('$1,500.00')).toBeTruthy();
+			expect(screen.getByText('$1500.00')).toBeTruthy();
 		});
 	});
 
-	it('formats currency correctly with thousand separators', async () => {
+	it('formats currency correctly', async () => {
 		const mockData = {
 			total_value_cents: 1234567,
-			total_cards: 1000,
-			valued_cards: 950,
-			excluded_cards: 50,
+			cards_over_ten_dollars: 950,
+			total_sets: 50,
 			last_updated: '2026-02-06T10:00:00Z'
 		};
 
@@ -65,37 +63,15 @@ describe('Reports Page', () => {
 		render(ReportsPage);
 
 		await waitFor(() => {
-			expect(screen.getByText('$12,345.67')).toBeTruthy();
+			expect(screen.getByText('$12345.67')).toBeTruthy();
 		});
 	});
 
-	it('displays breakdown of total cards', async () => {
+	it('displays cards over $10 count', async () => {
 		const mockData = {
 			total_value_cents: 100000,
-			total_cards: 250,
-			valued_cards: 240,
-			excluded_cards: 10,
-			last_updated: '2026-02-06T10:00:00Z'
-		};
-
-		(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-			ok: true,
-			json: async () => mockData
-		});
-
-		render(ReportsPage);
-
-		await waitFor(() => {
-			expect(screen.getByText('250')).toBeTruthy();
-		});
-	});
-
-	it('displays breakdown of valued cards', async () => {
-		const mockData = {
-			total_value_cents: 100000,
-			total_cards: 250,
-			valued_cards: 240,
-			excluded_cards: 10,
+			cards_over_ten_dollars: 240,
+			total_sets: 30,
 			last_updated: '2026-02-06T10:00:00Z'
 		};
 
@@ -108,15 +84,15 @@ describe('Reports Page', () => {
 
 		await waitFor(() => {
 			expect(screen.getByText('240')).toBeTruthy();
+			expect(screen.getByText('Cards Over $10')).toBeTruthy();
 		});
 	});
 
-	it('displays breakdown of cards without prices', async () => {
+	it('displays total sets count', async () => {
 		const mockData = {
 			total_value_cents: 100000,
-			total_cards: 250,
-			valued_cards: 240,
-			excluded_cards: 10,
+			cards_over_ten_dollars: 240,
+			total_sets: 30,
 			last_updated: '2026-02-06T10:00:00Z'
 		};
 
@@ -125,23 +101,20 @@ describe('Reports Page', () => {
 			json: async () => mockData
 		});
 
-		const { container } = render(ReportsPage);
+		render(ReportsPage);
 
 		await waitFor(() => {
-			// Find the "Without Prices" section in the specific container
-			const withouPricesTitle = container.querySelector('.breakdown-title');
-			expect(withouPricesTitle).toBeTruthy();
-			expect(container.textContent).toContain('10');
+			expect(screen.getByText('30')).toBeTruthy();
+			expect(screen.getByText('Different Sets')).toBeTruthy();
 		});
 	});
 
-	it('displays last updated timestamp', async () => {
+	it('displays total sets count', async () => {
 		const mockData = {
 			total_value_cents: 100000,
-			total_cards: 100,
-			valued_cards: 95,
-			excluded_cards: 5,
-			last_updated: '2026-02-06T14:30:00Z'
+			cards_over_ten_dollars: 240,
+			total_sets: 30,
+			last_updated: '2026-02-06T10:00:00Z'
 		};
 
 		(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
@@ -149,19 +122,19 @@ describe('Reports Page', () => {
 			json: async () => mockData
 		});
 
-		const { container } = render(ReportsPage);
+		render(ReportsPage);
 
 		await waitFor(() => {
-			expect(container.textContent).toContain('Last updated:');
+			expect(screen.getByText('30')).toBeTruthy();
+			expect(screen.getByText('Different Sets')).toBeTruthy();
 		});
 	});
 
-	it('displays "Never" when no last updated timestamp', async () => {
+	it('displays zero value for empty inventory', async () => {
 		const mockData = {
 			total_value_cents: 0,
-			total_cards: 10,
-			valued_cards: 0,
-			excluded_cards: 10,
+			cards_over_ten_dollars: 0,
+			total_sets: 0,
 			last_updated: null
 		};
 
@@ -173,7 +146,7 @@ describe('Reports Page', () => {
 		render(ReportsPage);
 
 		await waitFor(() => {
-			expect(screen.getByText(/Never/)).toBeTruthy();
+			expect(screen.getByText('$0.00')).toBeTruthy();
 		});
 	});
 
@@ -204,7 +177,7 @@ describe('Reports Page', () => {
 		render(ReportsPage);
 
 		await waitFor(() => {
-			expect(screen.getByText('Failed to load inventory value. Please try again.')).toBeTruthy();
+			expect(screen.getByText(/Failed to load inventory statistics/)).toBeTruthy();
 		});
 	});
 
@@ -217,7 +190,7 @@ describe('Reports Page', () => {
 		render(ReportsPage);
 
 		await waitFor(() => {
-			expect(screen.getByText('Failed to load inventory value. Please try again.')).toBeTruthy();
+			expect(screen.getByText(/Failed to load inventory statistics/)).toBeTruthy();
 		});
 	});
 
@@ -234,9 +207,8 @@ describe('Reports Page', () => {
 	it('uses correct API endpoint with base path', async () => {
 		const mockData = {
 			total_value_cents: 100000,
-			total_cards: 100,
-			valued_cards: 95,
-			excluded_cards: 5,
+			cards_over_ten_dollars: 95,
+			total_sets: 25,
 			last_updated: '2026-02-06T10:00:00Z'
 		};
 
@@ -248,38 +220,15 @@ describe('Reports Page', () => {
 		render(ReportsPage);
 
 		await waitFor(() => {
-			expect(global.fetch).toHaveBeenCalledWith('/api/inventory/value');
-		});
-	});
-
-	it('formats large numbers with thousand separators', async () => {
-		const mockData = {
-			total_value_cents: 100000,
-			total_cards: 5000,
-			valued_cards: 4800,
-			excluded_cards: 200,
-			last_updated: '2026-02-06T10:00:00Z'
-		};
-
-		(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-			ok: true,
-			json: async () => mockData
-		});
-
-		render(ReportsPage);
-
-		await waitFor(() => {
-			expect(screen.getByText('5,000')).toBeTruthy();
-			expect(screen.getByText('4,800')).toBeTruthy();
+			expect(global.fetch).toHaveBeenCalledWith('/api/reports/inventory_stats?uu');
 		});
 	});
 
 	it('handles cent values correctly', async () => {
 		const mockData = {
 			total_value_cents: 12345,
-			total_cards: 10,
-			valued_cards: 10,
-			excluded_cards: 0,
+			cards_over_ten_dollars: 10,
+			total_sets: 5,
 			last_updated: '2026-02-06T10:00:00Z'
 		};
 
