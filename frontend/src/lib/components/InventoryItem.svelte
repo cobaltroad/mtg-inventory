@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { InventoryItem as InventoryItemType } from '$lib/types/inventory';
+	import { shouldShowFinishIndicator, getFinishDisplayName } from '$lib/utils/finishDisplay';
 
 	interface Props {
 		item: InventoryItemType;
@@ -49,9 +50,9 @@
 		<div class="card-info">
 			<span class="set-info">{item.set_name} ({item.set.toUpperCase()})</span>
 			<span class="collector-number"
-				>#{item.collector_number}{#if item.finish && item.finish !== 'nonfoil'}<span
+				>#{item.collector_number}{#if shouldShowFinishIndicator(item.finish, item.promo_types)}<span
 						class="foil-star"
-						title="{capitalizeFirstLetter(item.finish)}">★</span
+						title="{getFinishDisplayName(item.finish, item.promo_types)}">★</span
 					>{/if}</span
 			>
 		</div>
