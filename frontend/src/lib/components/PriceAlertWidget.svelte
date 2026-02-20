@@ -18,6 +18,12 @@
 	let alerts = $state<PriceAlert[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
+	let dismissError = $state<string | null>(null);
+
+	function handleError(err: unknown, context: string, defaultMessage: string): string {
+		console.error(`Error ${context}:`, err);
+		return err instanceof Error ? err.message : defaultMessage;
+	}
 
 	async function fetchAlerts() {
 		try {
@@ -31,8 +37,7 @@
 
 			alerts = await response.json();
 		} catch (err) {
-			console.error('Error fetching price alerts:', err);
-			error = err instanceof Error ? err.message : 'Failed to load price alerts';
+			error = handleError(err, 'fetching price alerts', 'Failed to load price alerts');
 		} finally {
 			loading = false;
 		}
@@ -40,6 +45,7 @@
 
 	async function dismissAlert(alertId: number) {
 		try {
+			dismissError = null;
 			const response = await fetch(`${base}/api/price_alerts/${alertId}/dismiss`, {
 				method: 'PATCH'
 			});
@@ -51,7 +57,7 @@
 			// Remove the alert from the list
 			alerts = alerts.filter((a) => a.id !== alertId);
 		} catch (err) {
-			console.error('Error dismissing alert:', err);
+			dismissError = handleError(err, 'dismissing alert', 'Failed to dismiss alert');
 		}
 	}
 
@@ -87,6 +93,12 @@
 {#if !loading && alerts.length > 0}
 	<div class="price-alert-widget variant-ghost-surface card p-4">
 		<h2 class="mb-4 h3">Price Alerts</h2>
+
+		{#if dismissError}
+			<div role="alert" class="variant-soft-error alert mb-4 p-3">
+				<p class="text-sm text-error-500">{dismissError}</p>
+			</div>
+		{/if}
 
 		<div class="space-y-3">
 			{#each alerts as alert (alert.id)}
@@ -143,7 +155,8 @@
 								type="button"
 								class="variant-ghost-surface btn-icon btn-icon-sm"
 								onclick={() => dismissAlert(alert.id)}
-								aria-label="Dismiss alert"
+								aria-label={`Dismiss ${alert.card_name || 'alert'}`}
+								title="Dismiss this alert"
 							>
 								<X size={16} />
 							</button>
@@ -169,7 +182,7 @@
 	</div>
 {:else if error}
 	<div class="price-alert-widget variant-ghost-error card p-4">
-		<p class="text-sm text-error-500">{error}</p>
+		<p role="alert" class="text-sm text-error-500">{error}</p>
 	</div>
 {/if}
 
