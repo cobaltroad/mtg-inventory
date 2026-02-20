@@ -12,8 +12,6 @@
 	const sortOptions: { value: SortOption; label: string }[] = [
 		{ value: 'name-asc', label: 'Card Name (A-Z)' },
 		{ value: 'name-desc', label: 'Card Name (Z-A)' },
-		{ value: 'set-asc', label: 'Set Name (A-Z)' },
-		{ value: 'set-desc', label: 'Set Name (Z-A)' },
 		{ value: 'release-newest', label: 'Release Date (Newest First)' },
 		{ value: 'release-oldest', label: 'Release Date (Oldest First)' },
 		{ value: 'value-high', label: 'Value (Highest to Lowest)' },

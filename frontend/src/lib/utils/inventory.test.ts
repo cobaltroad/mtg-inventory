@@ -138,34 +138,6 @@ describe('sortInventory - Card Name', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Tests: sortInventory - Set Name
-// ---------------------------------------------------------------------------
-describe('sortInventory - Set Name', () => {
-	it('sorts by set name A-Z', () => {
-		const result = sortInventory(MOCK_ITEMS, 'set-asc');
-		// Commander 2015 (2 cards), Limited Edition Alpha (1 card), Ultimate Masters (1 card)
-		expect(result[0].set_name).toBe('Commander 2015');
-		expect(result[1].set_name).toBe('Commander 2015');
-		expect(result[2].set_name).toBe('Limited Edition Alpha');
-		expect(result[3].set_name).toBe('Ultimate Masters');
-	});
-
-	it('sorts by set name Z-A', () => {
-		const result = sortInventory(MOCK_ITEMS, 'set-desc');
-		expect(result[0].set_name).toBe('Ultimate Masters');
-		expect(result[1].set_name).toBe('Limited Edition Alpha');
-		expect(result[2].set_name).toBe('Commander 2015');
-	});
-
-	it('within same set, sorts by card name', () => {
-		const result = sortInventory(MOCK_ITEMS, 'set-asc');
-		const c15Cards = result.filter((item) => item.set === 'c15');
-		expect(c15Cards[0].card_name).toBe('Mox Pearl');
-		expect(c15Cards[1].card_name).toBe('Zombie Token');
-	});
-});
-
-// ---------------------------------------------------------------------------
 // Tests: sortInventory - Release Date
 // ---------------------------------------------------------------------------
 describe('sortInventory - Release Date', () => {

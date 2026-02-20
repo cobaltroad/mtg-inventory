@@ -29,8 +29,6 @@ export const FINISH_OPTIONS: readonly CardFinish[] = ['nonfoil', 'foil', 'etched
 export type SortOption =
 	| 'name-asc'
 	| 'name-desc'
-	| 'set-asc'
-	| 'set-desc'
 	| 'release-newest'
 	| 'release-oldest'
 	| 'value-high'

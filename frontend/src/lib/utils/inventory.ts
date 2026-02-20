@@ -28,20 +28,6 @@ export function sortInventory(items: InventoryItem[], sortOption: SortOption): I
 		case 'name-desc':
 			return sorted.sort((a, b) => b.card_name.localeCompare(a.card_name));
 
-		case 'set-asc':
-			return sorted.sort((a, b) => {
-				const setCompare = a.set_name.localeCompare(b.set_name);
-				if (setCompare !== 0) return setCompare;
-				return a.card_name.localeCompare(b.card_name);
-			});
-
-		case 'set-desc':
-			return sorted.sort((a, b) => {
-				const setCompare = b.set_name.localeCompare(a.set_name);
-				if (setCompare !== 0) return setCompare;
-				return a.card_name.localeCompare(b.card_name);
-			});
-
 		case 'release-newest':
 			return sorted.sort((a, b) => {
 				if (!a.released_at && !b.released_at) return 0;
