@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-02-20
+
+### Added
+- **Inventory Color Filtering** (#207)
+  - Filter cards by color identity (W, U, B, R, G, colorless)
+  - Backend API with color filtering support
+  - Frontend UI with interactive color filter buttons
+  - Handles double-faced cards properly
+  - Mono-color filtering by default
+- **Finish Display Improvements** (#204)
+  - Display specific finish types without 'finish' suffix
+  - Promo types support for special finish cards
+  - New `finishDisplay` utility for consistent formatting
+- **Price Alert Enhancements** (#203, #211)
+  - $5 minimum price threshold for increase alerts (reduces noise)
+  - Comprehensive dismiss functionality with hard delete
+  - Improved X icon visibility in dismiss button
+- **Mobile Responsive Inventory** (#42)
+  - Fully responsive inventory page layout
+  - Optimized table display for mobile devices
+- **Static Card List Integration** (#200)
+  - GitHub writer for static card lists (Game Changers, VCR)
+  - VCR integration tests with real HTTP responses
+  - Manual Game Changers YAML support
+  - Wizards source for card data
+
+### Changed
+- Inventory value sort now uses unit price instead of total value
+- Set sort option removed from inventory
+- Removed `active` scope from price_alerts (simpler query model)
+- Moxfield requests now include browser headers to prevent 403 errors
+
+### Fixed
+- TypeScript pre-existing lint errors across multiple files
+- Failing frontend tests (#217)
+- Skeleton UI v3 to v4 class migration (#214)
+- Race condition memoization issues in concurrent requests
+- Card search result styling improvements
+- EDH metagame page improvements
+
 ## [0.4.0] - 2026-02-12
 
 ### Added
@@ -102,6 +142,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Earlier releases are not documented in this changelog.
 
+[0.6.0]: https://github.com/cobaltroad/mtg-inventory/compare/v0.5.2...v0.6.0
 [0.4.0]: https://github.com/cobaltroad/mtg-inventory/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/cobaltroad/mtg-inventory/compare/v0.3.1...v0.3.3
 [0.1.0]: https://github.com/cobaltroad/mtg-inventory/compare/v0.0.3...v0.1.0
