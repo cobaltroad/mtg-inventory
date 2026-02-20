@@ -49,9 +49,9 @@
 		<div class="card-info">
 			<span class="set-info">{item.set_name} ({item.set.toUpperCase()})</span>
 			<span class="collector-number"
-				>#{item.collector_number}{#if item.finish === 'foil' || item.finish === 'etched'}<span
+				>#{item.collector_number}{#if item.finish && item.finish !== 'nonfoil'}<span
 						class="foil-star"
-						title="{capitalizeFirstLetter(item.finish)} finish">★</span
+						title="{capitalizeFirstLetter(item.finish)}">★</span
 					>{/if}</span
 			>
 		</div>

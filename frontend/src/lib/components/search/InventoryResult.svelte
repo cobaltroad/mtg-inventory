@@ -42,9 +42,9 @@
 			<span class="set-name">{result.set_name}</span>
 			<span class="set-code">({result.set.toUpperCase()})</span>
 			<span class="collector-number"
-				>#{result.collector_number}{#if result.finish === 'foil' || result.finish === 'etched'}<span
+				>#{result.collector_number}{#if result.finish && result.finish !== 'nonfoil'}<span
 						class="foil-star"
-						title="{capitalizeFirstLetter(result.finish)} finish">★</span
+						title="{capitalizeFirstLetter(result.finish)}">★</span
 					>{/if}</span
 			>
 		</div>

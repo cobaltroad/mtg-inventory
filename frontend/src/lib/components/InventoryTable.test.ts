@@ -275,3 +275,156 @@ describe('InventoryTable Component - Styling', () => {
 		expect(table).toBeInTheDocument();
 	});
 });
+
+describe('InventoryTable Component - Finish Type Display', () => {
+	it('should render star indicator for foil finish', () => {
+		const foilItem: InventoryItem[] = [
+			{
+				...mockItems[0],
+				finish: 'foil'
+			}
+		];
+		const { container } = render(InventoryTable, { props: { items: foilItem } });
+		const star = container.querySelector('.foil-star');
+		expect(star).toBeInTheDocument();
+		expect(star?.textContent).toBe('★');
+	});
+
+	it('should render star indicator for etched finish', () => {
+		const etchedItem: InventoryItem[] = [
+			{
+				...mockItems[0],
+				finish: 'etched'
+			}
+		];
+		const { container } = render(InventoryTable, { props: { items: etchedItem } });
+		const star = container.querySelector('.foil-star');
+		expect(star).toBeInTheDocument();
+		expect(star?.textContent).toBe('★');
+	});
+
+	it('should render star indicator for halofoil finish', () => {
+		const halofoilItem: InventoryItem[] = [
+			{
+				...mockItems[0],
+				finish: 'halofoil'
+			}
+		];
+		const { container } = render(InventoryTable, { props: { items: halofoilItem } });
+		const star = container.querySelector('.foil-star');
+		expect(star).toBeInTheDocument();
+		expect(star?.textContent).toBe('★');
+	});
+
+	it('should render star indicator for rainbowfoil finish', () => {
+		const rainbowfoilItem: InventoryItem[] = [
+			{
+				...mockItems[0],
+				finish: 'rainbowfoil'
+			}
+		];
+		const { container } = render(InventoryTable, { props: { items: rainbowfoilItem } });
+		const star = container.querySelector('.foil-star');
+		expect(star).toBeInTheDocument();
+		expect(star?.textContent).toBe('★');
+	});
+
+	it('should render star indicator for surgefoil finish', () => {
+		const surgefoilItem: InventoryItem[] = [
+			{
+				...mockItems[0],
+				finish: 'surgefoil'
+			}
+		];
+		const { container } = render(InventoryTable, { props: { items: surgefoilItem } });
+		const star = container.querySelector('.foil-star');
+		expect(star).toBeInTheDocument();
+		expect(star?.textContent).toBe('★');
+	});
+
+	it('should display "Foil" tooltip without "finish" suffix', () => {
+		const foilItem: InventoryItem[] = [
+			{
+				...mockItems[0],
+				finish: 'foil'
+			}
+		];
+		const { container } = render(InventoryTable, { props: { items: foilItem } });
+		const star = container.querySelector('.foil-star');
+		expect(star).toHaveAttribute('title', 'Foil');
+		expect(star?.getAttribute('title')).not.toContain('finish');
+	});
+
+	it('should display "Etched" tooltip without "finish" suffix', () => {
+		const etchedItem: InventoryItem[] = [
+			{
+				...mockItems[0],
+				finish: 'etched'
+			}
+		];
+		const { container } = render(InventoryTable, { props: { items: etchedItem } });
+		const star = container.querySelector('.foil-star');
+		expect(star).toHaveAttribute('title', 'Etched');
+		expect(star?.getAttribute('title')).not.toContain('finish');
+	});
+
+	it('should display "Halofoil" tooltip', () => {
+		const halofoilItem: InventoryItem[] = [
+			{
+				...mockItems[0],
+				finish: 'halofoil'
+			}
+		];
+		const { container } = render(InventoryTable, { props: { items: halofoilItem } });
+		const star = container.querySelector('.foil-star');
+		expect(star).toHaveAttribute('title', 'Halofoil');
+	});
+
+	it('should display "Rainbowfoil" tooltip', () => {
+		const rainbowfoilItem: InventoryItem[] = [
+			{
+				...mockItems[0],
+				finish: 'rainbowfoil'
+			}
+		];
+		const { container } = render(InventoryTable, { props: { items: rainbowfoilItem } });
+		const star = container.querySelector('.foil-star');
+		expect(star).toHaveAttribute('title', 'Rainbowfoil');
+	});
+
+	it('should display "Surgefoil" tooltip', () => {
+		const surgefoilItem: InventoryItem[] = [
+			{
+				...mockItems[0],
+				finish: 'surgefoil'
+			}
+		];
+		const { container } = render(InventoryTable, { props: { items: surgefoilItem } });
+		const star = container.querySelector('.foil-star');
+		expect(star).toHaveAttribute('title', 'Surgefoil');
+	});
+
+	it('should not render star indicator for nonfoil cards', () => {
+		const nonfoilItem: InventoryItem[] = [
+			{
+				...mockItems[0],
+				finish: 'nonfoil'
+			}
+		];
+		const { container } = render(InventoryTable, { props: { items: nonfoilItem } });
+		const star = container.querySelector('.foil-star');
+		expect(star).not.toBeInTheDocument();
+	});
+
+	it('should not render star indicator for null finish', () => {
+		const nullFinishItem: InventoryItem[] = [
+			{
+				...mockItems[0],
+				finish: null
+			}
+		];
+		const { container } = render(InventoryTable, { props: { items: nullFinishItem } });
+		const star = container.querySelector('.foil-star');
+		expect(star).not.toBeInTheDocument();
+	});
+});
