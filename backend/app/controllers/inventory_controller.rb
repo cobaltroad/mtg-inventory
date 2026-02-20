@@ -27,6 +27,10 @@ class InventoryController < ApplicationController
   #          Options: name-asc, name-desc, set-asc, set-desc,
   #                   release-newest, release-oldest, value-high, value-low,
   #                   date-newest, date-oldest
+  #   colors - Comma-separated color filters (optional)
+  #            Options: W, U, B, R, G, multicolor, colorless
+  #            Example: ?colors=W,U (white OR blue cards)
+  #            Note: Color filtering requires enriching all items with Scryfall data
   #
   # Returns JSON with:
   #   items: array of inventory items with card details
@@ -611,9 +615,28 @@ class InventoryController < ApplicationController
   # Applies color filtering to collection items based on the colors parameter.
   # Supports single colors (W, U, B, R, G), multicolor, colorless, and OR logic.
   #
+  # Implementation Note:
+  # Color data is fetched from Scryfall API and not stored in the database,
+  # so this method must enrich all items to access color information.
+  # For large inventories (1000+ cards), this may take 1-2 seconds.
+  # Future optimization: Consider caching color data in CollectionItem model.
+  #
+  # Filter Logic:
+  # - Color codes (W, U, B, R, G): Returns cards containing ANY of the specified colors
+  # - "multicolor": Returns cards with 2+ colors
+  # - "colorless": Returns cards with 0 colors
+  # - Multiple filters use OR logic (e.g., "W,multicolor" returns white OR multicolor cards)
+  #
+  # Examples:
+  #   apply_color_filters(items, "W")           # White cards only
+  #   apply_color_filters(items, "W,U")         # White OR Blue cards
+  #   apply_color_filters(items, "multicolor")  # Cards with 2+ colors
+  #   apply_color_filters(items, "colorless")   # Colorless cards
+  #   apply_color_filters(items, "W,multicolor") # White OR multicolor cards
+  #
   # @param items [ActiveRecord::Relation] Collection items to filter
   # @param colors_param [String] Comma-separated color codes or special filters
-  # @return [Array<CollectionItem>] Filtered items
+  # @return [ActiveRecord::Relation] Filtered items
   def apply_color_filters(items, colors_param)
     return items if colors_param.blank?
 
