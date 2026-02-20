@@ -70,4 +70,16 @@ describe('Home Page', () => {
 			expect(link).toHaveAttribute('href', `${BASE}/search`);
 		});
 	});
+
+	it('search button has proper Skeleton v4 classes instead of v3 variant-filled-primary', async () => {
+		render(HomePage);
+
+		await waitFor(() => {
+			const link = screen.getByRole('link', { name: /search cards/i });
+			const classNames = link.className;
+			// Should have Skeleton v4 primary button classes, not dead v3 classes
+			expect(classNames).toMatch(/bg-primary-/);
+			expect(classNames).not.toContain('variant-filled-primary');
+		});
+	});
 });

@@ -448,6 +448,28 @@ describe('InventoryValueWidget - Time Period', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Tests: Skeleton UI v4 Visual Classes (Regression for v3->v4 Migration)
+// ---------------------------------------------------------------------------
+describe('InventoryValueWidget - Skeleton UI v4 Classes', () => {
+	it('time period buttons have proper Skeleton v4 hover classes instead of v3 variant-ghost-surface', async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => validTimelineResponse
+		});
+
+		const { container } = render(InventoryValueWidget);
+
+		await waitFor(() => {
+			const sevenDayButton = screen.getByText('7 Days');
+			const classNames = sevenDayButton.className;
+			// Inactive buttons should have Skeleton v4 hover classes, not dead v3 classes
+			expect(classNames).toMatch(/hover:bg-surface-/);
+			expect(classNames).not.toContain('variant-ghost-surface');
+		});
+	});
+});
+
+// ---------------------------------------------------------------------------
 // Tests: Chart Rendering
 // ---------------------------------------------------------------------------
 describe('InventoryValueWidget - Chart', () => {

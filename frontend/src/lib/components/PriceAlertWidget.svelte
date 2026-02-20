@@ -18,6 +18,12 @@
 	let alerts = $state<PriceAlert[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
+	let dismissError = $state<string | null>(null);
+
+	function handleError(err: unknown, context: string, defaultMessage: string): string {
+		console.error(`Error ${context}:`, err);
+		return err instanceof Error ? err.message : defaultMessage;
+	}
 
 	async function fetchAlerts() {
 		try {
@@ -31,8 +37,7 @@
 
 			alerts = await response.json();
 		} catch (err) {
-			console.error('Error fetching price alerts:', err);
-			error = err instanceof Error ? err.message : 'Failed to load price alerts';
+			error = handleError(err, 'fetching price alerts', 'Failed to load price alerts');
 		} finally {
 			loading = false;
 		}
@@ -40,6 +45,7 @@
 
 	async function dismissAlert(alertId: number) {
 		try {
+			dismissError = null;
 			const response = await fetch(`${base}/api/price_alerts/${alertId}/dismiss`, {
 				method: 'PATCH'
 			});
@@ -51,7 +57,7 @@
 			// Remove the alert from the list
 			alerts = alerts.filter((a) => a.id !== alertId);
 		} catch (err) {
-			console.error('Error dismissing alert:', err);
+			dismissError = handleError(err, 'dismissing alert', 'Failed to dismiss alert');
 		}
 	}
 
@@ -85,15 +91,30 @@
 </script>
 
 {#if !loading && alerts.length > 0}
-	<div class="price-alert-widget variant-ghost-surface card p-4">
+	<div class="price-alert-widget card p-4">
 		<h2 class="mb-4 h3">Price Alerts</h2>
+
+		{#if dismissError}
+			<div
+				role="alert"
+				class="alert mb-4 bg-error-200 p-3 text-error-900 dark:bg-error-800 dark:text-error-100"
+			>
+				<p class="text-sm">{dismissError}</p>
+			</div>
+		{/if}
 
 		<div class="space-y-3">
 			{#each alerts as alert (alert.id)}
 				<div
-					class="alert-item variant-soft flex items-start gap-3 card p-3"
-					class:variant-soft-success={alert.alert_type === 'price_increase'}
-					class:variant-soft-error={alert.alert_type === 'price_decrease'}
+					class="alert-item flex items-start gap-3 card p-3"
+					class:bg-success-200={alert.alert_type === 'price_increase'}
+					class:dark:bg-success-800={alert.alert_type === 'price_increase'}
+					class:text-success-900={alert.alert_type === 'price_increase'}
+					class:dark:text-success-100={alert.alert_type === 'price_increase'}
+					class:bg-error-200={alert.alert_type === 'price_decrease'}
+					class:dark:bg-error-800={alert.alert_type === 'price_decrease'}
+					class:text-error-900={alert.alert_type === 'price_decrease'}
+					class:dark:text-error-100={alert.alert_type === 'price_decrease'}
 				>
 					<!-- Icon -->
 					<div class="mt-0.5 flex-shrink-0">
@@ -120,7 +141,9 @@
 										Price Drop
 									{/if}
 									{#if alert.finish && alert.finish !== 'nonfoil'}
-										<span class="text-surface-600-300-token">({capitalizeFirstLetter(alert.finish)})</span>
+										<span class="text-surface-600-300-token"
+											>({capitalizeFirstLetter(alert.finish)})</span
+										>
 									{/if}
 								</p>
 								<p class="text-surface-600-300-token mt-1 text-xs">
@@ -141,11 +164,12 @@
 							<!-- Dismiss button -->
 							<button
 								type="button"
-								class="variant-ghost-surface btn-icon btn-icon-sm"
+								class="btn-icon rounded-md transition-all bg-surface-300 text-surface-900 hover:bg-error-500 hover:text-white dark:bg-surface-700 dark:text-surface-100 dark:hover:bg-error-500"
 								onclick={() => dismissAlert(alert.id)}
-								aria-label="Dismiss alert"
+								aria-label={`Dismiss ${alert.card_name || 'alert'}`}
+								title="Dismiss this alert"
 							>
-								<X size={16} />
+								<X size={20} />
 							</button>
 						</div>
 					</div>
@@ -160,7 +184,7 @@
 		{/if}
 	</div>
 {:else if loading}
-	<div class="price-alert-widget variant-ghost-surface card p-4">
+	<div class="price-alert-widget card p-4">
 		<div class="placeholder animate-pulse space-y-3">
 			<div class="bg-surface-300-600-token h-6 w-32 rounded"></div>
 			<div class="bg-surface-300-600-token h-16 rounded"></div>
@@ -168,8 +192,8 @@
 		</div>
 	</div>
 {:else if error}
-	<div class="price-alert-widget variant-ghost-error card p-4">
-		<p class="text-sm text-error-500">{error}</p>
+	<div class="price-alert-widget card p-4">
+		<p role="alert" class="text-sm text-error-500">{error}</p>
 	</div>
 {/if}
 
