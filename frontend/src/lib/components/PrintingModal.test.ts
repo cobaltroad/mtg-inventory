@@ -959,7 +959,7 @@ describe('PrintingModal - Form Fields', () => {
 				expect(screen.getByText(/^Language$/i)).toBeInTheDocument();
 			});
 
-			const japaneseOption = screen.getByText('JA');
+			const japaneseOption = screen.getByText('JP');
 			await user.click(japaneseOption);
 			await tick();
 
@@ -985,7 +985,7 @@ describe('PrintingModal - Form Fields', () => {
 				expect(screen.getByText(/^Language$/i)).toBeInTheDocument();
 			});
 
-			const japaneseOption = screen.getByText('JA');
+			const japaneseOption = screen.getByText('JP');
 			await user.click(japaneseOption);
 			await tick();
 
@@ -1016,7 +1016,7 @@ describe('PrintingModal - Form Fields', () => {
 				expect(screen.getByText(/^Language$/i)).toBeInTheDocument();
 			});
 
-			await user.click(screen.getByText('JA'));
+			await user.click(screen.getByText('JP'));
 			await tick();
 			let japaneseRadio = screen.getByDisplayValue('Japanese') as HTMLInputElement;
 			expect(japaneseRadio.checked).toBe(true);
