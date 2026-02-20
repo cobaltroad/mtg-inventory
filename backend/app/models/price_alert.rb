@@ -36,9 +36,9 @@ class PriceAlert < ApplicationRecord
   # Instance Methods
   # ---------------------------------------------------------------------------
 
-  # Marks the alert as dismissed and records the dismissal timestamp.
+  # Permanently deletes the alert (hard delete).
   def dismiss!
-    update!(dismissed: true, dismissed_at: Time.current)
+    destroy!
   end
 
   # Returns true if this is a price increase alert.
