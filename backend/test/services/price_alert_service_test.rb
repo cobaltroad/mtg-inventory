@@ -74,6 +74,83 @@ class PriceAlertServiceTest < ActiveSupport::TestCase
     assert_equal 0, alerts.count
   end
 
+  test "does not create increase alert when old price is below $5.00 minimum even with percentage threshold met" do
+    CardPrice.create!(
+      card_id: @card_id,
+      usd_cents: 300,  # $3.00 - below $5.00 minimum
+      fetched_at: 1.day.ago
+    )
+
+    CardPrice.create!(
+      card_id: @card_id,
+      usd_cents: 450,  # $4.50 - 50% increase but still below minimum
+      fetched_at: Time.current
+    )
+
+    CollectionItem.create!(
+      user: @user,
+      card_id: @card_id,
+      collection_type: "inventory",
+      quantity: 1
+    )
+
+    alerts = @service.detect_price_changes
+
+    assert_equal 0, alerts.count, "Should not create alert when old price is below $5.00"
+  end
+
+  test "creates increase alert when old price is exactly $5.00 and percentage threshold met" do
+    CardPrice.create!(
+      card_id: @card_id,
+      usd_cents: 500,  # Exactly $5.00
+      fetched_at: 1.day.ago
+    )
+
+    CardPrice.create!(
+      card_id: @card_id,
+      usd_cents: 600,  # 20% increase
+      fetched_at: Time.current
+    )
+
+    CollectionItem.create!(
+      user: @user,
+      card_id: @card_id,
+      collection_type: "inventory",
+      quantity: 1
+    )
+
+    alerts = @service.detect_price_changes
+
+    assert_equal 1, alerts.count
+    assert_equal "price_increase", alerts.first.alert_type
+  end
+
+  test "creates increase alert when old price is above $5.00 and percentage threshold met" do
+    CardPrice.create!(
+      card_id: @card_id,
+      usd_cents: 1000,  # $10.00 - above minimum
+      fetched_at: 1.day.ago
+    )
+
+    CardPrice.create!(
+      card_id: @card_id,
+      usd_cents: 1200,  # 20% increase
+      fetched_at: Time.current
+    )
+
+    CollectionItem.create!(
+      user: @user,
+      card_id: @card_id,
+      collection_type: "inventory",
+      quantity: 1
+    )
+
+    alerts = @service.detect_price_changes
+
+    assert_equal 1, alerts.count
+    assert_equal "price_increase", alerts.first.alert_type
+  end
+
   # ---------------------------------------------------------------------------
   # Price Change Detection - Decreases
   # ---------------------------------------------------------------------------
@@ -131,6 +208,58 @@ class PriceAlertServiceTest < ActiveSupport::TestCase
     alerts = @service.detect_price_changes
 
     assert_equal 0, alerts.count
+  end
+
+  test "creates decrease alert even when old price is below $5.00 minimum" do
+    CardPrice.create!(
+      card_id: @card_id,
+      usd_cents: 300,  # $3.00 - below minimum
+      fetched_at: 1.day.ago
+    )
+
+    CardPrice.create!(
+      card_id: @card_id,
+      usd_cents: 210,  # 30% decrease
+      fetched_at: Time.current
+    )
+
+    CollectionItem.create!(
+      user: @user,
+      card_id: @card_id,
+      collection_type: "inventory",
+      quantity: 1
+    )
+
+    alerts = @service.detect_price_changes
+
+    assert_equal 1, alerts.count, "Should create alert for decrease even when old price is below $5.00"
+    assert_equal "price_decrease", alerts.first.alert_type
+  end
+
+  test "creates decrease alert when old price is exactly $5.00" do
+    CardPrice.create!(
+      card_id: @card_id,
+      usd_cents: 500,  # Exactly $5.00
+      fetched_at: 1.day.ago
+    )
+
+    CardPrice.create!(
+      card_id: @card_id,
+      usd_cents: 350,  # 30% decrease
+      fetched_at: Time.current
+    )
+
+    CollectionItem.create!(
+      user: @user,
+      card_id: @card_id,
+      collection_type: "inventory",
+      quantity: 1
+    )
+
+    alerts = @service.detect_price_changes
+
+    assert_equal 1, alerts.count
+    assert_equal "price_decrease", alerts.first.alert_type
   end
 
   # ---------------------------------------------------------------------------
