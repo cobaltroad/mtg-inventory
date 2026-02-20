@@ -25,8 +25,29 @@ export const load: PageLoad = async ({ fetch, url }) => {
 			sort = 'name-asc';
 		}
 
-		// Fetch with pagination and sort parameters
-		const res = await fetch(`${base}/api/inventory?page=${page}&per_page=${perPage}&sort=${sort}`);
+		// Get color filters from URL, or fallback to localStorage
+		let colors = url.searchParams.get('colors');
+		if (!colors && browser) {
+			colors = localStorage.getItem('inventory-colors') || '';
+		}
+		if (!colors) {
+			colors = '';
+		}
+
+		// Build query parameters
+		const params = new URLSearchParams({
+			page,
+			per_page: perPage,
+			sort
+		});
+
+		// Add colors parameter if present
+		if (colors) {
+			params.set('colors', colors);
+		}
+
+		// Fetch with pagination, sort, and color filter parameters
+		const res = await fetch(`${base}/api/inventory?${params.toString()}`);
 		if (!res.ok) {
 			throw new Error(`Failed to fetch inventory: ${res.statusText}`);
 		}

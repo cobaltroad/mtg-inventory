@@ -8,6 +8,7 @@
 	import EmptyInventory from '$lib/components/EmptyInventory.svelte';
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 	import FilterBar from '$lib/components/FilterBar.svelte';
+	import ColorFilter from '$lib/components/ColorFilter.svelte';
 	import SortDropdown from '$lib/components/SortDropdown.svelte';
 	import InventoryStats from '$lib/components/InventoryStats.svelte';
 	import { pluralize } from '$lib/utils/format';
@@ -20,6 +21,7 @@
 	const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
 	const STORAGE_KEY_SORT = 'inventory-sort';
 	const STORAGE_KEY_PAGE_SIZE = 'inventory-page-size';
+	const STORAGE_KEY_COLORS = 'inventory-colors';
 
 	let { data }: { data: PageData } = $props();
 
@@ -133,6 +135,7 @@
 	// Filtering and sorting state
 	let currentFilter = $state('');
 	let currentSort = $state<SortOption>('name-asc');
+	let selectedColors = $state<string[]>([]);
 
 	// Pagination state - sync with backend page when available
 	let currentPage = $state(1);
@@ -201,11 +204,23 @@
 		return `${totalCount} ${pluralize(totalCount, 'card')}`;
 	});
 
-	// Load sort preference from localStorage on mount
+	// Load sort and color preferences from localStorage on mount
 	onMount(() => {
 		const savedSort = localStorage.getItem(STORAGE_KEY_SORT);
 		if (savedSort) {
 			currentSort = savedSort as SortOption;
+		}
+
+		const savedColors = localStorage.getItem(STORAGE_KEY_COLORS);
+		if (savedColors) {
+			try {
+				const parsed = JSON.parse(savedColors);
+				if (Array.isArray(parsed)) {
+					selectedColors = parsed;
+				}
+			} catch (e) {
+				// Invalid JSON, ignore
+			}
 		}
 	});
 
@@ -234,6 +249,27 @@
 	function handleFilterChange(newFilter: string) {
 		currentFilter = newFilter;
 		currentPage = 1; // Reset to first page when filter changes
+	}
+
+	/**
+	 * Updates color filters and persists to localStorage
+	 * When backend pagination is active, also updates URL to trigger page load
+	 */
+	function handleColorChange(newColors: string[]) {
+		selectedColors = newColors;
+		localStorage.setItem(STORAGE_KEY_COLORS, JSON.stringify(newColors));
+		currentPage = 1; // Reset to first page when filter changes
+
+		// Update URL for backend pagination to trigger new data fetch
+		const url = new URL($page.url);
+		if (newColors.length > 0) {
+			url.searchParams.set('colors', newColors.join(','));
+		} else {
+			url.searchParams.delete('colors');
+		}
+		url.searchParams.set('page', '1'); // Reset to first page
+		url.searchParams.set('per_page', String(pageSize));
+		goto(url.toString(), { keepFocus: true, noScroll: true });
 	}
 
 	/**
@@ -306,8 +342,11 @@
 		{/if}
 
 		<div class="controls-bar">
-			<FilterBar items={allItems} {currentFilter} onFilterChange={handleFilterChange} />
-			<SortDropdown {currentSort} onSortChange={handleSortChange} />
+			<ColorFilter {selectedColors} onColorChange={handleColorChange} />
+			<div class="filter-sort-row">
+				<FilterBar items={allItems} {currentFilter} onFilterChange={handleFilterChange} />
+				<SortDropdown {currentSort} onSortChange={handleSortChange} />
+			</div>
 		</div>
 
 		{#if filteredItems.length === 0}
@@ -451,9 +490,15 @@
 
 	.controls-bar {
 		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.filter-sort-row {
+		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		margin-bottom: 1.5rem;
 		gap: 1rem;
 		flex-wrap: wrap;
 	}
@@ -579,7 +624,7 @@
 	}
 
 	@media (max-width: 768px) {
-		.controls-bar {
+		.filter-sort-row {
 			flex-direction: column;
 			align-items: stretch;
 		}
