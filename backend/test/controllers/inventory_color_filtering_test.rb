@@ -133,6 +133,26 @@ class InventoryColorFilteringTest < ActionDispatch::IntegrationTest
     assert_equal "green_1", items.first["card_id"]
   end
 
+  test "GET /api/inventory?colors=W excludes multicolor cards with white" do
+    mono_white = CollectionItem.create!(user: @user, card_id: "mono_w", collection_type: "inventory", quantity: 1)
+    dual_wu = CollectionItem.create!(user: @user, card_id: "dual_wu", collection_type: "inventory", quantity: 1)
+    dual_wb = CollectionItem.create!(user: @user, card_id: "dual_wb", collection_type: "inventory", quantity: 1)
+
+    stub_card_with_colors("mono_w", name: "Serra Angel", colors: ["W"])
+    stub_card_with_colors("dual_wu", name: "Azorius Charm", colors: ["W", "U"])
+    stub_card_with_colors("dual_wb", name: "Orzhov Charm", colors: ["W", "B"])
+
+    get api_path("/inventory?colors=W")
+
+    assert_response :success
+    items = parse_inventory_response
+    assert_equal 1, items.size, "Should return ONLY mono-white (multicolor excluded)"
+    assert_equal "mono_w", items.first["card_id"]
+    card_ids = items.map { |item| item["card_id"] }
+    assert_not_includes card_ids, "dual_wu", "W/U multicolor card excluded"
+    assert_not_includes card_ids, "dual_wb", "W/B multicolor card excluded"
+  end
+
   # ---------------------------------------------------------------------------
   # AC2: Multicolor Filter Tests
   # ---------------------------------------------------------------------------
@@ -186,7 +206,7 @@ class InventoryColorFilteringTest < ActionDispatch::IntegrationTest
   # AC4: Multiple Color Filters (OR Logic) Tests
   # ---------------------------------------------------------------------------
 
-  test "GET /api/inventory?colors=W,U returns cards with white OR blue" do
+  test "GET /api/inventory?colors=W,U returns mono-white OR mono-blue (no multicolor)" do
     white_card = CollectionItem.create!(user: @user, card_id: "white_1", collection_type: "inventory", quantity: 1)
     blue_card = CollectionItem.create!(user: @user, card_id: "blue_1", collection_type: "inventory", quantity: 1)
     red_card = CollectionItem.create!(user: @user, card_id: "red_1", collection_type: "inventory", quantity: 1)
@@ -201,15 +221,15 @@ class InventoryColorFilteringTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     items = parse_inventory_response
-    assert_equal 3, items.size, "Should return cards with W OR U"
+    assert_equal 2, items.size, "Should return mono-white OR mono-blue (no multicolor)"
     card_ids = items.map { |item| item["card_id"] }
     assert_includes card_ids, "white_1"
     assert_includes card_ids, "blue_1"
-    assert_includes card_ids, "wu_1"
+    assert_not_includes card_ids, "wu_1", "Multicolor cards excluded without M filter"
     assert_not_includes card_ids, "red_1"
   end
 
-  test "GET /api/inventory?colors=B,R,G returns cards with black OR red OR green" do
+  test "GET /api/inventory?colors=B,R,G returns mono-black OR mono-red OR mono-green (no multicolor)" do
     black_card = CollectionItem.create!(user: @user, card_id: "black_1", collection_type: "inventory", quantity: 1)
     red_card = CollectionItem.create!(user: @user, card_id: "red_1", collection_type: "inventory", quantity: 1)
     green_card = CollectionItem.create!(user: @user, card_id: "green_1", collection_type: "inventory", quantity: 1)
@@ -226,12 +246,12 @@ class InventoryColorFilteringTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     items = parse_inventory_response
-    assert_equal 4, items.size, "Should return cards with B OR R OR G"
+    assert_equal 3, items.size, "Should return mono-color B, R, or G (no multicolor)"
     card_ids = items.map { |item| item["card_id"] }
     assert_includes card_ids, "black_1"
     assert_includes card_ids, "red_1"
     assert_includes card_ids, "green_1"
-    assert_includes card_ids, "brg_1"
+    assert_not_includes card_ids, "brg_1", "Multicolor cards excluded without M filter"
     assert_not_includes card_ids, "white_1"
   end
 
@@ -356,10 +376,10 @@ class InventoryColorFilteringTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     items = parse_inventory_response
-    assert_equal 3, items.size, "Should return multicolor cards OR white cards"
+    assert_equal 2, items.size, "Should return mono-white + multicolor cards containing white"
     card_ids = items.map { |item| item["card_id"] }
-    assert_includes card_ids, "mono_w"
-    assert_includes card_ids, "dual_wb"
-    assert_includes card_ids, "dual_ub"
+    assert_includes card_ids, "mono_w", "Mono-white card included"
+    assert_includes card_ids, "dual_wb", "Multicolor card with W included"
+    assert_not_includes card_ids, "dual_ub", "Multicolor card without W excluded"
   end
 end

@@ -621,18 +621,19 @@ class InventoryController < ApplicationController
   # For large inventories (1000+ cards), this may take 1-2 seconds.
   # Future optimization: Consider caching color data in CollectionItem model.
   #
-  # Filter Logic:
-  # - Color codes (W, U, B, R, G): Returns cards containing ANY of the specified colors
-  # - "multicolor": Returns cards with 2+ colors
-  # - "colorless": Returns cards with 0 colors
-  # - Multiple filters use OR logic (e.g., "W,multicolor" returns white OR multicolor cards)
+  # Filter Logic (Mono-color by default):
+  # - W alone: Returns ONLY mono-white cards
+  # - W,U (without M): Returns mono-white OR mono-blue cards (no multicolor)
+  # - W + M: Returns mono-white cards AND multicolor cards containing white
+  # - M alone: Returns all multicolor cards (2+ colors)
+  # - C (colorless): Returns colorless cards
   #
   # Examples:
-  #   apply_color_filters(items, "W")           # White cards only
-  #   apply_color_filters(items, "W,U")         # White OR Blue cards
-  #   apply_color_filters(items, "multicolor")  # Cards with 2+ colors
-  #   apply_color_filters(items, "colorless")   # Colorless cards
-  #   apply_color_filters(items, "W,multicolor") # White OR multicolor cards
+  #   apply_color_filters(items, "W")           # Mono-white cards only
+  #   apply_color_filters(items, "W,U")         # Mono-white OR mono-blue (no multicolor)
+  #   apply_color_filters(items, "W,multicolor") # Mono-white + multicolor containing white
+  #   apply_color_filters(items, "multicolor")  # All multicolor cards
+  #   apply_color_filters(items, "colorless")   # Colorless cards only
   #
   # @param items [ActiveRecord::Relation] Collection items to filter
   # @param colors_param [String] Comma-separated color codes or special filters
@@ -655,27 +656,35 @@ class InventoryController < ApplicationController
     preload_prices(items_with_details)
     enriched_items = enrich_with_card_details(items_with_details)
 
+    multicolor_selected = special_filters.include?("MULTICOLOR")
+    colorless_selected = special_filters.include?("COLORLESS")
+
     # Filter items based on color criteria
     filtered = enriched_items.select do |item|
       card_colors = item[:colors] || []
 
-      # Check special filters
-      matches_special = special_filters.any? do |filter|
-        case filter
-        when "MULTICOLOR"
-          card_colors.length >= 2
-        when "COLORLESS"
-          card_colors.empty?
+      # Colorless matching
+      matches_colorless = colorless_selected && card_colors.empty?
+
+      # Color matching logic
+      if color_codes.any?
+        if multicolor_selected
+          # With M: match mono-color of requested colors OR multicolor containing any requested color
+          is_requested_mono = card_colors.length == 1 && color_codes.include?(card_colors.first)
+          is_matching_multi = card_colors.length >= 2 && (card_colors & color_codes).any?
+          matches_colors = is_requested_mono || is_matching_multi
+        else
+          # Without M: only match mono-color of requested colors
+          matches_colors = card_colors.length == 1 && color_codes.include?(card_colors.first)
         end
+      elsif multicolor_selected
+        # M alone (no specific colors): match all multicolor
+        matches_colors = card_colors.length >= 2
+      else
+        matches_colors = false
       end
 
-      # Check color codes (OR logic - card must contain at least one requested color)
-      matches_colors = color_codes.any? do |color|
-        card_colors.include?(color)
-      end
-
-      # Item matches if it satisfies any filter (OR logic across all filters)
-      matches_special || matches_colors
+      matches_colorless || matches_colors
     end
 
     # Convert filtered enriched items back to CollectionItem relation format
