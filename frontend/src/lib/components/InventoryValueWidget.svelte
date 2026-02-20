@@ -271,7 +271,7 @@
 				<div class="card bg-surface-200 p-4 dark:bg-surface-800">
 					<div class="text-surface-600-300-token text-sm">Current Value</div>
 					<div class="text-2xl font-bold">
-						{timelineData.summary.end_value_cents}
+						{formatCurrency(timelineData.summary.end_value_cents)}
 					</div>
 				</div>
 				<div class="card bg-surface-200 p-4 dark:bg-surface-800">
