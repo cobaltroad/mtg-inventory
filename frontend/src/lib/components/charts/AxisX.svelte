@@ -5,7 +5,7 @@
 
 	$: ticks = $xScale.ticks(5);
 
-	function formatDate(date) {
+	function formatDate(/** @type {any} */ date) {
 		return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(date);
 	}
 </script>

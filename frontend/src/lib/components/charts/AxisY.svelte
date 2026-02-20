@@ -2,6 +2,7 @@
 	import { getContext } from 'svelte';
 
 	export let ticks = 4;
+	/** @type {(d: any) => any} */
 	export let formatTick = (d) => d;
 
 	const { height, yScale } = getContext('LayerCake');

@@ -265,7 +265,7 @@
 			</button>
 		</div>
 
-		{#if hasValidSummary}
+		{#if hasValidSummary && timelineData}
 			<!-- Value Summary -->
 			<div class="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
 				<div class="card bg-surface-200 p-4 dark:bg-surface-800">
