@@ -96,7 +96,7 @@
 
 <style>
 	.filter-bar {
-		margin-bottom: 1rem;
+		/* No margin - parent .filters-group handles spacing */
 	}
 
 	.filter-container {
