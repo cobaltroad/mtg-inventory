@@ -74,6 +74,26 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
       )
   end
 
+  def stub_scryfall_special_finish(card_id, name: "Special Card", promo_types: [])
+    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+      .to_return(
+        status: 200,
+        body: {
+          id: card_id,
+          name: name,
+          set: "SLD",
+          set_name: "Secret Lair Drop",
+          collector_number: "1",
+          finishes: [ "foil" ],
+          promo_types: promo_types,
+          image_uris: {
+            normal: "https://cards.scryfall.io/normal/front/s/s/special.jpg"
+          }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+  end
+
   # ---------------------------------------------------------------------------
   # #index -- returns only current_user's inventory items
   # ---------------------------------------------------------------------------
@@ -199,6 +219,55 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     assert_equal "foil", item["finish"]
     assert_equal "Japanese", item["language"]
     assert_equal "Black Lotus", item["card_name"]
+  end
+
+  # ---------------------------------------------------------------------------
+  # RED Phase: Test that promo_types are included in inventory response
+  # ---------------------------------------------------------------------------
+  test "GET /api/inventory includes promo_types for special finish cards" do
+    CollectionItem.create!(
+      user: @user,
+      card_id: "uuid-halofoil",
+      collection_type: "inventory",
+      quantity: 1,
+      finish: "foil"
+    )
+
+    stub_scryfall_special_finish("uuid-halofoil", name: "Utvara Hellkite", promo_types: [ "halofoil" ])
+
+    get api_path("/inventory")
+
+    assert_response :success
+    items = parse_inventory_response
+    assert_equal 1, items.size
+
+    item = items.first
+    assert_equal "uuid-halofoil", item["card_id"]
+    assert_equal "Utvara Hellkite", item["card_name"]
+    assert_equal "foil", item["finish"]
+    assert_equal [ "halofoil" ], item["promo_types"]
+  end
+
+  test "GET /api/inventory returns empty promo_types array when not present" do
+    CollectionItem.create!(
+      user: @user,
+      card_id: "uuid-normal",
+      collection_type: "inventory",
+      quantity: 1,
+      finish: "nonfoil"
+    )
+
+    stub_scryfall_card_details("uuid-normal")
+
+    get api_path("/inventory")
+
+    assert_response :success
+    items = parse_inventory_response
+    assert_equal 1, items.size
+
+    item = items.first
+    assert_equal "uuid-normal", item["card_id"]
+    assert_equal [], item["promo_types"]
   end
 
   test "GET /api/inventory returns empty array when inventory is empty" do

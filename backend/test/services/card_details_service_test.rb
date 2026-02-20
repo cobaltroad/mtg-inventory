@@ -41,8 +41,8 @@ class CardDetailsServiceTest < ActiveSupport::TestCase
     result1 = service.call
     assert_equal "Black Lotus", result1[:name]
 
-    # Verify the result is now in cache
-    cached_result = Rails.cache.read("card_details:#{card_id}")
+    # Verify the result is now in cache (v3 cache key includes promo_types)
+    cached_result = Rails.cache.read("card_details:v3:#{card_id}")
     assert_not_nil cached_result
     assert_equal "Black Lotus", cached_result[:name]
 
@@ -154,6 +154,148 @@ class CardDetailsServiceTest < ActiveSupport::TestCase
 
     assert_equal "Delver of Secrets // Insectile Aberration", result[:name]
     assert_equal "https://cards.scryfall.io/normal/front/d/e/delver-front.jpg", result[:image_url]
+  end
+
+  # ---------------------------------------------------------------------------
+  # RED Phase: Test fetching promo_types from Scryfall API
+  # ---------------------------------------------------------------------------
+  test "fetches promo_types for halofoil cards" do
+    card_id = "halofoil-uuid"
+    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+      .to_return(
+        status: 200,
+        body: {
+          id: card_id,
+          name: "Utvara Hellkite",
+          set: "SLD",
+          set_name: "Secret Lair Drop",
+          collector_number: "1273",
+          finishes: [ "foil" ],
+          promo_types: [ "halofoil" ],
+          image_uris: {
+            normal: "https://cards.scryfall.io/normal/front/u/h/utvara.jpg"
+          }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    service = CardDetailsService.new(card_id: card_id)
+    result = service.call
+
+    assert_equal card_id, result[:id]
+    assert_equal "Utvara Hellkite", result[:name]
+    assert_equal [ "halofoil" ], result[:promo_types]
+  end
+
+  test "fetches promo_types for rainbowfoil cards" do
+    card_id = "rainbowfoil-uuid"
+    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+      .to_return(
+        status: 200,
+        body: {
+          id: card_id,
+          name: "Price of Glory",
+          set: "SLD",
+          set_name: "Secret Lair Drop",
+          collector_number: "1525",
+          finishes: [ "foil" ],
+          promo_types: [ "rainbowfoil" ],
+          image_uris: {
+            normal: "https://cards.scryfall.io/normal/front/p/o/price.jpg"
+          }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    service = CardDetailsService.new(card_id: card_id)
+    result = service.call
+
+    assert_equal card_id, result[:id]
+    assert_equal "Price of Glory", result[:name]
+    assert_equal [ "rainbowfoil" ], result[:promo_types]
+  end
+
+  test "fetches promo_types for surgefoil cards" do
+    card_id = "surgefoil-uuid"
+    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+      .to_return(
+        status: 200,
+        body: {
+          id: card_id,
+          name: "Bastion of Remembrance",
+          set: "PIP",
+          set_name: "Fallout",
+          collector_number: "710",
+          finishes: [ "foil" ],
+          promo_types: [ "surgefoil" ],
+          image_uris: {
+            normal: "https://cards.scryfall.io/normal/front/b/a/bastion.jpg"
+          }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    service = CardDetailsService.new(card_id: card_id)
+    result = service.call
+
+    assert_equal card_id, result[:id]
+    assert_equal "Bastion of Remembrance", result[:name]
+    assert_equal [ "surgefoil" ], result[:promo_types]
+  end
+
+  test "returns empty array for promo_types when not present" do
+    card_id = "no-promo-uuid"
+    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+      .to_return(
+        status: 200,
+        body: {
+          id: card_id,
+          name: "Lightning Bolt",
+          set: "LEA",
+          set_name: "Limited Edition Alpha",
+          collector_number: "161",
+          finishes: [ "nonfoil" ],
+          image_uris: {
+            normal: "https://cards.scryfall.io/normal/front/l/b/bolt.jpg"
+          }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    service = CardDetailsService.new(card_id: card_id)
+    result = service.call
+
+    assert_equal card_id, result[:id]
+    assert_equal "Lightning Bolt", result[:name]
+    assert_equal [], result[:promo_types]
+  end
+
+  test "handles cards with multiple promo types" do
+    card_id = "multi-promo-uuid"
+    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+      .to_return(
+        status: 200,
+        body: {
+          id: card_id,
+          name: "Test Card",
+          set: "TST",
+          set_name: "Test Set",
+          collector_number: "1",
+          finishes: [ "foil" ],
+          promo_types: [ "halofoil", "prerelease" ],
+          image_uris: {
+            normal: "https://cards.scryfall.io/normal/front/t/t/test.jpg"
+          }
+        }.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    service = CardDetailsService.new(card_id: card_id)
+    result = service.call
+
+    assert_equal card_id, result[:id]
+    assert_equal "Test Card", result[:name]
+    assert_equal [ "halofoil", "prerelease" ], result[:promo_types]
   end
 
   private
