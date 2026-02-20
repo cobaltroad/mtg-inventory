@@ -48,8 +48,9 @@ class CardDetailsService
   end
 
   # Generates a cache key for the given card_id
+  # Version 2: Added color_identity fallback for double-faced cards
   def cache_key
-    "card_details:#{@card_id}"
+    "card_details:v2:#{@card_id}"
   end
 
   # Fetches card details from the Scryfall API
@@ -129,7 +130,10 @@ class CardDetailsService
       set_name: card["set_name"],
       collector_number: card["collector_number"],
       released_at: card["released_at"],
-      image_url: extract_image_url(card)
+      image_url: extract_image_url(card),
+      # For double-faced cards, Scryfall returns null for colors
+      # Use color_identity as fallback which includes all mana symbols on the card
+      colors: card["colors"] || card["color_identity"] || []
     }
   end
 

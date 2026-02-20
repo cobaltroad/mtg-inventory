@@ -27,6 +27,10 @@ class InventoryController < ApplicationController
   #          Options: name-asc, name-desc, set-asc, set-desc,
   #                   release-newest, release-oldest, value-high, value-low,
   #                   date-newest, date-oldest
+  #   colors - Comma-separated color filters (optional)
+  #            Options: W, U, B, R, G, multicolor, colorless
+  #            Example: ?colors=W,U (white OR blue cards)
+  #            Note: Color filtering requires enriching all items with Scryfall data
   #
   # Returns JSON with:
   #   items: array of inventory items with card details
@@ -39,6 +43,9 @@ class InventoryController < ApplicationController
   def index
     # Get base collection scoped to current user and inventory type
     base_items = collection_items
+
+    # Apply color filters if provided
+    base_items = apply_color_filters(base_items, params[:colors]) if params[:colors].present?
 
     # Normalize and validate sort parameter
     sort_option = normalize_sort_param(params[:sort])
@@ -385,6 +392,7 @@ class InventoryController < ApplicationController
       unit_price_cents: unit_price,
       total_price_cents: total_price,
       price_updated_at: price_updated_at,
+      colors: card_details[:colors] || [],
       created_at: item.created_at,
       updated_at: item.updated_at,
       user_id: item.user_id,
@@ -598,5 +606,93 @@ class InventoryController < ApplicationController
       # Fallback to default
       items.sort_by { |item| item[:card_name]&.downcase || "" }
     end
+  end
+
+  # Valid MTG color codes
+  VALID_COLORS = %w[W U B R G].freeze
+  SPECIAL_FILTERS = %w[multicolor colorless].freeze
+
+  # Applies color filtering to collection items based on the colors parameter.
+  # Supports single colors (W, U, B, R, G), multicolor, colorless, and OR logic.
+  #
+  # Implementation Note:
+  # Color data is fetched from Scryfall API and not stored in the database,
+  # so this method must enrich all items to access color information.
+  # For large inventories (1000+ cards), this may take 1-2 seconds.
+  # Future optimization: Consider caching color data in CollectionItem model.
+  #
+  # Filter Logic (Mono-color by default):
+  # - W alone: Returns ONLY mono-white cards
+  # - W,U (without M): Returns mono-white OR mono-blue cards (no multicolor)
+  # - W + M: Returns mono-white cards AND multicolor cards containing white
+  # - M alone: Returns all multicolor cards (2+ colors)
+  # - C (colorless): Returns colorless cards
+  #
+  # Examples:
+  #   apply_color_filters(items, "W")           # Mono-white cards only
+  #   apply_color_filters(items, "W,U")         # Mono-white OR mono-blue (no multicolor)
+  #   apply_color_filters(items, "W,multicolor") # Mono-white + multicolor containing white
+  #   apply_color_filters(items, "multicolor")  # All multicolor cards
+  #   apply_color_filters(items, "colorless")   # Colorless cards only
+  #
+  # @param items [ActiveRecord::Relation] Collection items to filter
+  # @param colors_param [String] Comma-separated color codes or special filters
+  # @return [ActiveRecord::Relation] Filtered items
+  def apply_color_filters(items, colors_param)
+    return items if colors_param.blank?
+
+    # Handle edge case where frontend sends "[]" as string
+    return items if colors_param == "[]"
+
+    # Parse colors parameter - supports comma-separated values
+    requested_colors = colors_param.to_s.split(",").map(&:strip).map(&:upcase)
+
+    # Separate special filters from color codes
+    special_filters = requested_colors & SPECIAL_FILTERS.map(&:upcase)
+    color_codes = requested_colors & VALID_COLORS
+
+    # If no valid filters, return all items (graceful degradation)
+    return items if special_filters.empty? && color_codes.empty?
+
+    # Load items with card details to filter by color
+    items_with_details = items.includes(cached_image_attachment: :blob).to_a
+    preload_prices(items_with_details)
+    enriched_items = enrich_with_card_details(items_with_details)
+
+    multicolor_selected = special_filters.include?("MULTICOLOR")
+    colorless_selected = special_filters.include?("COLORLESS")
+
+    # Filter items based on color criteria
+    filtered = enriched_items.select do |item|
+      card_colors = item[:colors] || []
+
+      # Colorless matching
+      matches_colorless = colorless_selected && card_colors.empty?
+
+      # Color matching logic
+      if color_codes.any?
+        if multicolor_selected
+          # With M: match mono-color of requested colors OR multicolor containing any requested color
+          is_requested_mono = card_colors.length == 1 && color_codes.include?(card_colors.first)
+          is_matching_multi = card_colors.length >= 2 && (card_colors & color_codes).any?
+          matches_colors = is_requested_mono || is_matching_multi
+        else
+          # Without M: only match mono-color of requested colors
+          matches_colors = card_colors.length == 1 && color_codes.include?(card_colors.first)
+        end
+      elsif multicolor_selected
+        # M alone (no specific colors): match all multicolor
+        matches_colors = card_colors.length >= 2
+      else
+        matches_colors = false
+      end
+
+      matches_colorless || matches_colors
+    end
+
+    # Convert filtered enriched items back to CollectionItem relation format
+    # We need to return the original items that match the filter
+    filtered_ids = filtered.map { |item| item[:id] }
+    items.where(id: filtered_ids)
   end
 end
