@@ -3,7 +3,7 @@
 
 	const { data, xGet, yGet } = getContext('LayerCake');
 
-	$: path = 'M' + $data.map((d) => `${$xGet(d)},${$yGet(d)}`).join('L');
+	$: path = 'M' + $data.map((/** @type {any} */ d) => `${$xGet(d)},${$yGet(d)}`).join('L');
 </script>
 
 <path class="path-line" d={path} />

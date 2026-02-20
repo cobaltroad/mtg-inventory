@@ -138,6 +138,7 @@
 					},
 					tooltip: {
 						callbacks: {
+							/** @param {any} context */
 							label: function (context) {
 								const label = context.dataset.label || '';
 								const value = formatCurrency((context.parsed.y || 0) * 100);
@@ -170,6 +171,7 @@
 							text: 'Price (USD)'
 						},
 						ticks: {
+							/** @param {any} value */
 							callback: function (value) {
 								return '$' + value.toLocaleString();
 							}
