@@ -102,4 +102,21 @@
 	:global(.dark) .sort-select:focus {
 		border-color: #60a5fa;
 	}
+
+	@media (max-width: 640px) {
+		.sort-dropdown {
+			width: 100%;
+		}
+
+		.sort-label {
+			display: none;
+		}
+
+		.sort-select {
+			width: 100%;
+			padding: 0.75rem 2.5rem 0.75rem 0.75rem;
+			font-size: 1rem;
+			min-height: 44px;
+		}
+	}
 </style>

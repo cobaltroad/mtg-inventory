@@ -154,7 +154,7 @@
 					<th>Image</th>
 					<th>Card Name</th>
 					<th>Quantity</th>
-					<th>Value</th>
+					<th class="desktop-only">Value</th>
 					<th>Details</th>
 					<th>Actions</th>
 				</tr>
@@ -162,7 +162,7 @@
 			<tbody>
 				{#each localItems as item (item.id)}
 					<tr>
-						<td>
+						<td data-label="Image">
 							<div class="image-cell">
 								{#if imageStates[item.id]?.error}
 									<div class="image-placeholder error">No image</div>
@@ -182,7 +182,7 @@
 								{/if}
 							</div>
 						</td>
-						<td>
+						<td data-label="Card Name">
 							<div class="card-name-cell">
 								<span class="font-beleren card-name">{item.card_name}</span>
 								<span class="collector-number">
@@ -194,18 +194,23 @@
 								</span>
 							</div>
 						</td>
-						<td>
-							<QuantityEditor
-								initialQuantity={item.quantity}
-								onSave={(newQuantity) => handleQuantityUpdate(item, newQuantity)}
-							/>
+						<td data-label="Quantity">
+							<div class="quantity-cell">
+								<QuantityEditor
+									initialQuantity={item.quantity}
+									onSave={(newQuantity) => handleQuantityUpdate(item, newQuantity)}
+								/>
+								<span class="price-display-mobile">
+									{formatCurrency(item.unit_price_cents, item.total_price_cents, item.quantity)}
+								</span>
+							</div>
 						</td>
-						<td>
+						<td data-label="Value" class="desktop-only">
 							<div class="price-cell">
 								{formatCurrency(item.unit_price_cents, item.total_price_cents, item.quantity)}
 							</div>
 						</td>
-						<td>
+						<td data-label="Details">
 							<div class="details-cell">
 								{#if item.finish}
 									<span class="detail-badge">{capitalizeFirstLetter(item.finish)}</span>
@@ -219,7 +224,7 @@
 								{/if}
 							</div>
 						</td>
-						<td>
+						<td data-label="Actions">
 							<button
 								class="remove-btn"
 								onclick={() => showRemoveConfirmation(item.id)}
@@ -491,7 +496,28 @@
 		white-space: nowrap;
 	}
 
+	.quantity-cell {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.5rem;
+	}
+
+	.price-display {
+		font-size: 0.875rem;
+		color: #111827;
+		font-weight: 500;
+	}
+
+	.price-display-mobile {
+		display: none;
+	}
+
 	:global(.dark) .price-cell {
+		color: #f9fafb;
+	}
+
+	:global(.dark) .price-display {
 		color: #f9fafb;
 	}
 
@@ -544,13 +570,136 @@
 	}
 
 	@media (max-width: 768px) {
+		.desktop-only {
+			display: none;
+		}
+
+		.desktop-only::before {
+			display: none;
+		}
+
 		.table-container {
 			font-size: 0.875rem;
 		}
 
+		.inventory-table {
+			display: block;
+		}
+
+		.inventory-table thead {
+			display: none;
+		}
+
+		.inventory-table tbody {
+			display: flex;
+			flex-direction: column;
+			gap: 1rem;
+			padding: 0.5rem;
+		}
+
+		.inventory-table tbody tr {
+			display: flex;
+			flex-direction: column;
+			background: white;
+			border: 1px solid #e5e7eb;
+			border-radius: 0.5rem;
+			padding: 1rem;
+			box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+		}
+
+		:global(.dark) .inventory-table tbody tr {
+			background: #1f2937;
+			border-color: #374151;
+		}
+
+		.inventory-table tbody tr:hover {
+			background: transparent;
+		}
+
+		.inventory-table td {
+			padding: 0.25rem 0;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			border: none;
+		}
+
+		.inventory-table td::before {
+			content: attr(data-label);
+			font-weight: 600;
+			color: #6b7280;
+			font-size: 0.75rem;
+			text-transform: uppercase;
+			letter-spacing: 0.05em;
+		}
+
+		:global(.dark) .inventory-table td::before {
+			color: #9ca3af;
+		}
+
 		.image-cell {
-			width: 60px;
-			height: 84px;
+			width: 100px;
+			height: 140px;
+			margin: 0 auto 0.75rem;
+		}
+
+		.card-name-cell {
+			flex-direction: row;
+			flex-wrap: wrap;
+			gap: 0.5rem;
+			justify-content: center;
+			text-align: center;
+		}
+
+		.card-name {
+			font-size: 1rem;
+			width: 100%;
+			text-align: center;
+		}
+
+		.collector-number {
+			font-size: 0.875rem;
+			width: 100%;
+			text-align: center;
+		}
+
+		.quantity-cell {
+			width: 100%;
+			align-items: center;
+			gap: 0.5rem;
+		}
+
+		.price-display {
+			display: none;
+		}
+
+		.price-display-mobile {
+			display: inline;
+			font-size: 1rem;
+			font-weight: 600;
+		}
+
+		:global(.dark) .price-display-mobile {
+			color: #f9fafb;
+		}
+
+		.price-cell {
+			display: none;
+		}
+
+		.details-cell {
+			flex-direction: row;
+			flex-wrap: wrap;
+			justify-content: center;
+			gap: 0.5rem;
+		}
+
+		.remove-btn {
+			width: 100%;
+			justify-content: center;
+			padding: 0.75rem;
+			margin-top: 0.5rem;
+			min-height: 44px;
 		}
 	}
 </style>

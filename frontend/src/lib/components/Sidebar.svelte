@@ -271,6 +271,13 @@
 		border-top: 1px solid rgb(229 231 235);
 	}
 
+	/* Hide mode toggle on mobile */
+	@media (max-width: 768px) {
+		.mode-toggle-wrapper {
+			display: none;
+		}
+	}
+
 	/* In rail mode, adjust padding for centered layout */
 	:global(.navigation-rail) .mode-toggle-wrapper {
 		padding: 1rem 0;
