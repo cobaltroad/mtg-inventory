@@ -18,8 +18,8 @@
 	] as const;
 
 	const specialFilters = [
-		{ code: 'multicolor', name: 'Multi', symbol: 'M', bg: 'bg-amber-50', border: 'border-amber-500', activeBg: 'bg-amber-200' },
-		{ code: 'colorless', name: 'Colorless', symbol: 'C', bg: 'bg-gray-50', border: 'border-gray-400', activeBg: 'bg-gray-200' }
+		{ code: 'multicolor', name: 'Multicolor', symbol: 'M' },
+		{ code: 'colorless', name: 'Colorless', symbol: 'C' }
 	] as const;
 
 	function toggleColor(colorCode: string) {
@@ -38,20 +38,6 @@
 </script>
 
 <div class="color-filter">
-	<div class="filter-label">
-		<span>Filter by Color:</span>
-		{#if hasActiveFilters}
-			<button
-				class="clear-all-button"
-				onclick={clearFilters}
-				aria-label="Clear all color filters"
-			>
-				<X size={14} />
-				<span>Clear</span>
-			</button>
-		{/if}
-	</div>
-
 	<div class="color-buttons">
 		<!-- Main colors -->
 		{#each colors as color}
@@ -79,46 +65,43 @@
 				aria-pressed={selectedColors.includes(filter.code)}
 				title={filter.name}
 			>
-				<span class="filter-label-text">{filter.name}</span>
+				<span class="mana-symbol mana-{filter.code}">{filter.symbol}</span>
 			</button>
 		{/each}
+
+		{#if hasActiveFilters}
+			<button
+				class="clear-all-button"
+				onclick={clearFilters}
+				aria-label="Clear all color filters"
+				title="Clear all color filters"
+			>
+				<X size={16} />
+			</button>
+		{/if}
 	</div>
 </div>
 
 <style>
 	.color-filter {
 		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		margin-bottom: 1rem;
-	}
-
-	.filter-label {
-		display: flex;
 		align-items: center;
-		gap: 0.75rem;
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: #374151;
-	}
-
-	:global(.dark) .filter-label {
-		color: #e5e7eb;
 	}
 
 	.clear-all-button {
 		display: flex;
 		align-items: center;
-		gap: 0.25rem;
-		padding: 0.25rem 0.5rem;
+		justify-content: center;
+		width: 2rem;
+		height: 2rem;
+		padding: 0;
 		background: #ef4444;
 		border: none;
-		border-radius: 0.25rem;
+		border-radius: 0.375rem;
 		color: white;
-		font-size: 0.75rem;
-		font-weight: 500;
 		cursor: pointer;
 		transition: background 0.2s;
+		flex-shrink: 0;
 	}
 
 	.clear-all-button:hover {
@@ -264,43 +247,36 @@
 		background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
 	}
 
-	/* Special filters styling */
-	.special-filter {
-		width: auto;
-		min-width: 4.5rem;
-		height: 2.5rem;
-		padding: 0 0.75rem;
-		border-radius: 0.375rem;
+	/* Special filters styling - Multicolor (M) and Colorless (C) */
+	.mana-multicolor {
+		color: #f59e0b;
+		font-weight: bold;
+		text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 	}
 
-	.filter-label-text {
-		font-size: 0.75rem;
-		font-weight: 600;
-		text-transform: uppercase;
+	.color-button:has(.mana-multicolor) {
+		background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+		border-color: #f59e0b;
 	}
 
-	.special-filter:has(.filter-label-text) {
-		background: white;
+	.color-button.active:has(.mana-multicolor) {
+		border-color: #d97706;
+		background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+	}
+
+	.mana-colorless {
+		color: #6b7280;
+		font-weight: bold;
+	}
+
+	.color-button:has(.mana-colorless) {
+		background: linear-gradient(135deg, #f9fafb 0%, #e5e7eb 100%);
 		border-color: #9ca3af;
-		color: #374151;
 	}
 
-	.special-filter.active:has(.filter-label-text) {
-		background: #e5e7eb;
+	.color-button.active:has(.mana-colorless) {
 		border-color: #6b7280;
-		color: #111827;
-	}
-
-	:global(.dark) .special-filter:has(.filter-label-text) {
-		background: #374151;
-		border-color: #6b7280;
-		color: #e5e7eb;
-	}
-
-	:global(.dark) .special-filter.active:has(.filter-label-text) {
-		background: #4b5563;
-		border-color: #9ca3af;
-		color: #f3f4f6;
+		background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
 	}
 
 	/* Responsive adjustments */

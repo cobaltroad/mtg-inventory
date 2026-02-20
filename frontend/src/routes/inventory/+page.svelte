@@ -342,9 +342,11 @@
 		{/if}
 
 		<div class="controls-bar">
-			<ColorFilter {selectedColors} onColorChange={handleColorChange} />
 			<div class="filter-sort-row">
-				<FilterBar items={allItems} {currentFilter} onFilterChange={handleFilterChange} />
+				<div class="filters-group">
+					<FilterBar items={allItems} {currentFilter} onFilterChange={handleFilterChange} />
+					<ColorFilter {selectedColors} onColorChange={handleColorChange} />
+				</div>
 				<SortDropdown {currentSort} onSortChange={handleSortChange} />
 			</div>
 		</div>
@@ -489,15 +491,19 @@
 	}
 
 	.controls-bar {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
 		margin-bottom: 1.5rem;
 	}
 
 	.filter-sort-row {
 		display: flex;
 		justify-content: space-between;
+		align-items: center;
+		gap: 1rem;
+		flex-wrap: wrap;
+	}
+
+	.filters-group {
+		display: flex;
 		align-items: center;
 		gap: 1rem;
 		flex-wrap: wrap;
