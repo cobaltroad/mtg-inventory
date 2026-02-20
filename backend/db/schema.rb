@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_15_191902) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_20_053425) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -120,8 +120,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_15_191902) do
     t.string "alert_type", null: false
     t.string "card_id", null: false
     t.datetime "created_at", null: false
-    t.boolean "dismissed", default: false, null: false
-    t.datetime "dismissed_at"
     t.string "finish"
     t.integer "new_price_cents", null: false
     t.integer "old_price_cents", null: false
@@ -129,7 +127,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_15_191902) do
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
     t.index ["user_id", "card_id", "created_at"], name: "index_price_alerts_on_user_id_and_card_id_and_created_at"
-    t.index ["user_id", "dismissed"], name: "index_price_alerts_on_user_id_and_dismissed"
     t.index ["user_id"], name: "index_price_alerts_on_user_id"
   end
 
