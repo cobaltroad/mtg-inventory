@@ -28,7 +28,6 @@ class PriceAlert < ApplicationRecord
   # Scopes
   # ---------------------------------------------------------------------------
 
-  scope :active, -> { where(dismissed: false) }
   scope :for_user, ->(user) { where(user: user) }
   scope :recent, -> { order(created_at: :desc) }
 
@@ -36,9 +35,9 @@ class PriceAlert < ApplicationRecord
   # Instance Methods
   # ---------------------------------------------------------------------------
 
-  # Marks the alert as dismissed and records the dismissal timestamp.
+  # Permanently deletes the alert (hard delete).
   def dismiss!
-    update!(dismissed: true, dismissed_at: Time.current)
+    destroy!
   end
 
   # Returns true if this is a price increase alert.

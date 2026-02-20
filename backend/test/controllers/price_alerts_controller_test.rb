@@ -75,17 +75,6 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
       created_at: 2.hours.ago
     )
 
-    # Create dismissed alert (should not appear)
-    PriceAlert.create!(
-      user: @user,
-      card_id: "card-3",
-      alert_type: "price_increase",
-      old_price_cents: 50,
-      new_price_cents: 75,
-      percentage_change: 50.0,
-      dismissed: true
-    )
-
     get api_path("/price_alerts")
 
     assert_response :success
@@ -205,12 +194,14 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
       percentage_change: 30.0
     )
 
-    patch api_path("/price_alerts/#{alert.id}/dismiss")
+    alert_id = alert.id
+
+    patch api_path("/price_alerts/#{alert_id}/dismiss")
 
     assert_response :success
-    alert.reload
-    assert alert.dismissed
-    assert_not_nil alert.dismissed_at
+
+    # Alert should be permanently deleted
+    assert_nil PriceAlert.find_by(id: alert_id)
   end
 
   test "dismiss returns 404 for non-existent alert" do
@@ -235,7 +226,9 @@ class PriceAlertsControllerTest < ActionDispatch::IntegrationTest
     patch api_path("/price_alerts/#{alert.id}/dismiss")
 
     assert_response :forbidden
+
+    # Alert should still exist (not deleted due to permission error)
     alert.reload
-    assert_not alert.dismissed
+    assert_not_nil alert
   end
 end

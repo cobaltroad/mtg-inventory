@@ -1,11 +1,10 @@
 class PriceAlertsController < ApplicationController
   # GET /api/price_alerts
-  # Returns active (non-dismissed) price alerts for the current user,
+  # Returns price alerts for the current user,
   # limited to the top 10 most recent alerts.
   # Enriches each alert with card name from Scryfall.
   def index
     alerts = PriceAlert.for_user(current_user)
-                       .active
                        .recent
                        .limit(10)
 
