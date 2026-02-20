@@ -129,7 +129,8 @@ class CardDetailsService
       set_name: card["set_name"],
       collector_number: card["collector_number"],
       released_at: card["released_at"],
-      image_url: extract_image_url(card)
+      image_url: extract_image_url(card),
+      colors: card["colors"] || []
     }
   end
 
