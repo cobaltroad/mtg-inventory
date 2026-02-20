@@ -588,6 +588,94 @@ describe('PriceAlertWidget - Keyboard Navigation', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Tests: Skeleton UI v4 Visual Classes (Regression for v3->v4 Migration)
+// ---------------------------------------------------------------------------
+describe('PriceAlertWidget - Skeleton UI v4 Classes', () => {
+	it('dismiss button has proper Skeleton v4 hover classes instead of v3 variant-ghost-surface', async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => [mockAlerts[0]]
+		});
+
+		const { container } = render(PriceAlertWidget);
+
+		await waitFor(() => {
+			const dismissButton = screen.getByRole('button', { name: /dismiss/i });
+			// Should have Skeleton v4 hover classes, not dead v3 classes
+			const classNames = dismissButton.className;
+			expect(classNames).toMatch(/hover:bg-surface-/);
+			expect(classNames).not.toContain('variant-ghost-surface');
+		});
+	});
+
+	it('success alerts have proper Skeleton v4 background classes instead of v3 variant-soft-success', async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => [mockAlerts[0]] // price_increase
+		});
+
+		const { container } = render(PriceAlertWidget);
+
+		await waitFor(() => {
+			const alertItem = container.querySelector('.alert-item');
+			expect(alertItem).toBeInTheDocument();
+			const classNames = alertItem?.className || '';
+			// Should have Skeleton v4 background classes, not dead v3 classes
+			expect(classNames).toMatch(/bg-success-/);
+			expect(classNames).not.toContain('variant-soft-success');
+		});
+	});
+
+	it('error alerts have proper Skeleton v4 background classes instead of v3 variant-soft-error', async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => [mockAlerts[1]] // price_decrease
+		});
+
+		const { container } = render(PriceAlertWidget);
+
+		await waitFor(() => {
+			const alertItem = container.querySelector('.alert-item');
+			expect(alertItem).toBeInTheDocument();
+			const classNames = alertItem?.className || '';
+			// Should have Skeleton v4 background classes, not dead v3 classes
+			expect(classNames).toMatch(/bg-error-/);
+			expect(classNames).not.toContain('variant-soft-error');
+		});
+	});
+
+	it('dismiss error message has proper Skeleton v4 classes instead of v3 variant-soft-error', async () => {
+		const user = userEvent.setup();
+
+		mockFetch
+			.mockResolvedValueOnce({
+				ok: true,
+				json: async () => [mockAlerts[0]]
+			})
+			.mockResolvedValueOnce({
+				ok: false,
+				status: 500
+			});
+
+		const { container } = render(PriceAlertWidget);
+
+		await waitFor(() => {
+			expect(screen.getByText('Black Lotus')).toBeInTheDocument();
+		});
+
+		const dismissButton = screen.getByRole('button', { name: /dismiss/i });
+		await user.click(dismissButton);
+
+		await waitFor(() => {
+			const errorAlert = screen.getByRole('alert');
+			const classNames = errorAlert.className;
+			expect(classNames).toMatch(/bg-error-/);
+			expect(classNames).not.toContain('variant-soft-error');
+		});
+	});
+});
+
+// ---------------------------------------------------------------------------
 // Tests: Accessibility - Screen Reader Support
 // ---------------------------------------------------------------------------
 describe('PriceAlertWidget - Screen Reader Support', () => {

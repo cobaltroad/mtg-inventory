@@ -212,7 +212,7 @@
 	});
 </script>
 
-<div class="inventory-value-widget variant-ghost-surface card p-4">
+<div class="inventory-value-widget card p-4">
 	{#if loading}
 		<div class="placeholder animate-pulse space-y-3">
 			<div class="bg-surface-300-600-token h-6 w-48 rounded"></div>
@@ -220,9 +220,14 @@
 		</div>
 	{:else if error}
 		<h2 class="mb-4 h3">Inventory Value Over Time</h2>
-		<div class="alert variant-ghost-error p-4">
+		<div class="alert rounded-md p-4 transition-colors hover:bg-error-200 dark:hover:bg-error-800">
 			<p>{error}</p>
-			<button onclick={() => fetchTimeline()} class="variant-filled-error mt-2 btn"> Retry </button>
+			<button
+				onclick={() => fetchTimeline()}
+				class="mt-2 btn bg-error-500 text-white hover:bg-error-600"
+			>
+				Retry
+			</button>
 		</div>
 	{:else if !hasValidTimeline}
 		<h2 class="mb-4 h3">Inventory Value Over Time</h2>
@@ -233,21 +238,27 @@
 		<h2 class="mb-4 h3">Inventory Value Over Time</h2>
 
 		<!-- Time Period Selector -->
-		<div class="variant-ghost mb-4 btn-group">
+		<div class="mb-4 btn-group">
 			<button
-				class="btn {timePeriod === 7 ? 'variant-filled-primary' : 'variant-ghost-surface'}"
+				class="btn {timePeriod === 7
+					? 'bg-primary-500 text-white hover:bg-primary-600'
+					: 'rounded-md transition-colors hover:bg-surface-200 dark:hover:bg-surface-800'}"
 				onclick={() => changeTimePeriod(7)}
 			>
 				7 Days
 			</button>
 			<button
-				class="btn {timePeriod === 30 ? 'variant-filled-primary' : 'variant-ghost-surface'}"
+				class="btn {timePeriod === 30
+					? 'bg-primary-500 text-white hover:bg-primary-600'
+					: 'rounded-md transition-colors hover:bg-surface-200 dark:hover:bg-surface-800'}"
 				onclick={() => changeTimePeriod(30)}
 			>
 				30 Days
 			</button>
 			<button
-				class="btn {timePeriod === 90 ? 'variant-filled-primary' : 'variant-ghost-surface'}"
+				class="btn {timePeriod === 90
+					? 'bg-primary-500 text-white hover:bg-primary-600'
+					: 'rounded-md transition-colors hover:bg-surface-200 dark:hover:bg-surface-800'}"
 				onclick={() => changeTimePeriod(90)}
 			>
 				90 Days
@@ -257,13 +268,13 @@
 		{#if hasValidSummary}
 			<!-- Value Summary -->
 			<div class="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-				<div class="variant-ghost card p-4">
+				<div class="card bg-surface-200 p-4 dark:bg-surface-800">
 					<div class="text-surface-600-300-token text-sm">Current Value</div>
 					<div class="text-2xl font-bold">
 						{formatCurrency(timelineData.summary.end_value_cents)}
 					</div>
 				</div>
-				<div class="variant-ghost card p-4">
+				<div class="card bg-surface-200 p-4 dark:bg-surface-800">
 					<div class="text-surface-600-300-token text-sm">Change ({timePeriod}d)</div>
 					<div
 						class="text-2xl font-bold"

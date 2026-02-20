@@ -44,9 +44,7 @@
 
 	// Get unique types and rarities for filter dropdowns
 	let availableTypes = $derived(commander?.cards ? getUniqueCardTypes(commander.cards) : []);
-	let availableRarities = $derived(
-		commander?.cards ? getUniqueRarities(commander.cards) : []
-	);
+	let availableRarities = $derived(commander?.cards ? getUniqueRarities(commander.cards) : []);
 
 	// Apply sorting and filtering
 	let processedCards = $derived.by(() => {
@@ -110,9 +108,11 @@
 			<p class="text-lg">Loading commander...</p>
 		</div>
 	{:else if error}
-		<div class="variant-ghost-error card p-6">
+		<div class="card rounded-md p-6 transition-colors hover:bg-error-200 dark:hover:bg-error-800">
 			<p class="mb-4">{error}</p>
-			<a href="{base}/metagame/edh" class="variant-filled-primary btn"> Back to Commanders </a>
+			<a href="{base}/metagame/edh" class="btn bg-primary-500 text-white hover:bg-primary-600">
+				Back to Commanders
+			</a>
 		</div>
 	{:else if commander}
 		<div class="mb-6">
@@ -127,14 +127,14 @@
 		<header class="mb-8">
 			<div class="mb-4 flex items-start justify-between gap-4">
 				<h1 class="flex-1 h1">{commander.name}</h1>
-				<span class="variant-filled-primary badge px-4 py-2 text-lg">#{commander.rank}</span>
+				<span class="badge bg-primary-500 px-4 py-2 text-lg text-white">#{commander.rank}</span>
 			</div>
 			<div class="flex items-center gap-4">
 				<a
 					href={commander.edhrec_url}
 					target="_blank"
 					rel="noopener noreferrer"
-					class="variant-ghost-surface btn"
+					class="btn rounded-md transition-colors hover:bg-surface-200 dark:hover:bg-surface-800"
 				>
 					<ExternalLink size={16} />
 					View on EDHREC
@@ -147,7 +147,7 @@
 		</header>
 
 		{#if !commander.cards || commander.cards.length === 0}
-			<div class="variant-ghost card p-8 text-center">
+			<div class="card bg-surface-200 p-8 text-center dark:bg-surface-800">
 				<p class="text-lg">No cards in this decklist yet.</p>
 			</div>
 		{:else}
@@ -163,7 +163,7 @@
 						<!-- Sort dropdown -->
 						<label class="flex items-center gap-2">
 							<span class="text-sm font-semibold">Sort:</span>
-							<select bind:value={sortBy} class="select variant-form-material w-auto">
+							<select bind:value={sortBy} class="variant-form-material select w-auto">
 								<option value="alphabetical">A-Z</option>
 								<option value="value">$ Value</option>
 								<option value="edh-rank">EDH Rank</option>
@@ -175,8 +175,11 @@
 						<button
 							type="button"
 							onclick={() => (showFilters = !showFilters)}
-							class="btn {showFilters ? 'variant-filled-primary' : 'variant-ghost-surface'}"
-							class:variant-filled-warning={hasActiveFilters && !showFilters}
+							class="btn {showFilters
+								? 'bg-primary-500 text-white hover:bg-primary-600'
+								: 'rounded-md transition-colors hover:bg-surface-200 dark:hover:bg-surface-800'}"
+							class:bg-warning-500={hasActiveFilters && !showFilters}
+							class:text-white={hasActiveFilters && !showFilters}
 						>
 							<SlidersHorizontal size={16} />
 							{hasActiveFilters ? `Filters (${Object.keys(filterOptions).length})` : 'Filters'}
@@ -187,7 +190,7 @@
 							<button
 								type="button"
 								onclick={resetFilters}
-								class="btn variant-ghost-error"
+								class="btn rounded-md transition-colors hover:bg-error-200 dark:hover:bg-error-800"
 								title="Clear all filters"
 							>
 								<X size={16} />
@@ -199,7 +202,7 @@
 
 				<!-- Filter panel (collapsible) -->
 				{#if showFilters}
-					<div class="variant-ghost-surface card mb-4 p-4">
+					<div class="mb-4 card bg-surface-200 p-4 dark:bg-surface-800">
 						<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 							<!-- Card Type Filter -->
 							<div>
@@ -210,8 +213,8 @@
 											type="button"
 											onclick={() => toggleCardType(type)}
 											class="chip {filterOptions.cardTypes?.includes(type)
-												? 'variant-filled-primary'
-												: 'variant-soft-surface'}"
+												? 'bg-primary-500 text-white'
+												: 'bg-surface-300 dark:bg-surface-700'}"
 										>
 											{type}
 										</button>
@@ -228,8 +231,8 @@
 											type="button"
 											onclick={() => toggleRarity(rarity)}
 											class="chip capitalize {filterOptions.rarities?.includes(rarity)
-												? 'variant-filled-primary'
-												: 'variant-soft-surface'}"
+												? 'bg-primary-500 text-white'
+												: 'bg-surface-300 dark:bg-surface-700'}"
 										>
 											{rarity}
 										</button>
@@ -262,7 +265,7 @@
 											min="0"
 											placeholder="0.00"
 											bind:value={filterOptions.minPrice}
-											class="input variant-form-material w-24"
+											class="variant-form-material input w-24"
 										/>
 									</label>
 									<label class="flex items-center gap-2">
@@ -273,7 +276,7 @@
 											min="0"
 											placeholder="100.00"
 											bind:value={filterOptions.maxPrice}
-											class="input variant-form-material w-24"
+											class="variant-form-material input w-24"
 										/>
 									</label>
 								</div>
@@ -283,13 +286,13 @@
 				{/if}
 
 				<!-- Card list -->
-				<div class="variant-ghost-surface card">
+				<div class="card bg-surface-200 dark:bg-surface-800">
 					<div class="p-4">
 						<ul class="grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
 							{#each processedCards as card (card.card_id)}
 								<li
 									class="hover:bg-surface-hover-token flex items-center gap-2 rounded px-3 py-2 transition-colors {card.is_commander
-										? 'variant-soft-primary font-semibold'
+										? 'bg-primary-200 font-semibold text-primary-900 dark:bg-primary-800 dark:text-primary-100'
 										: ''}"
 								>
 									<!-- Commander crown icon -->

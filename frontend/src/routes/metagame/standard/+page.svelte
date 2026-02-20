@@ -5,9 +5,9 @@
 
 <div class="container mx-auto px-4 py-8">
 	<div class="flex min-h-[60vh] items-center justify-center">
-		<div class="variant-ghost max-w-2xl card p-8 text-center">
+		<div class="max-w-2xl card bg-surface-200 p-8 text-center dark:bg-surface-800">
 			<div class="mb-6 flex justify-center">
-				<div class="variant-soft-surface rounded-full p-6">
+				<div class="rounded-full bg-surface-300 p-6 dark:bg-surface-700">
 					<Construction size={48} />
 				</div>
 			</div>
@@ -16,7 +16,9 @@
 				Standard metagame tracking is coming soon. This feature will include popular decks, rotation
 				information, and trending cards.
 			</p>
-			<a href="{base}/metagame" class="variant-filled-primary btn"> Back to Metagame Browser </a>
+			<a href="{base}/metagame" class="btn bg-primary-500 text-white hover:bg-primary-600">
+				Back to Metagame Browser
+			</a>
 		</div>
 	</div>
 </div>

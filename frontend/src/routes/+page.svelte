@@ -7,7 +7,9 @@
 	<h1 class="h1">MTG Inventory</h1>
 
 	<div class="mb-6">
-		<a href="{base}/search" class="btn variant-filled-primary">Search Cards</a>
+		<a href="{base}/search" class="btn bg-primary-500 text-white hover:bg-primary-600"
+			>Search Cards</a
+		>
 	</div>
 
 	<PriceAlertWidget />

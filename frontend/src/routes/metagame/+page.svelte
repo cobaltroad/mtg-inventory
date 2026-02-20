@@ -49,11 +49,11 @@
 			{#if format.available}
 				<a
 					href={format.href}
-					class="variant-ghost-surface hover:variant-ghost-primary card transition-all"
+					class="card transition-all hover:bg-surface-200 dark:hover:bg-surface-800"
 				>
 					<header class="card-header">
 						<div class="flex items-center gap-3">
-							<div class="variant-filled-primary rounded-lg p-3">
+							<div class="rounded-lg bg-primary-500 p-3 text-white">
 								<Icon size={24} />
 							</div>
 							<h2 class="h3">{format.name}</h2>
@@ -67,10 +67,10 @@
 					</footer>
 				</a>
 			{:else}
-				<div class="variant-ghost card opacity-60">
+				<div class="card bg-surface-200 opacity-60 dark:bg-surface-800">
 					<header class="card-header">
 						<div class="flex items-center gap-3">
-							<div class="variant-soft-surface rounded-lg p-3">
+							<div class="rounded-lg bg-surface-300 p-3 dark:bg-surface-700">
 								<Icon size={24} />
 							</div>
 							<h2 class="h3">{format.name}</h2>
@@ -80,7 +80,7 @@
 						<p class="text-surface-600-300-token">{format.description}</p>
 					</section>
 					<footer class="card-footer">
-						<span class="variant-soft-surface badge">Coming Soon</span>
+						<span class="badge bg-surface-300 dark:bg-surface-700">Coming Soon</span>
 					</footer>
 				</div>
 			{/if}
