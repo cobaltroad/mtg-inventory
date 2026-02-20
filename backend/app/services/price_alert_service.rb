@@ -6,6 +6,10 @@ class PriceAlertService
   INCREASE_THRESHOLD = 20.0  # 20% or more price increase
   DECREASE_THRESHOLD = -30.0  # 30% or more price decrease
 
+  # Minimum price threshold for increase alerts (in cents)
+  # Price increase alerts require both percentage threshold AND this minimum old price
+  MINIMUM_PRICE_FOR_INCREASE_ALERTS = 500  # $5.00
+
   # Time window for comparing prices
   PRICE_COMPARISON_WINDOW = 24.hours
 
@@ -56,11 +60,14 @@ class PriceAlertService
     # Check if change meets threshold
     return nil unless meets_threshold?(percentage_change)
 
-    # Check for duplicate alerts
-    return nil if duplicate_alert_exists?(item.user, item.card_id)
-
     # Determine alert type
     alert_type = percentage_change > 0 ? "price_increase" : "price_decrease"
+
+    # For price increases, also check minimum price threshold
+    return nil if alert_type == "price_increase" && old_price < MINIMUM_PRICE_FOR_INCREASE_ALERTS
+
+    # Check for duplicate alerts
+    return nil if duplicate_alert_exists?(item.user, item.card_id)
 
     # Create the alert
     PriceAlert.create!(
