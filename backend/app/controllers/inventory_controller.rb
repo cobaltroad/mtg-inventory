@@ -393,6 +393,7 @@ class InventoryController < ApplicationController
       total_price_cents: total_price,
       price_updated_at: price_updated_at,
       colors: card_details[:colors] || [],
+      promo_types: card_details[:promo_types] || [],
       created_at: item.created_at,
       updated_at: item.updated_at,
       user_id: item.user_id,

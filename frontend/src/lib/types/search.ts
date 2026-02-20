@@ -30,6 +30,7 @@ export interface InventoryResult {
 	quantity: number;
 	image_url?: string;
 	finish?: string;
+	promo_types?: string[];
 	unit_price_cents?: number;
 	total_price_cents?: number;
 }

@@ -1,6 +1,11 @@
 <script lang="ts">
 	import type { InventoryResult } from '$lib/types/search';
 	import { formatPrice } from '$lib/utils/priceFormatter';
+	import {
+		shouldShowFinishIndicator,
+		getFinishDisplayName,
+		capitalizeFirstLetter
+	} from '$lib/utils/finishDisplay';
 
 	interface Props {
 		result: InventoryResult;
@@ -42,9 +47,9 @@
 			<span class="set-name">{result.set_name}</span>
 			<span class="set-code">({result.set.toUpperCase()})</span>
 			<span class="collector-number"
-				>#{result.collector_number}{#if result.finish === 'foil' || result.finish === 'etched'}<span
+				>#{result.collector_number}{#if shouldShowFinishIndicator(result.finish, result.promo_types)}<span
 						class="foil-star"
-						title="{capitalizeFirstLetter(result.finish)} finish">★</span
+						title="{getFinishDisplayName(result.finish, result.promo_types)}">★</span
 					>{/if}</span
 			>
 		</div>

@@ -3,6 +3,31 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/svelte';
 import InventoryResult from './InventoryResult.svelte';
 import type { InventoryResult as InventoryResultType } from '$lib/types/search';
 
+// Mock data defined at module level for access across all describe blocks
+const mockResult: InventoryResultType = {
+	id: 1,
+	card_id: 'test-card-id',
+	card_name: 'Lightning Bolt',
+	set: 'lea',
+	set_name: 'Limited Edition Alpha',
+	collector_number: '161',
+	quantity: 4,
+	image_url: 'https://example.com/card.jpg',
+	finish: 'foil',
+	unit_price_cents: 500,
+	total_price_cents: 2000
+};
+
+const mockResultNoPrice: InventoryResultType = {
+	id: 2,
+	card_id: 'test-card-id-2',
+	card_name: 'Test Card',
+	set: 'test',
+	set_name: 'Test Set',
+	collector_number: '1',
+	quantity: 1
+};
+
 /**
  * Tests for InventoryResult component
  */
@@ -10,29 +35,6 @@ describe('InventoryResult', () => {
 	afterEach(() => {
 		cleanup();
 	});
-	const mockResult: InventoryResultType = {
-		id: 1,
-		card_id: 'test-card-id',
-		card_name: 'Lightning Bolt',
-		set: 'lea',
-		set_name: 'Limited Edition Alpha',
-		collector_number: '161',
-		quantity: 4,
-		image_url: 'https://example.com/card.jpg',
-		finish: 'foil',
-		unit_price_cents: 500,
-		total_price_cents: 2000
-	};
-
-	const mockResultNoPrice: InventoryResultType = {
-		id: 2,
-		card_id: 'test-card-id-2',
-		card_name: 'Test Card',
-		set: 'test',
-		set_name: 'Test Set',
-		collector_number: '1',
-		quantity: 1
-	};
 
 	let mockViewDetails: (result: InventoryResultType) => void;
 
@@ -108,5 +110,144 @@ describe('InventoryResult', () => {
 		render(InventoryResult, { result: mockResult, onViewDetails: mockViewDetails });
 		const image = screen.getByAltText('Lightning Bolt from Limited Edition Alpha');
 		expect(image).toHaveClass('card-image');
+	});
+});
+
+describe('InventoryResult - Finish Type Display', () => {
+	let mockViewDetailsFinish: (result: InventoryResultType) => void;
+
+	beforeEach(() => {
+		mockViewDetailsFinish = vi.fn() as (result: InventoryResultType) => void;
+	});
+
+	afterEach(() => {
+		cleanup();
+	});
+
+	it('should render star indicator for foil finish', () => {
+		const foilResult = { ...mockResult, finish: 'foil' };
+		const { container } = render(InventoryResult, {
+			result: foilResult,
+			onViewDetails: mockViewDetailsFinish
+		});
+		const star = container.querySelector('.foil-star');
+		expect(star).toBeInTheDocument();
+		expect(star?.textContent).toBe('★');
+	});
+
+	it('should render star indicator for etched finish', () => {
+		const etchedResult = { ...mockResult, finish: 'etched' };
+		const { container } = render(InventoryResult, {
+			result: etchedResult,
+			onViewDetails: mockViewDetailsFinish
+		});
+		const star = container.querySelector('.foil-star');
+		expect(star).toBeInTheDocument();
+		expect(star?.textContent).toBe('★');
+	});
+
+	it('should render star indicator for halofoil finish', () => {
+		const halofoilResult = { ...mockResult, finish: 'foil', promo_types: ['halofoil'] };
+		const { container } = render(InventoryResult, {
+			result: halofoilResult,
+			onViewDetails: mockViewDetailsFinish
+		});
+		const star = container.querySelector('.foil-star');
+		expect(star).toBeInTheDocument();
+		expect(star?.textContent).toBe('★');
+	});
+
+	it('should render star indicator for rainbowfoil finish', () => {
+		const rainbowfoilResult = { ...mockResult, finish: 'foil', promo_types: ['rainbowfoil'] };
+		const { container } = render(InventoryResult, {
+			result: rainbowfoilResult,
+			onViewDetails: mockViewDetailsFinish
+		});
+		const star = container.querySelector('.foil-star');
+		expect(star).toBeInTheDocument();
+		expect(star?.textContent).toBe('★');
+	});
+
+	it('should render star indicator for surgefoil finish', () => {
+		const surgefoilResult = { ...mockResult, finish: 'foil', promo_types: ['surgefoil'] };
+		const { container } = render(InventoryResult, {
+			result: surgefoilResult,
+			onViewDetails: mockViewDetailsFinish
+		});
+		const star = container.querySelector('.foil-star');
+		expect(star).toBeInTheDocument();
+		expect(star?.textContent).toBe('★');
+	});
+
+	it('should display "Foil" tooltip without "finish" suffix', () => {
+		const foilResult = { ...mockResult, finish: 'foil' };
+		const { container } = render(InventoryResult, {
+			result: foilResult,
+			onViewDetails: mockViewDetailsFinish
+		});
+		const star = container.querySelector('.foil-star');
+		expect(star).toHaveAttribute('title', 'Foil');
+		expect(star?.getAttribute('title')).not.toContain('finish');
+	});
+
+	it('should display "Etched" tooltip without "finish" suffix', () => {
+		const etchedResult = { ...mockResult, finish: 'etched' };
+		const { container } = render(InventoryResult, {
+			result: etchedResult,
+			onViewDetails: mockViewDetailsFinish
+		});
+		const star = container.querySelector('.foil-star');
+		expect(star).toHaveAttribute('title', 'Etched');
+		expect(star?.getAttribute('title')).not.toContain('finish');
+	});
+
+	it('should display "Halofoil" tooltip', () => {
+		const halofoilResult = { ...mockResult, finish: 'foil', promo_types: ['halofoil'] };
+		const { container } = render(InventoryResult, {
+			result: halofoilResult,
+			onViewDetails: mockViewDetailsFinish
+		});
+		const star = container.querySelector('.foil-star');
+		expect(star).toHaveAttribute('title', 'Halofoil');
+	});
+
+	it('should display "Rainbowfoil" tooltip', () => {
+		const rainbowfoilResult = { ...mockResult, finish: 'foil', promo_types: ['rainbowfoil'] };
+		const { container } = render(InventoryResult, {
+			result: rainbowfoilResult,
+			onViewDetails: mockViewDetailsFinish
+		});
+		const star = container.querySelector('.foil-star');
+		expect(star).toHaveAttribute('title', 'Rainbowfoil');
+	});
+
+	it('should display "Surgefoil" tooltip', () => {
+		const surgefoilResult = { ...mockResult, finish: 'foil', promo_types: ['surgefoil'] };
+		const { container } = render(InventoryResult, {
+			result: surgefoilResult,
+			onViewDetails: mockViewDetailsFinish
+		});
+		const star = container.querySelector('.foil-star');
+		expect(star).toHaveAttribute('title', 'Surgefoil');
+	});
+
+	it('should not render star indicator for nonfoil cards', () => {
+		const nonfoilResult = { ...mockResult, finish: 'nonfoil' };
+		const { container } = render(InventoryResult, {
+			result: nonfoilResult,
+			onViewDetails: mockViewDetailsFinish
+		});
+		const star = container.querySelector('.foil-star');
+		expect(star).not.toBeInTheDocument();
+	});
+
+	it('should not render star indicator for null finish', () => {
+		const nullFinishResult = { ...mockResult, finish: null };
+		const { container } = render(InventoryResult, {
+			result: nullFinishResult,
+			onViewDetails: mockViewDetailsFinish
+		});
+		const star = container.querySelector('.foil-star');
+		expect(star).not.toBeInTheDocument();
 	});
 });

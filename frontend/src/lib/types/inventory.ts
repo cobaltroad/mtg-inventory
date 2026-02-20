@@ -16,6 +16,7 @@ export interface InventoryItem {
 	total_price_cents?: number | null;
 	price_updated_at?: string | null;
 	colors?: string[];
+	promo_types?: string[];
 	created_at: string;
 	updated_at: string;
 	user_id: number;

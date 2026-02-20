@@ -1,6 +1,11 @@
 <script lang="ts">
 	import type { InventoryItem } from '$lib/types/inventory';
 	import { formatCurrency } from '$lib/utils/format';
+	import {
+		shouldShowFinishIndicator,
+		getFinishDisplayName,
+		capitalizeFirstLetter
+	} from '$lib/utils/finishDisplay';
 	import QuantityEditor from './QuantityEditor.svelte';
 	import RemoveConfirmation from './RemoveConfirmation.svelte';
 	import Toast from './Toast.svelte';
@@ -121,10 +126,6 @@
 	function dismissToast() {
 		toast = null;
 	}
-
-	function capitalizeFirstLetter(text: string): string {
-		return text.charAt(0).toUpperCase() + text.slice(1);
-	}
 </script>
 
 {#if loading}
@@ -176,9 +177,9 @@
 							<div class="card-name-cell">
 								<span class="font-beleren card-name">{item.card_name}</span>
 								<span class="collector-number"
-									>{item.set.toUpperCase()} {item.collector_number}{#if item.finish === 'foil' || item.finish === 'etched'}<span
+									>{item.set.toUpperCase()} {item.collector_number}{#if shouldShowFinishIndicator(item.finish, item.promo_types)}<span
 											class="foil-star"
-											title="{capitalizeFirstLetter(item.finish)} finish">★</span
+											title="{getFinishDisplayName(item.finish, item.promo_types)}">★</span
 										>{/if}</span
 								>
 							</div>

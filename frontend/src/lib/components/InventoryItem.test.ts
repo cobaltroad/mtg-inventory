@@ -235,3 +235,99 @@ describe('InventoryItem - Layout', () => {
 		expect(container.querySelector('.card-details')).toBeInTheDocument();
 	});
 });
+
+// ---------------------------------------------------------------------------
+// Tests: Finish Type Display
+// ---------------------------------------------------------------------------
+describe('InventoryItem - Finish Type Display', () => {
+	it('should render star indicator for foil finish', () => {
+		const foilItem = { ...MOCK_ITEM_FULL, finish: 'foil' };
+		const { container } = render(InventoryItem, { props: { item: foilItem } });
+		const star = container.querySelector('.foil-star');
+		expect(star).toBeInTheDocument();
+		expect(star?.textContent).toBe('★');
+	});
+
+	it('should render star indicator for etched finish', () => {
+		const etchedItem = { ...MOCK_ITEM_FULL, finish: 'etched' };
+		const { container } = render(InventoryItem, { props: { item: etchedItem } });
+		const star = container.querySelector('.foil-star');
+		expect(star).toBeInTheDocument();
+		expect(star?.textContent).toBe('★');
+	});
+
+	it('should render star indicator for halofoil finish', () => {
+		const halofoilItem = { ...MOCK_ITEM_FULL, finish: 'foil', promo_types: ['halofoil'] };
+		const { container } = render(InventoryItem, { props: { item: halofoilItem } });
+		const star = container.querySelector('.foil-star');
+		expect(star).toBeInTheDocument();
+		expect(star?.textContent).toBe('★');
+	});
+
+	it('should render star indicator for rainbowfoil finish', () => {
+		const rainbowfoilItem = { ...MOCK_ITEM_FULL, finish: 'foil', promo_types: ['rainbowfoil'] };
+		const { container } = render(InventoryItem, { props: { item: rainbowfoilItem } });
+		const star = container.querySelector('.foil-star');
+		expect(star).toBeInTheDocument();
+		expect(star?.textContent).toBe('★');
+	});
+
+	it('should render star indicator for surgefoil finish', () => {
+		const surgefoilItem = { ...MOCK_ITEM_FULL, finish: 'foil', promo_types: ['surgefoil'] };
+		const { container } = render(InventoryItem, { props: { item: surgefoilItem } });
+		const star = container.querySelector('.foil-star');
+		expect(star).toBeInTheDocument();
+		expect(star?.textContent).toBe('★');
+	});
+
+	it('should display "Foil" tooltip without "finish" suffix', () => {
+		const foilItem = { ...MOCK_ITEM_FULL, finish: 'foil' };
+		const { container } = render(InventoryItem, { props: { item: foilItem } });
+		const star = container.querySelector('.foil-star');
+		expect(star).toHaveAttribute('title', 'Foil');
+		expect(star?.getAttribute('title')).not.toContain('finish');
+	});
+
+	it('should display "Etched" tooltip without "finish" suffix', () => {
+		const etchedItem = { ...MOCK_ITEM_FULL, finish: 'etched' };
+		const { container } = render(InventoryItem, { props: { item: etchedItem } });
+		const star = container.querySelector('.foil-star');
+		expect(star).toHaveAttribute('title', 'Etched');
+		expect(star?.getAttribute('title')).not.toContain('finish');
+	});
+
+	it('should display "Halofoil" tooltip', () => {
+		const halofoilItem = { ...MOCK_ITEM_FULL, finish: 'foil', promo_types: ['halofoil'] };
+		const { container } = render(InventoryItem, { props: { item: halofoilItem } });
+		const star = container.querySelector('.foil-star');
+		expect(star).toHaveAttribute('title', 'Halofoil');
+	});
+
+	it('should display "Rainbowfoil" tooltip', () => {
+		const rainbowfoilItem = { ...MOCK_ITEM_FULL, finish: 'foil', promo_types: ['rainbowfoil'] };
+		const { container } = render(InventoryItem, { props: { item: rainbowfoilItem } });
+		const star = container.querySelector('.foil-star');
+		expect(star).toHaveAttribute('title', 'Rainbowfoil');
+	});
+
+	it('should display "Surgefoil" tooltip', () => {
+		const surgefoilItem = { ...MOCK_ITEM_FULL, finish: 'foil', promo_types: ['surgefoil'] };
+		const { container } = render(InventoryItem, { props: { item: surgefoilItem } });
+		const star = container.querySelector('.foil-star');
+		expect(star).toHaveAttribute('title', 'Surgefoil');
+	});
+
+	it('should not render star indicator for nonfoil cards', () => {
+		const nonfoilItem = { ...MOCK_ITEM_FULL, finish: 'nonfoil' };
+		const { container } = render(InventoryItem, { props: { item: nonfoilItem } });
+		const star = container.querySelector('.foil-star');
+		expect(star).not.toBeInTheDocument();
+	});
+
+	it('should not render star indicator for null finish', () => {
+		const nullFinishItem = { ...MOCK_ITEM_FULL, finish: null };
+		const { container } = render(InventoryItem, { props: { item: nullFinishItem } });
+		const star = container.querySelector('.foil-star');
+		expect(star).not.toBeInTheDocument();
+	});
+});
