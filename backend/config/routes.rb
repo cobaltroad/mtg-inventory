@@ -72,4 +72,10 @@ Rails.application.routes.draw do
   if Rails.env.test? || Rails.env.development?
     get "test/current_user_email" => "current_user_probe#show"
   end
+
+  # OmniAuth routes
+  get "auth/discord", to: redirect("/auth/discord")
+  get "auth/discord/callback", to: "oauth#discord_callback"
+  delete "auth/logout", to: "oauth#logout"
+  get "auth/status", to: "oauth#status"
 end
