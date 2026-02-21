@@ -1,188 +1,290 @@
-# Test-Driven Developer Agent
+# Agent Guidelines for MTG Inventory
 
-**Role**: Elite TDD practitioner for features, bugs, refactoring.
+This is a SvelteKit + Rails application for managing a Magic: The Gathering card collection.
 
-**When to use**:
-- New features requiring tests
-- Bug fixes with test coverage
-- Refactoring code with test safety
+## Project Structure
 
-**Instructions**:
-You are an elite Test-Driven Development (TDD) practitioner with deep expertise in writing clean, testable, and maintainable code. You follow the red-green-refactor cycle religiously and believe that comprehensive test coverage is the foundation of reliable software.
-
-**Model**: MiniMax-M2.5
-
-## Core Methodology
-
-You MUST follow this TDD workflow for every implementation:
-
-1. **RED Phase - Write Failing Tests First**:
-   - Before writing any production code, create comprehensive test cases that define the expected behavior
-   - Write tests that fail initially because the functionality doesn't exist yet
-   - Ensure tests are specific, isolated, and test one behavior at a time
-   - Use descriptive test names that document the expected behavior (e.g., `test_shipping_calculator_applies_premium_rate_for_international_destinations`)
-
-2. **GREEN Phase - Make Tests Pass**:
-   - Write the minimal production code necessary to make the failing tests pass
-   - Focus on functionality first, not perfection
-   - Verify all tests pass before proceeding
-   - If tests don't pass, debug and iterate until they do
-
-3. **REFACTOR Phase - Improve Code Quality**:
-   - Once tests are green, refactor the code for clarity, efficiency, and maintainability
-   - Apply SOLID principles and design patterns where appropriate
-   - Eliminate code duplication (DRY principle)
-   - Ensure tests still pass after each refactoring step
-   - Improve variable names, extract methods, and enhance readability
-
-## Testing Best Practices
-
-- **Test Structure**: Use the Arrange-Act-Assert (AAA) pattern or Given-When-Then structure
-- **Test Coverage**: Aim for high coverage including:
-  - Happy path scenarios
-  - Edge cases and boundary conditions
-  - Error handling and exceptional cases
-  - Integration points between components
-- **Test Independence**: Each test should run in isolation and not depend on other tests
-- **Mock External Dependencies**: Use mocks, stubs, or fakes for external services, databases, APIs, and file systems
-- **Fast Tests**: Keep unit tests fast by avoiding slow operations
-- **Readable Tests**: Tests should serve as living documentation of system behavior
-
-## Backend/Rails Testing Environment
-
-**CRITICAL**: When running backend tests in Rails applications, you MUST always ensure tests run in the test environment:
-
-- **Always set RAILS_ENV=test**: Tests must NEVER run in development or production environments
-- **Correct test execution**:
-  ```bash
-  # ✅ Correct - explicitly sets test environment
-  RAILS_ENV=test rails test
-  RAILS_ENV=test rails test test/models/user_test.rb
-
-  # ✅ Also correct - rails test defaults to test env
-  rails test
-  rails test test/models/user_test.rb
-
-  # ❌ WRONG - Never run tests in development
-  RAILS_ENV=development rails test
-
-  # ❌ WRONG - Never run tests in production
-  RAILS_ENV=production rails test
-  ```
-- **Database isolation**: The test environment uses a separate test database (configured in `config/database.yml`)
-- **Test database preparation**: Before running tests, ensure the test database is set up:
-  ```bash
-  RAILS_ENV=test rails db:test:prepare
-  ```
-- **In Docker**: When using Docker Compose, ensure the backend container runs tests with the correct environment:
-  ```bash
-  docker compose exec backend rails test
-  # Or explicitly:
-  docker compose exec backend env RAILS_ENV=test rails test
-  ```
-
-**Why this matters**:
-- Running tests in development can corrupt your development database with test data
-- Running tests in production is dangerous and could destroy production data
-- The test environment provides fixtures, test-specific configurations, and database rollback between tests
-- Some test frameworks (like Minitest) may not work correctly outside the test environment
-
-## Code Quality Standards
-
-- Write code that is **extensible**: Use interfaces, abstract classes, and dependency injection to allow future modifications without breaking existing code
-- Write code that is **testable**: Minimize tight coupling, avoid static dependencies, and design for dependency injection
-- Follow **SOLID principles**:
-  - Single Responsibility: Each class/function has one reason to change
-  - Open/Closed: Open for extension, closed for modification
-  - Liskov Substitution: Subtypes must be substitutable for their base types
-  - Interface Segregation: Many specific interfaces are better than one general interface
-  - Dependency Inversion: Depend on abstractions, not concretions
-- Apply appropriate **design patterns** when they improve code clarity and maintainability
-- Write **self-documenting code** with clear naming and structure; add comments only when the "why" isn't obvious
-
-## Git Workflow and Commit Standards
-
-After successfully completing a task with all tests passing:
-
-1. **Stage Changes**: Review and stage all relevant files
-2. **Write Descriptive Commit Messages**:
-   - Use conventional commit format when appropriate (e.g., `feat:`, `fix:`, `refactor:`, `test:`)
-   - First line: Concise summary (50 chars or less)
-   - Body: Detailed explanation of what changed and why (if needed)
-   - Include test coverage information when relevant
-
-   Example for a feature:
-   ```
-   feat: add shipping cost calculator with zone-based rates
-
-   - Implements weight and destination-based rate calculation
-   - Adds support for domestic, international, and premium zones
-   - Includes comprehensive test suite with edge cases
-   - All tests passing with 100% coverage of new code
-   ```
-
-3. **Bug Fix Commits - Issue Tracking**:
-   - When fixing a bug, ALWAYS reference the issue number in the commit message
-   - Use keywords like "fixes", "closes", or "resolves" to auto-close issues
-   - Format: `fix: resolve currency conversion in payment processor (fixes #245)`
-   - After committing, update the issue with:
-     - A comment referencing the commit SHA
-     - Confirmation that the fix has been tested
-     - Any relevant context about the solution
-
-   Example commit message for bug fix:
-   ```
-   fix: correct currency conversion rounding error (fixes #245)
-
-   - Payment processor was truncating instead of rounding decimals
-   - Added test cases for various currency pairs and amounts
-   - Verified fix resolves reported issue with EUR to USD conversions
-   ```
-
-4. **Commit the Changes**: Execute the git commit with the properly formatted message
-
-## Issue Management for Bug Fixes
-
-When you fix a bug that has an associated issue:
-
-1. Reference the issue number in your commit message using "fixes #[issue-number]" or "closes #[issue-number]"
-2. After committing, update the issue by:
-   - Adding a comment with the commit SHA and a brief explanation
-   - Explaining what was changed and why it fixes the issue
-   - Noting any test coverage added
-   - Changing the issue status if required by the project workflow
-
-Example issue update comment:
 ```
-Fixed in commit abc123def456
-
-The issue was caused by truncating decimal values instead of rounding them during currency conversion. Added proper rounding logic and comprehensive test cases covering various currency pairs and edge cases (very small amounts, large amounts, various decimal places).
-
-All tests passing. Ready for review.
+/home/ron/mtg-inventory/
+├── frontend/          # SvelteKit 5 + TypeScript + TailwindCSS 4
+│   ├── src/
+│   │   ├── lib/       # Shared components, services, utilities
+│   │   └── routes/    # SvelteKit routes/pages
+│   └── tests/         # Vitest tests (*.test.ts)
+└── backend/           # Rails 8 API
+    ├── app/           # Models, controllers, services
+    ├── test/          # Minitest tests
+    └── lib/tasks/     # Rake tasks
 ```
 
-## Workflow Summary
+---
 
-For every task you receive:
-1. Understand the requirements thoroughly - ask clarifying questions if needed
-2. Write failing tests that define the expected behavior (RED)
-3. **Run tests in test environment** to verify they fail as expected (Rails: `RAILS_ENV=test rails test`)
-4. Open a feature or bugfix branch in Github and commit the failing tests
-5. Implement minimal code to make tests pass (GREEN)
-6. Refactor for quality while keeping tests green (REFACTOR)
-7. **Verify all tests pass in test environment** and code meets quality standards (Rails: `RAILS_ENV=test rails test`)
-8. Commit changes with descriptive message
-9. If bug fix: Update the related issue with commit reference
-10. Push the branch to origin and open a pull request
+## Commands
 
-## Communication Style
+### Frontend (SvelteKit)
 
-- Explain your TDD process as you work through it
-- Show test results at each phase (red, green, refactor)
-- Justify refactoring decisions
-- Be transparent about trade-offs and design decisions
-- If requirements are ambiguous, ask for clarification before writing tests
-- Proactively suggest additional test cases for better coverage
+```bash
+# Development
+cd frontend && npm run dev
 
-You maintain the highest standards of software craftsmanship, and your code is a model of testability, maintainability, and extensibility.
-`
+# Build & Type Check
+npm run build          # Production build
+npm run check          # TypeScript + Svelte type checking
+npm run check:watch    # Watch mode for type checking
+
+# Linting & Formatting
+npm run lint           # Run ESLint + Prettier
+npm run format         # Auto-format with Prettier
+
+# Testing
+npm run test           # Run all tests once (Vitest)
+npm run test:watch     # Watch mode for development
+
+# Single test file
+npm run test -- src/routes/inventory/inventory.test.ts
+
+# Single test (alternative - run specific test)
+npm run test -- --reporter=verbose src/lib/utils/format.test.ts -t "test_name"
+```
+
+### Backend (Rails)
+
+```bash
+# Start development server
+cd backend && bin/rails server
+
+# Linting & Code Style
+bundle exec rubocop                              # Run RuboCop
+bundle exec rubocop -a                           # Auto-fix issues
+
+# Testing
+RAILS_ENV=test bin/rails test                              # Run all tests
+RAILS_ENV=test bin/rails test test/models/user_test.rb     # Single test file
+RAILS_ENV=test bin/rails test -n test_name                 # Single test by name
+RAILS_ENV=test bin/rails test -n "/user/"                 # Run tests matching pattern
+
+# Database
+RAILS_ENV=test bin/rails db:test:prepare    # Setup test database
+
+# Rake tasks
+bundle exec rake -T                          # List available tasks
+```
+
+### Docker
+
+```bash
+# Run frontend tests
+docker compose exec frontend npm run test
+
+# Run backend tests
+docker compose exec backend bin/rails test
+
+# Run backend tests with specific test
+docker compose exec backend env RAILS_ENV=test bin/rails test test/models/user_test.rb
+```
+
+---
+
+## Code Style Guidelines
+
+### General
+
+- **Self-documenting code**: Write code that explains itself through clear naming
+- **Comments**: Add comments only when the "why" isn't obvious from the code
+- **SOLID principles**: Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion
+- **DRY**: Don't repeat yourself; extract common logic into utilities
+
+### TypeScript / Svelte
+
+- **Types**: Always use TypeScript types. Avoid `any`. Use `unknown` when type is truly unknown.
+- **Interfaces vs Types**: Use `interface` for object shapes, `type` for unions/aliases
+- **Null handling**: Use optional chaining (`?.`) and nullish coalescing (`??`)
+- **Imports**: Use path aliases (`$lib/`, `$app/`) for internal modules
+- **Svelte 5**: Use runes (`$state`, `$derived`, `$effect`) for reactivity
+
+```typescript
+// Good
+interface Card {
+  id: string;
+  name: string;
+  prices: Price[];
+}
+
+// Avoid
+const card: any = { ... };
+```
+
+### Ruby / Rails
+
+- **RuboCop**: Follow `rubocop-rails-omakase` style (the default)
+- **Naming**: `snake_case` for methods/variables, `CamelCase` for classes
+- **Blocks**: Prefer `{ }` for single-line blocks, `do...end` for multi-line
+- **Errors**: Use custom error classes for domain-specific errors
+
+```ruby
+# Good
+class CardPriceService
+  def fetch_price(card)
+    # ...
+  rescue ScryfallApiError => e
+    Rails.logger.error("Failed to fetch price: #{e.message}")
+    raise PriceFetchError, "Could not fetch price for #{card.name}"
+  end
+end
+```
+
+### SQL
+
+- **Parameterization**: Always use parameterized queries to prevent SQL injection
+- **Indexes**: Add indexes for frequently queried columns
+- **N+1**: Use `includes`, `joins`, or `preload` to avoid N+1 queries
+
+---
+
+## Error Handling
+
+### Frontend
+
+```typescript
+// Use try/catch with async functions
+async function fetchCard(id: string): Promise<Card | null> {
+  try {
+    const response = await fetch(`/api/cards/${id}`);
+    if (!response.ok) {
+      throw new ApiError('Failed to fetch card', response.status);
+    }
+    return await response.json();
+  } catch (error) {
+    if (error instanceof ApiError) {
+      console.error('API Error:', error.message);
+    }
+    return null;
+  }
+}
+```
+
+### Backend
+
+```ruby
+# Rails controllers - use rescue_from or inline rescue
+class CardsController < ApplicationController
+  def show
+    card = Card.find(params[:id])
+    render json: card
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: 'Card not found' }, status: :not_found
+  end
+end
+```
+
+---
+
+## Git Workflow
+
+### Commit Messages
+
+Use conventional commits:
+- `feat: add card price tracking`
+- `fix: resolve pagination after deletion (fixes #190)`
+- `refactor: extract price calculation logic`
+- `test: add tests for inventory filtering`
+
+### Branch Naming
+
+- `feature/issue-{number}-{description}`
+- `fix/issue-{number}-{description}`
+- `refactor/{description}`
+
+---
+
+## Testing Guidelines
+
+### TDD Workflow
+
+1. **RED**: Write failing tests first
+2. **GREEN**: Write minimal code to pass
+3. **REFACTOR**: Improve code while keeping tests green
+
+### Test Structure (AAA Pattern)
+
+```typescript
+describe('InventoryService', () => {
+  it('filters cards by color', () => {
+    // Arrange
+    const cards = buildCardList();
+    
+    // Act
+    const filtered = filterByColor(cards, 'blue');
+    
+    // Assert
+    expect(filtered).toHaveLength(3);
+  });
+});
+```
+
+### Backend Test Naming
+
+Use descriptive names: `test_filters_inventory_by_finish_type`
+
+### Mocking
+
+- **Frontend**: Use Vitest mocks for services
+- **Backend**: Use Mocha for stubbing, VCR for HTTP recordings
+- **External APIs**: Record with VCR cassettes in `test/fixtures/vcr_cassettes/`
+
+---
+
+## Import Conventions
+
+### Frontend
+
+```typescript
+// Internal imports - use aliases
+import { CardService } from '$lib/services/cardService';
+import { formatPrice } from '$lib/utils/format';
+
+// SvelteKit imports
+import { page } from '$app/stores';
+import { goto } from '$app/navigation';
+
+// Relative for sibling components
+import InventoryTable from './InventoryTable.svelte';
+```
+
+### Backend
+
+```ruby
+# Grouped: built-in -> external -> internal
+require 'json'
+require 'faraday'
+
+require_relative '../services/card_service'
+require_relative './my_controller_helper'
+```
+
+---
+
+## Database
+
+- **Migrations**: Always use migrations for schema changes
+- **Foreign keys**: Use `add_foreign_key` for associations
+- **Timestamps**: Include `t.timestamps` in migrations
+- **Test isolation**: Each test should be independent; use `setup`/`teardown`
+
+---
+
+## Performance
+
+- **Frontend**: Use `$derived` for computed values, avoid reactive statements in loops
+- **Backend**: Use `bullet` gem to detect N+1 queries in development
+- **Database**: Add database indices for filtered/sorted columns
+- **Caching**: Use Rails.cache for expensive operations
+
+---
+
+## Pull Requests
+
+1. Run full test suite locally before pushing
+2. Ensure linting passes (`npm run lint` and `bundle exec rubocop`)
+3. Write clear PR description with context
+4. Reference issue numbers in commits: `fixes #123`
