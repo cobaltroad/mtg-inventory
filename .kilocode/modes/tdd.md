@@ -1,6 +1,6 @@
 ---
 name: test-driven-developer
-description: "TDD Red-Green-Refactor for Rails"
+description: "TDD Red-Green-Refactor"
 model: MiniMax-M2.5
 ---
 
