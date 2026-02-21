@@ -6,9 +6,13 @@
 	import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
 
 	onMount(async () => {
-		await checkAuthStatus();
-		// eslint-disable-next-line svelte/no-navigation-without-resolve
-		goto(`${base}/inventory`);
+		try {
+			await checkAuthStatus();
+			// eslint-disable-next-line svelte/no-navigation-within-svelte
+			goto(`${base}/inventory`);
+		} catch {
+			goto(`${base}/login`);
+		}
 	});
 </script>
 
