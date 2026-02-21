@@ -265,8 +265,6 @@ class ScrapeEdhrecCommandersJobTest < ActiveJob::TestCase
   def stub_edhrec_discovery(top_commanders:)
     EdhrecScraper.define_singleton_method(:fetch_top_commanders) { top_commanders }
     yield
-  ensure
-    EdhrecScraper.singleton_class.send(:remove_method, :fetch_top_commanders)
   end
 
   # Build mock commander data

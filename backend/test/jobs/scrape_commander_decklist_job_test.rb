@@ -119,17 +119,13 @@ class ScrapeCommanderDecklistJobTest < ActiveJob::TestCase
       raise EdhrecScraper::FetchError, "Network timeout"
     end
 
-    begin
-      # Should re-raise the error so Solid Queue can retry the job
-      assert_raises EdhrecScraper::FetchError do
-        ScrapeCommanderDecklistJob.perform_now(commander.id)
-      end
-
-      # Verify no decklist was created
-      assert_equal 0, Decklist.count
-    ensure
-      EdhrecScraper.singleton_class.send(:remove_method, :fetch_commander_decklist)
+    # Should re-raise the error so Solid Queue can retry the job
+    assert_raises EdhrecScraper::FetchError do
+      ScrapeCommanderDecklistJob.perform_now(commander.id)
     end
+
+    # Verify no decklist was created
+    assert_equal 0, Decklist.count
   end
 
   # ---------------------------------------------------------------------------
@@ -143,16 +139,12 @@ class ScrapeCommanderDecklistJobTest < ActiveJob::TestCase
       raise EdhrecScraper::ParseError, "Invalid JSON structure"
     end
 
-    begin
-      assert_raises EdhrecScraper::ParseError do
-        ScrapeCommanderDecklistJob.perform_now(commander.id)
-      end
-
-      # Verify no decklist was created
-      assert_equal 0, Decklist.count
-    ensure
-      EdhrecScraper.singleton_class.send(:remove_method, :fetch_commander_decklist)
+    assert_raises EdhrecScraper::ParseError do
+      ScrapeCommanderDecklistJob.perform_now(commander.id)
     end
+
+    # Verify no decklist was created
+    assert_equal 0, Decklist.count
   end
 
   # ---------------------------------------------------------------------------
@@ -166,16 +158,12 @@ class ScrapeCommanderDecklistJobTest < ActiveJob::TestCase
       raise EdhrecScraper::RateLimitError, "Rate limit exceeded"
     end
 
-    begin
-      assert_raises EdhrecScraper::RateLimitError do
-        ScrapeCommanderDecklistJob.perform_now(commander.id)
-      end
-
-      # Verify no decklist was created
-      assert_equal 0, Decklist.count
-    ensure
-      EdhrecScraper.singleton_class.send(:remove_method, :fetch_commander_decklist)
+    assert_raises EdhrecScraper::RateLimitError do
+      ScrapeCommanderDecklistJob.perform_now(commander.id)
     end
+
+    # Verify no decklist was created
+    assert_equal 0, Decklist.count
   end
 
   # ---------------------------------------------------------------------------
@@ -265,8 +253,6 @@ class ScrapeCommanderDecklistJobTest < ActiveJob::TestCase
   def stub_edhrec_scraper(decklist:)
     EdhrecScraper.define_singleton_method(:fetch_commander_decklist) { |url| decklist }
     yield
-  ensure
-    EdhrecScraper.singleton_class.send(:remove_method, :fetch_commander_decklist)
   end
 
   # Build mock decklist with 100 cards

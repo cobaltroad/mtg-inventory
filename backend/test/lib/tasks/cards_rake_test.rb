@@ -21,7 +21,7 @@ class CardsRakeTest < ActiveSupport::TestCase
     CardListWriter.instance_variable_set(:@output_directory, @test_dir)
 
     # Stub API requests
-    stub_moxfield_game_changers
+    stub_wizards_game_changers
     stub_scryfall_reserved_list
   end
 
@@ -48,7 +48,7 @@ class CardsRakeTest < ActiveSupport::TestCase
     assert_kind_of Array, yaml["cards"]
     assert_operator yaml["cards"].length, :>, 0
     assert_equal Date.today.iso8601, yaml["last_updated"]
-    assert_equal CardListFetcher::MOXFIELD_GAME_CHANGERS_URL, yaml["source"]
+    assert_equal CardListFetcher::WIZARDS_GAME_CHANGERS_URL, yaml["source"]
   end
 
   test "update_static_lists task creates reserved_list.yml file" do
@@ -110,7 +110,7 @@ class CardsRakeTest < ActiveSupport::TestCase
     first_rl_content = File.read(@test_dir.join("reserved_list.yml"))
 
     Rake::Task["cards:update_static_lists"].reenable
-    stub_moxfield_game_changers  # Re-stub since WebMock stubs are consumed
+    stub_wizards_game_changers  # Re-stub since WebMock stubs are consumed
     stub_scryfall_reserved_list
 
     capture_io do
@@ -132,7 +132,7 @@ class CardsRakeTest < ActiveSupport::TestCase
   test "update_static_lists task handles Moxfield network failure gracefully" do
     # Override stub to return error
     WebMock.reset!
-    stub_request(:get, CardListFetcher::MOXFIELD_GAME_CHANGERS_URL)
+    stub_request(:get, CardListFetcher::WIZARDS_GAME_CHANGERS_URL)
       .to_timeout
 
     stub_scryfall_reserved_list
@@ -150,7 +150,7 @@ class CardsRakeTest < ActiveSupport::TestCase
   test "update_static_lists task handles Scryfall network failure gracefully" do
     # Override stub to return error
     WebMock.reset!
-    stub_moxfield_game_changers
+    stub_wizards_game_changers
 
     stub_request(:get, %r{https://api\.scryfall\.com/cards/search\?q=is:reserved})
       .to_timeout
@@ -168,7 +168,7 @@ class CardsRakeTest < ActiveSupport::TestCase
   test "update_static_lists task continues if one list succeeds and one fails" do
     # Make Reserved List fail, but Game Changers succeed
     WebMock.reset!
-    stub_moxfield_game_changers
+    stub_wizards_game_changers
 
     stub_request(:get, %r{https://api\.scryfall\.com/cards/search\?q=is:reserved})
       .to_return(status: 500, body: "Server Error")
@@ -192,7 +192,7 @@ class CardsRakeTest < ActiveSupport::TestCase
   # Test Helpers - API Stubs
   # ---------------------------------------------------------------------------
 
-  def stub_moxfield_game_changers
+  def stub_wizards_game_changers
     html = build_moxfield_html([
       "Dockside Extortionist",
       "Jeweled Lotus",
@@ -201,7 +201,7 @@ class CardsRakeTest < ActiveSupport::TestCase
       "Sol Ring"
     ])
 
-    stub_request(:get, CardListFetcher::MOXFIELD_GAME_CHANGERS_URL)
+    stub_request(:get, CardListFetcher::WIZARDS_GAME_CHANGERS_URL)
       .to_return(status: 200, body: html, headers: { "Content-Type" => "text/html" })
   end
 

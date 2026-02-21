@@ -21,8 +21,8 @@ class ScraperExecutionFlowTest < ActionDispatch::IntegrationTest
   test "full scraper execution creates execution record and is visible via API" do
     # Mock commander data
     mock_commanders = [
-      { name: "Atraxa", rank: 1, url: "https://edhrec.com/commanders/atraxa" },
-      { name: "Muldrotha", rank: 2, url: "https://edhrec.com/commanders/muldrotha" }
+      { name: "Atraxa", rank: 1, url: "https://disambiguation.com/commanders/atraxa" },
+      { name: "Muldrotha", rank: 2, url: "https://disambiguation.com/commanders/muldrotha" }
     ]
 
     # Stub the scraper
@@ -64,8 +64,6 @@ class ScraperExecutionFlowTest < ActionDispatch::IntegrationTest
     detail = JSON.parse(response.body)
     assert_equal execution.id, detail["id"]
     assert_equal 100.0, detail["success_rate"]
-  ensure
-    EdhrecScraper.singleton_class.send(:remove_method, :fetch_top_commanders)
   end
 
   # ---------------------------------------------------------------------------
@@ -98,8 +96,6 @@ class ScraperExecutionFlowTest < ActionDispatch::IntegrationTest
     assert_equal 1, body.length
     assert_equal execution.id, body[0]["id"]
     assert_equal "failure", body[0]["status"]
-  ensure
-    EdhrecScraper.singleton_class.send(:remove_method, :fetch_top_commanders)
   end
 
   # ---------------------------------------------------------------------------

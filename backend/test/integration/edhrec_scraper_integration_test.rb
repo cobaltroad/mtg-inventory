@@ -8,6 +8,7 @@ class EdhrecScraperIntegrationTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
   # Integration test with real EDHREC page using VCR
   # ---------------------------------------------------------------------------
+
   test "successfully fetches and parses real EDHREC page" do
     VCR.use_cassette("edhrec_commanders_week") do
       result = EdhrecScraper.fetch_top_commanders
