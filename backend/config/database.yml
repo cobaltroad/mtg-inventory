@@ -22,7 +22,7 @@ default: &default
 
 development:
   <<: *default
-  database: backend_development
+  database: mtg_inventory_development
   host: <%= ENV.fetch("DB_HOST") { "localhost" } %>
   username: <%= ENV.fetch("DB_USER") { nil } %>
   password: <%= ENV.fetch("DB_PASS") { nil } %>
@@ -75,18 +75,19 @@ test:
 production:
   primary: &primary_production
     <<: *default
-    database: backend_production
-    username: backend
-    password: <%= ENV["BACKEND_DATABASE_PASSWORD"] %>
+    database: mtg_inventory_production
+    host: <%= ENV.fetch("DB_HOST") { "localhost" } %>
+    username: <%= ENV.fetch("DB_USER") { nil } %>
+    password: <%= ENV.fetch("DB_PASS") { nil } %>
   cache:
     <<: *primary_production
-    database: backend_production_cache
+    database: mtg_inventory_production_cache
     migrations_paths: db/cache_migrate
   queue:
     <<: *primary_production
-    database: backend_production_queue
+    database: mtg_inventory_production_queue
     migrations_paths: db/queue_migrate
   cable:
     <<: *primary_production
-    database: backend_production_cable
+    database: mtg_inventory_production_cable
     migrations_paths: db/cable_migrate
