@@ -41,6 +41,14 @@ gem "fugit"
 # Lightweight pagination library for backend pagination evaluation (Spike #156)
 gem "pagy", "~> 9.4"
 
+# OAuth authentication
+gem "omniauth", "~> 2.1"
+gem "omniauth-discord", "~> 1.0"
+gem "oauth2", "~> 2.0"
+
+# HTTP client
+gem "faraday"
+
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin Ajax possible
 # gem "rack-cors"
 
