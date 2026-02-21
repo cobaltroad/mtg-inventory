@@ -1,4 +1,6 @@
+import { base } from '$app/paths';
 import type { LayoutLoad } from './$types';
+import { redirect } from '@sveltejs/kit';
 import { getAuthState, checkAuthStatus } from '$lib/services/authService.svelte';
 
 const PROTECTED_ROUTES = ['/inventory', '/wishlist', '/reports'];
@@ -18,9 +20,7 @@ export const load: LayoutLoad = async ({ url }) => {
 
 		const currentState = getAuthState();
 		if (!currentState.isAuthenticated) {
-			return {
-				redirect: '/login'
-			};
+			throw redirect(302, `${base}/login`);
 		}
 	}
 
