@@ -3,7 +3,7 @@ import { redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 import { browser } from '$app/environment';
 
-const AUTH_ENABLED = import.meta.env.VITE_AUTH_ENABLED !== 'false';
+const AUTH_ENABLED = import.meta.env.VITE_AUTH_ENABLED === 'true';
 
 export const load: PageLoad = async ({ fetch, url }) => {
 	// Check authentication first (only if auth is enabled)

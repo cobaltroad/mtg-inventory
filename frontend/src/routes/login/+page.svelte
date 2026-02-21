@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { login } from '$lib/services/authService.svelte';
 
-	const AUTH_ENABLED = import.meta.env.VITE_AUTH_ENABLED !== 'false';
+	const AUTH_ENABLED = import.meta.env.VITE_AUTH_ENABLED === 'true';
 </script>
 
 <div class="login-page">

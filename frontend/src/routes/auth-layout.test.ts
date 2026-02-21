@@ -42,8 +42,8 @@ describe('Auth Layout - VITE_AUTH_ENABLED', () => {
 		await expect(load({ url: mockUrl } as any)).rejects.toThrow();
 	});
 
-	it('does not redirect when auth disabled', async () => {
-		process.env = { ...originalEnv, VITE_AUTH_ENABLED: 'false' };
+	it('does not redirect when auth disabled (default)', async () => {
+		delete process.env.VITE_AUTH_ENABLED;
 		vi.resetModules();
 
 		const { load } = await import('../routes/+layout.ts');
