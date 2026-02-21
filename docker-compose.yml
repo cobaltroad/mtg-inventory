@@ -32,7 +32,7 @@ services:
       EDITOR: nano
       RUBY_VERSION: ${RUBY_VERSION}
       BUNDLE_PATH: /bundle
-      RAILS_ENV: development
+      RAILS_ENV: ${APP_ENV:-development}
       RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
       DB_HOST: db
       DB_USER: ${POSTGRES_USER_NAME}
@@ -41,6 +41,8 @@ services:
       DATABASE_URL: ${POSTGRES_DB_URL}
       APP_DOMAIN: ${APP_DOMAIN}
       PUBLIC_API_PATH: ${PUBLIC_API_PATH}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
     volumes:
       - ./backend:/backend  # Rails code
       - bundle_cache:/bundle       # Gems
@@ -69,7 +71,7 @@ services:
       EDITOR: nano
       RUBY_VERSION: ${RUBY_VERSION}
       BUNDLE_PATH: /bundle
-      RAILS_ENV: development
+      RAILS_ENV: ${APP_ENV:-development}
       RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
       DB_HOST: db
       DB_USER: ${POSTGRES_USER_NAME}
@@ -78,6 +80,8 @@ services:
       DATABASE_URL: ${POSTGRES_DB_URL}
       APP_DOMAIN: ${APP_DOMAIN}
       PUBLIC_API_PATH: ${PUBLIC_API_PATH}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
     volumes:
       - ./backend:/backend  # Rails code
       - bundle_cache:/bundle       # Gems
@@ -101,7 +105,7 @@ services:
     depends_on:
       - backend
     environment:
-      NODE_ENV: development
+      NODE_ENV: ${APP_ENV:-development}
       APP_DOMAIN: ${APP_DOMAIN}
       PUBLIC_BASE_PATH: ${PUBLIC_BASE_PATH}
       VITE_API_URL: http://backend:3000

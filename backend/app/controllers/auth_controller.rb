@@ -3,6 +3,8 @@ class AuthController < ApplicationController
   before_action :verify_state, only: :callback
 
   def discord
+    return render json: { error: "OAuth not configured in development" }, status: :service_unavailable unless production?
+
     state = SecureRandom.hex(24)
     session[:oauth_state] = state
     session[:return_to] = params[:return_to] if params[:return_to].present?
@@ -16,6 +18,8 @@ class AuthController < ApplicationController
   end
 
   def callback
+    return render json: { error: "OAuth not configured in development" }, status: :service_unavailable unless production?
+
     return render json: { error: "Authorization denied" }, status: :unauthorized if params[:error]
 
     error = verify_state
@@ -116,6 +120,10 @@ class AuthController < ApplicationController
     return "Missing state parameter" if params[:state].blank?
     return "State mismatch - possible CSRF attack" if params[:state] != session[:oauth_state]
     nil
+  end
+
+  def production?
+    Rails.env.production?
   end
 
   def json_request?
