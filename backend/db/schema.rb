@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_20_053425) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_21_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -114,6 +114,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_20_053425) do
     t.index ["collection_item_id"], name: "index_image_cache_executions_on_collection_item_id"
     t.index ["started_at"], name: "index_image_cache_executions_on_started_at"
     t.index ["status"], name: "index_image_cache_executions_on_status"
+  end
+
+  create_table "oauth_providers", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "provider", null: false
+    t.string "uid", null: false
+    t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
+    t.index ["provider", "uid"], name: "index_oauth_providers_on_provider_and_uid", unique: true
+    t.index ["user_id"], name: "index_oauth_providers_on_user_id"
   end
 
   create_table "price_alerts", force: :cascade do |t|
@@ -316,6 +326,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_20_053425) do
   add_foreign_key "collection_items", "users"
   add_foreign_key "decklists", "commanders"
   add_foreign_key "decklists", "commanders", column: "partner_id"
+  add_foreign_key "oauth_providers", "users"
   add_foreign_key "price_alerts", "users"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
