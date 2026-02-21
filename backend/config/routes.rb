@@ -78,4 +78,14 @@ Rails.application.routes.draw do
   get "auth/discord/callback", to: "oauth#discord_callback"
   delete "auth/logout", to: "oauth#logout"
   get "auth/status", to: "oauth#status"
+
+  # Auth API routes (inside API scope)
+  scope ENV.fetch("PUBLIC_API_PATH", "/api") do
+    scope "/auth" do
+      get "discord", to: "auth#discord"
+      get "discord/callback", to: "auth#callback"
+      delete "logout", to: "auth#logout"
+      get "status", to: "auth#status"
+    end
+  end
 end

@@ -1,8 +1,4 @@
 class ApplicationController < ActionController::API
-  # ---------------------------------------------------------------------------
-  # Custom error raised when the default user is not found in the database.
-  # This provides a more helpful error message than ActiveRecord::RecordNotFound.
-  # ---------------------------------------------------------------------------
   class DefaultUserMissingError < StandardError
     def initialize
       super(
@@ -12,22 +8,10 @@ class ApplicationController < ActionController::API
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Global error handler for DefaultUserMissingError.
-  # Returns a 500 status with a helpful error message.
-  # ---------------------------------------------------------------------------
   rescue_from DefaultUserMissingError do |error|
     render json: { error: error.message }, status: :internal_server_error
   end
 
-  # ---------------------------------------------------------------------------
-  # MVP current_user resolver.
-  #
-  # At MVP there is no authentication flow.  This helper returns the single
-  # seeded default user unconditionally.  When OAuth or session-based auth is
-  # added later, replace this method body with the real resolver — the method
-  # signature (no arguments, returns a User instance) stays the same.
-  # ---------------------------------------------------------------------------
   private
 
   def force_user_reload?
@@ -35,11 +19,15 @@ class ApplicationController < ActionController::API
   end
 
   def current_user
-    # Skip memoization when ?uu is present
-    # unless force_user_reload?
-    unless true
-      @current_user ||= User.find_by(email: User::DEFAULT_EMAIL) || raise(DefaultUserMissingError)
+    if session[:user_id]
+      user = User.find_by(id: session[:user_id])
+      return user if user
     end
+
     User.find_by(email: User::DEFAULT_EMAIL) || raise(DefaultUserMissingError)
+  end
+
+  def authenticate_api_user
+    return render json: { error: "Unauthorized" }, status: :unauthorized unless current_user
   end
 end
