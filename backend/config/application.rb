@@ -24,10 +24,10 @@ module Backend
     # config.time_zone = "Central Time (US & Canada)"
     # config.eager_load_paths << Rails.root.join("extras")
 
-    # Only loads a smaller set of middleware suitable for API only apps.
-    # Middleware like session, flash, cookies can be added back manually.
-    # Skip views, helpers and assets when generating a new resource.
-    config.api_only = true
+    # Use a standard Rails app with sessions enabled (not API-only)
+    # This is needed for cookie-based OAuth authentication
+    config.middleware.use ActionDispatch::Cookies
+    config.middleware.use ActionDispatch::Session::CookieStore, key: '_mtg_inventory_session'
 
     # Honour the PUBLIC_API_PATH env var so that generated URLs (redirects,
     # url_for, etc.) include the API path prefix. When the var is absent

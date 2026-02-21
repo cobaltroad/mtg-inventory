@@ -88,4 +88,7 @@ Rails.application.configure do
 
   # Allow requests from SvelteKit frontend via Docker internal network
   config.hosts << "backend"
+
+  # Enable cookie-based sessions for OAuth flow
+  config.session_store :cookie_store, key: '_mtg_inventory_session', same_site: :lax
 end

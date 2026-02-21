@@ -41,6 +41,7 @@ services:
       PUBLIC_API_PATH: ${PUBLIC_API_PATH}
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
       DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
     volumes:
       - ./backend:/backend  # Rails code
       - bundle_cache:/bundle       # Gems
@@ -78,6 +79,7 @@ services:
       PUBLIC_API_PATH: ${PUBLIC_API_PATH}
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
       DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
     volumes:
       - ./backend:/backend  # Rails code
       - bundle_cache:/bundle       # Gems
@@ -105,6 +107,7 @@ services:
       APP_DOMAIN: ${APP_DOMAIN}
       PUBLIC_BASE_PATH: ${PUBLIC_BASE_PATH}
       VITE_API_URL: http://backend:3000
+      VITE_AUTH_ENABLED: ${VITE_AUTH_ENABLED:-false}
     # Remove volumes: and command: in production since it will use the built-app
     # and does not require hot reload
     volumes:
