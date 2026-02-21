@@ -1,5 +1,6 @@
 class User < ApplicationRecord
   DEFAULT_EMAIL = "default@mtg-inventory.local"
+  DISCORD_PROVIDER = "discord"
 
   has_many :oauth_providers, dependent: :destroy
   has_many :collection_items, dependent: :destroy
@@ -12,7 +13,7 @@ class User < ApplicationRecord
     email = auth_info["info"]["email"]
     name = auth_info["info"]["name"]
 
-    oauth_provider = OauthProvider.find_by(provider: "discord", uid: uid)
+    oauth_provider = OauthProvider.find_by(provider: DISCORD_PROVIDER, uid: uid)
 
     if oauth_provider
       oauth_provider.user
@@ -22,7 +23,7 @@ class User < ApplicationRecord
       end
 
       OauthProvider.create!(
-        provider: "discord",
+        provider: DISCORD_PROVIDER,
         uid: uid,
         user: user
       )
