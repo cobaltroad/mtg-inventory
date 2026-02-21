@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup } from '@testing-library/svelte';
+import { base } from '$app/paths';
 
 vi.mock('$lib/services/authService.svelte', () => ({
 	getAuthState: vi.fn(() => ({
@@ -12,121 +13,60 @@ vi.mock('$lib/services/authService.svelte', () => ({
 }));
 
 vi.mock('$app/paths', () => ({
-	base: ''
+	base: '/projects/mtg'
 }));
 
-describe('Auth Layout', () => {
+describe('Auth Layout - VITE_AUTH_ENABLED', () => {
+	let originalEnv: NodeJS.ProcessEnv;
+
 	beforeEach(() => {
-		cleanup();
-		vi.clearAllMocks();
+		originalEnv = process.env;
+		vi.resetModules();
 	});
 
 	afterEach(() => {
+		process.env = originalEnv;
 		cleanup();
 	});
 
-	describe('Layout imports', () => {
-		it('imports auth service functions', async () => {
-			const { getAuthState, checkAuthStatus, logout } =
-				await import('$lib/services/authService.svelte');
-			expect(getAuthState).toBeDefined();
-			expect(checkAuthStatus).toBeDefined();
-			expect(logout).toBeDefined();
-		});
+	it('redirects to login when auth enabled and user not authenticated', async () => {
+		process.env = { ...originalEnv, VITE_AUTH_ENABLED: 'true' };
+		vi.resetModules();
 
-		it('auth state returns correct structure', async () => {
-			const { getAuthState } = await import('$lib/services/authService.svelte');
-			const state = getAuthState();
-			expect(state).toHaveProperty('user');
-			expect(state).toHaveProperty('isAuthenticated');
-			expect(state).toHaveProperty('loading');
-		});
+		const { load } = await import('../routes/+layout.ts');
+		
+		const mockUrl = {
+			pathname: '/inventory'
+		} as any;
+
+		await expect(load({ url: mockUrl } as any)).rejects.toThrow();
 	});
 
-	describe('Auth state checked on mount', () => {
-		it('checkAuthStatus is called when component mounts', async () => {
-			const { checkAuthStatus } = await import('$lib/services/authService.svelte');
-			expect(checkAuthStatus).toBeDefined();
-		});
+	it('does not redirect when auth disabled', async () => {
+		process.env = { ...originalEnv, VITE_AUTH_ENABLED: 'false' };
+		vi.resetModules();
+
+		const { load } = await import('../routes/+layout.ts');
+		
+		const mockUrl = {
+			pathname: '/inventory'
+		} as any;
+
+		const result = await load({ url: mockUrl } as any);
+		expect(result).toEqual({});
 	});
 
-	describe('+layout.ts redirect logic', () => {
-		it('defines protected routes correctly', async () => {
-			const PROTECTED_ROUTES = ['/inventory', '/wishlist', '/reports'];
-			expect(PROTECTED_ROUTES).toContain('/inventory');
-			expect(PROTECTED_ROUTES).toContain('/wishlist');
-			expect(PROTECTED_ROUTES).toContain('/reports');
-		});
+	it('does not redirect to public routes', async () => {
+		process.env = { ...originalEnv, VITE_AUTH_ENABLED: 'true' };
+		vi.resetModules();
 
-		it('defines public routes correctly', async () => {
-			const PUBLIC_ROUTES = ['/login', '/auth/callback'];
-			expect(PUBLIC_ROUTES).toContain('/login');
-			expect(PUBLIC_ROUTES).toContain('/auth/callback');
-		});
+		const { load } = await import('../routes/+layout.ts');
+		
+		const mockUrl = {
+			pathname: '/login'
+		} as any;
 
-		it('should not redirect for public routes when not authenticated', () => {
-			const path = '/login';
-			const isPublicRoute = ['/login', '/auth/callback'].some(
-				(route) => path === route || path.startsWith(route)
-			);
-			const isProtectedRoute = ['/inventory', '/wishlist', '/reports'].some((route) =>
-				path.startsWith(route)
-			);
-
-			expect(isPublicRoute).toBe(true);
-			expect(isProtectedRoute).toBe(false);
-		});
-
-		it('should redirect protected routes when not authenticated', () => {
-			const path = '/inventory';
-			const isPublicRoute = ['/login', '/auth/callback'].some(
-				(route) => path === route || path.startsWith(route)
-			);
-			const isProtectedRoute = ['/inventory', '/wishlist', '/reports'].some((route) =>
-				path.startsWith(route)
-			);
-
-			expect(isPublicRoute).toBe(false);
-			expect(isProtectedRoute).toBe(true);
-		});
-
-		it('should not redirect for home page when not authenticated', () => {
-			const path = '/';
-			const isPublicRoute = ['/login', '/auth/callback'].some(
-				(route) => path === route || path.startsWith(route)
-			);
-			const isProtectedRoute = ['/inventory', '/wishlist', '/reports'].some((route) =>
-				path.startsWith(route)
-			);
-
-			expect(isPublicRoute).toBe(false);
-			expect(isProtectedRoute).toBe(false);
-		});
-
-		it('should not redirect for search page when not authenticated', () => {
-			const path = '/search';
-			const isPublicRoute = ['/login', '/auth/callback'].some(
-				(route) => path === route || path.startsWith(route)
-			);
-			const isProtectedRoute = ['/inventory', '/wishlist', '/reports'].some((route) =>
-				path.startsWith(route)
-			);
-
-			expect(isPublicRoute).toBe(false);
-			expect(isProtectedRoute).toBe(false);
-		});
-
-		it('should not redirect for metagame page when not authenticated', () => {
-			const path = '/metagame';
-			const isPublicRoute = ['/login', '/auth/callback'].some(
-				(route) => path === route || path.startsWith(route)
-			);
-			const isProtectedRoute = ['/inventory', '/wishlist', '/reports'].some((route) =>
-				path.startsWith(route)
-			);
-
-			expect(isPublicRoute).toBe(false);
-			expect(isProtectedRoute).toBe(false);
-		});
+		const result = await load({ url: mockUrl } as any);
+		expect(result).toEqual({});
 	});
 });

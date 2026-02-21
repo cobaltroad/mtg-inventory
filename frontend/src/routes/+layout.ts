@@ -5,13 +5,14 @@ import { getAuthState, checkAuthStatus } from '$lib/services/authService.svelte'
 
 const PROTECTED_ROUTES = ['/inventory', '/wishlist', '/reports'];
 const PUBLIC_ROUTES = ['/login', '/auth/callback'];
+const AUTH_ENABLED = import.meta.env.VITE_AUTH_ENABLED !== 'false';
 
 export const load: LayoutLoad = async ({ url }) => {
 	const path = url.pathname;
 	const isPublicRoute = PUBLIC_ROUTES.some((route) => path === route || path.startsWith(route));
 	const isProtectedRoute = PROTECTED_ROUTES.some((route) => path.startsWith(route));
 
-	if (isProtectedRoute && !isPublicRoute) {
+	if (isProtectedRoute && !isPublicRoute && AUTH_ENABLED) {
 		const authState = getAuthState();
 
 		if (!authState.isAuthenticated && !authState.loading) {

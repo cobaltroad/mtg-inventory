@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { login } from '$lib/services/authService.svelte';
+
+	const AUTH_ENABLED = import.meta.env.VITE_AUTH_ENABLED !== 'false';
 </script>
 
 <div class="login-page">
@@ -7,7 +9,11 @@
 		<h1 class="title">MTG Inventory</h1>
 		<p class="subtitle">Sign in to manage your collection</p>
 
-		<button class="login-btn" onclick={login}> Login with Discord </button>
+		{#if AUTH_ENABLED}
+			<button class="login-btn" onclick={login}> Login with Discord </button>
+		{:else}
+			<p class="dev-notice">Authentication is disabled in development</p>
+		{/if}
 	</div>
 </div>
 
@@ -83,5 +89,14 @@
 
 	.login-btn:active {
 		transform: translateY(0);
+	}
+
+	.dev-notice {
+		color: #6b7280;
+		font-size: 0.875rem;
+	}
+
+	:global(.dark) .dev-notice {
+		color: #9ca3af;
 	}
 </style>
