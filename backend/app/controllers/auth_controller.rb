@@ -1,3 +1,5 @@
+require "cgi"
+
 class AuthController < ApplicationController
   before_action :verify_state, only: :callback
 
@@ -10,44 +12,43 @@ class AuthController < ApplicationController
 
     redirect_to oauth_client.auth_code.authorize_url(
       client_id: ENV["DISCORD_CLIENT_ID"],
-      redirect_uri: "#{ENV.fetch("APP_DOMAIN", "http://localhost")}/api/auth/discord/callback",
+      redirect_uri: "#{ENV.fetch("APP_DOMAIN", "http://localhost")}#{ENV.fetch("PUBLIC_API_PATH", "")}/auth/discord/callback",
       scope: "identify email",
       state: state
-    )
+    ), allow_other_host: true
   end
 
   def callback
-    return render json: { error: "OAuth not configured in development" }, status: :service_unavailable unless production?
+    return redirect_to_frontend_with_error("OAuth not configured in development") unless production?
 
-    return render json: { error: "Authorization denied" }, status: :unauthorized if params[:error]
+    return redirect_to_frontend_with_error("Authorization denied") if params[:error]
 
     error = verify_state
-    return render json: { error: error }, status: :unauthorized if error
+    return redirect_to_frontend_with_error(error) if error
 
     code = params[:code]
     token = exchange_code_for_token(code)
 
     if token.nil?
-      return render json: { error: "Failed to exchange code for token" }, status: :unauthorized
+      return redirect_to_frontend_with_error("Failed to exchange code for token")
     end
 
     user_info = fetch_discord_user_info(token)
-    return render json: { error: "Failed to fetch user info" }, status: :unauthorized if user_info.nil?
+    return redirect_to_frontend_with_error("Failed to fetch user info") if user_info.nil?
 
     auth_info = build_auth_info(user_info)
     user = User.find_or_create_by_discord(auth_info)
 
     session[:user_id] = user.id
 
-    return_to = session.delete(:return_to) || "/"
     session.delete(:oauth_state)
 
-    render json: { user_id: user.id, email: user.email, name: user.name, return_to: return_to }
+    redirect_to "#{ENV.fetch("APP_DOMAIN", "http://localhost")}#{ENV.fetch("PUBLIC_BASE_PATH", "")}/auth/callback", allow_other_host: true
   end
 
   def logout
     session.delete(:user_id)
-    redirect_to ENV.fetch("APP_DOMAIN", "http://localhost")
+    redirect_to "#{ENV.fetch("APP_DOMAIN", "http://localhost")}#{ENV.fetch("PUBLIC_BASE_PATH", "")}/login", allow_other_host: true
   end
 
   def status
@@ -83,7 +84,7 @@ class AuthController < ApplicationController
   def exchange_code_for_token(code)
     oauth_client.auth_code.get_token(
       code,
-      redirect_uri: "#{ENV.fetch("APP_DOMAIN", "http://localhost")}/api/auth/discord/callback"
+      redirect_uri: "#{ENV.fetch("APP_DOMAIN", "http://localhost")}#{ENV.fetch("PUBLIC_API_PATH", "")}/auth/discord/callback"
     )
   rescue OAuth2::Error => e
     Rails.logger.error "OAuth token exchange failed: #{e.message}"
@@ -123,6 +124,10 @@ class AuthController < ApplicationController
 
   def production?
     Rails.env.production?
+  end
+
+  def redirect_to_frontend_with_error(message)
+    redirect_to "#{ENV.fetch("APP_DOMAIN", "http://localhost")}#{ENV.fetch("PUBLIC_BASE_PATH", "")}/login?error=#{CGI.escape(message)}", allow_other_host: true
   end
 
   def json_request?
