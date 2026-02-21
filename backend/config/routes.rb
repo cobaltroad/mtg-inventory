@@ -73,10 +73,11 @@ Rails.application.routes.draw do
     get "test/current_user_email" => "current_user_probe#show"
   end
 
-  # OmniAuth routes
+  # OmniAuth routes (for OmniAuth library compatibility)
+  get "auth/discord", to: redirect("/api/auth/discord")
   get "auth/discord/callback", to: "oauth#discord_callback"
   delete "auth/logout", to: "oauth#logout"
-  get "auth/status", to: "oauth#status"
+  get "auth/status", to: "auth#status"
 
   # Auth API routes (inside API scope)
   scope ENV.fetch("PUBLIC_API_PATH", "/api") do
