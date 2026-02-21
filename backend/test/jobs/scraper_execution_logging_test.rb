@@ -211,29 +211,21 @@ class ScraperExecutionLoggingTest < ActiveJob::TestCase
   def stub_edhrec_discovery(top_commanders:)
     EdhrecScraper.define_singleton_method(:fetch_top_commanders) { top_commanders }
     yield
-  ensure
-    EdhrecScraper.singleton_class.send(:remove_method, :fetch_top_commanders)
   end
 
   def stub_edhrec_decklist(decklist_data)
     EdhrecScraper.define_singleton_method(:fetch_commander_decklist) { |_url| decklist_data }
     yield
-  ensure
-    EdhrecScraper.singleton_class.send(:remove_method, :fetch_commander_decklist)
   end
 
   def stub_edhrec_fetch_error(error)
     EdhrecScraper.define_singleton_method(:fetch_top_commanders) { raise error }
     yield
-  ensure
-    EdhrecScraper.singleton_class.send(:remove_method, :fetch_top_commanders)
   end
 
   def stub_edhrec_decklist_error(error)
     EdhrecScraper.define_singleton_method(:fetch_commander_decklist) { |_url| raise error }
     yield
-  ensure
-    EdhrecScraper.singleton_class.send(:remove_method, :fetch_commander_decklist)
   end
 
   def stub_edhrec_rate_limit(retry_after:)
@@ -241,8 +233,6 @@ class ScraperExecutionLoggingTest < ActiveJob::TestCase
     error.define_singleton_method(:retry_after) { retry_after }
     EdhrecScraper.define_singleton_method(:fetch_top_commanders) { raise error }
     yield
-  ensure
-    EdhrecScraper.singleton_class.send(:remove_method, :fetch_top_commanders)
   end
 
   def build_mock_commanders(count)

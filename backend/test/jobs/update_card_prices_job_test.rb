@@ -265,10 +265,14 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
   def capture_log
     log_output = StringIO.new
     old_logger = Rails.logger
-    Rails.logger = Logger.new(log_output)
-
+    
+    new_logger = ActiveSupport::Logger.new(log_output)
+    new_logger.level = :info
+    
+    Rails.logger = new_logger
+    
     yield
-
+    
     Rails.logger = old_logger
     log_output.string
   end

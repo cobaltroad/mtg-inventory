@@ -5,9 +5,19 @@ class EdhrecScraperIntegrationTest < ActiveSupport::TestCase
   # Disable parallelization to avoid VCR conflicts
   parallelize(workers: 1)
 
+  setup do
+    # If singleton methods were removed by other tests, reload the class to restore them
+    # This handles test isolation issues where stubs pollute subsequent tests
+    unless EdhrecScraper.respond_to?(:fetch_top_commanders)
+      Object.send(:remove_const, :EdhrecScraper) if defined?(EdhrecScraper)
+      load Rails.root.join("app/services/edhrec_scraper.rb")
+    end
+  end
+
   # ---------------------------------------------------------------------------
   # Integration test with real EDHREC page using VCR
   # ---------------------------------------------------------------------------
+
   test "successfully fetches and parses real EDHREC page" do
     VCR.use_cassette("edhrec_commanders_week") do
       result = EdhrecScraper.fetch_top_commanders
