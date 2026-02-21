@@ -8,12 +8,11 @@ class User < ApplicationRecord
   validates :name, presence: true
 
   def self.find_or_create_by_discord(auth_info)
-    provider_info = auth_info["provider"]
     uid = auth_info["uid"]
     email = auth_info["info"]["email"]
     name = auth_info["info"]["name"]
 
-    oauth_provider = OauthProvider.find_by(provider: provider_info, uid: uid)
+    oauth_provider = OauthProvider.find_by(provider: "discord", uid: uid)
 
     if oauth_provider
       oauth_provider.user
@@ -23,7 +22,7 @@ class User < ApplicationRecord
       end
 
       OauthProvider.create!(
-        provider: provider_info,
+        provider: "discord",
         uid: uid,
         user: user
       )
