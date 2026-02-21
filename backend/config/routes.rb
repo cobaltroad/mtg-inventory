@@ -74,7 +74,8 @@ Rails.application.routes.draw do
   end
 
   # OmniAuth routes
-  get "auth/discord", to: redirect("/auth/discord")
+delete "auth/logout", to: "oauth#logout"
+get "auth/discord/callback", to: "oauth#discord_callback"
   get "auth/discord/callback", to: "oauth#discord_callback"
   delete "auth/logout", to: "oauth#logout"
   get "auth/status", to: "oauth#status"
