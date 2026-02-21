@@ -3,12 +3,13 @@
 	import '@fontsource-variable/montserrat';
 	import { base } from '$app/paths';
 	import favicon from '$lib/assets/favicon.svg';
-	import { AppBar } from '@skeletonlabs/skeleton-svelte';
+	import { User as UserIcon, LogOut } from 'lucide-svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
 	import SearchDrawer from '$lib/components/SearchDrawer.svelte';
 	import PrintingModal from '$lib/components/PrintingModal.svelte';
 	import type { Card } from '$lib/types/card';
 	import { onMount, setContext } from 'svelte';
+	import { checkAuthStatus, getAuthState, logout } from '$lib/services/authService.svelte';
 
 	let { children } = $props();
 
@@ -42,6 +43,9 @@
 		};
 		mediaQuery.addEventListener('change', handleChange);
 
+		// Check authentication status
+		checkAuthStatus();
+
 		return () => {
 			mediaQuery.removeEventListener('change', handleChange);
 		};
@@ -50,6 +54,13 @@
 	let sidebarOpen = $state(false);
 	let searchDrawerOpen = $state(false);
 	let sidebarMode = $state<'sidebar' | 'rail'>('sidebar');
+
+	// Auth state
+	let authState = $derived(getAuthState());
+
+	function handleLogout() {
+		logout();
+	}
 
 	// Search state
 	let searching = $state(false);
@@ -116,11 +127,20 @@
 	<Sidebar bind:open={sidebarOpen} mode={sidebarMode} onToggleMode={toggleSidebarMode} />
 
 	<div class="content-wrapper" class:rail-mode={sidebarMode === 'rail'}>
-		<AppBar class="app-bar-root">
-			{#snippet headline()}
+		<header class="app-bar-root">
+			<div class="app-bar-content">
 				<span class="app-title">MTG Inventory</span>
-			{/snippet}
-		</AppBar>
+				{#if authState.isAuthenticated && authState.user}
+					<div class="user-info">
+						<UserIcon class="h-4 w-4" />
+						<span class="user-name">{authState.user.name}</span>
+						<button type="button" onclick={handleLogout} class="logout-btn" aria-label="Logout">
+							<LogOut class="h-4 w-4" />
+						</button>
+					</div>
+				{/if}
+			</div>
+		</header>
 
 		<main class="main-content">
 			{@render children()}
@@ -174,10 +194,47 @@
 		border-bottom: 1px solid var(--color-surface-700);
 	}
 
+	.app-bar-content {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		height: 100%;
+		padding: 0 1rem;
+	}
+
 	.app-title {
 		font-size: 1.25rem;
 		font-weight: 600;
 		color: var(--color-surface-50);
+	}
+
+	.user-info {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		color: var(--color-surface-200);
+	}
+
+	.user-name {
+		font-size: 0.875rem;
+	}
+
+	.logout-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.375rem;
+		background: transparent;
+		border: 1px solid var(--color-surface-600);
+		border-radius: 0.375rem;
+		color: var(--color-surface-300);
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.logout-btn:hover {
+		background: var(--color-surface-700);
+		color: var(--color-surface-100);
 	}
 
 	.main-content {
