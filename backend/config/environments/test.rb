@@ -58,4 +58,9 @@ Rails.application.configure do
 
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
+
+  # Use dummy API endpoints in test environment to ensure tests never hit real APIs
+  config.api_endpoints.scryfall_base = "https://test-scryfall.example.com"
+  config.api_endpoints.edhrec_base = "https://test-edhrec.example.com"
+  config.api_endpoints.edhrec_json = "https://test-edhrec-json.example.com"
 end

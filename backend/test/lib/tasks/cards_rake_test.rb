@@ -214,7 +214,7 @@ class CardsRakeTest < ActiveSupport::TestCase
       "Time Walk"
     ])
 
-    stub_request(:get, %r{https://api\.scryfall\.com/cards/search\?q=is:reserved})
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/search\?q=is:reserved/)
       .to_return(status: 200, body: json, headers: { "Content-Type" => "application/json" })
   end
 

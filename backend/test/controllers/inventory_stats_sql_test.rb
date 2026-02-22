@@ -27,7 +27,7 @@ class InventoryStatsSqlTest < ActionDispatch::IntegrationTest
   end
 
   def stub_scryfall_card_details(card_id, name: "Test Card", set: "TST", set_name: "Test Set")
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(
         status: 200,
         body: {

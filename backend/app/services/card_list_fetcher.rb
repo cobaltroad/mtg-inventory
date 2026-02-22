@@ -10,7 +10,7 @@ class CardListFetcher
   # API endpoints
   # Note: Fragment (#gamechangers) is client-side only, not sent to server
   WIZARDS_GAME_CHANGERS_URL = "https://magic.wizards.com/en/formats/commander"
-  SCRYFALL_RESERVED_LIST_URL = "https://api.scryfall.com/cards/search?q=is:reserved"
+  SCRYFALL_RESERVED_LIST_URL = "#{Rails.application.config.api_endpoints.scryfall_base}/cards/search?q=is:reserved"
 
   # User-Agent for polite crawling (used for Scryfall API)
   USER_AGENT = "MTG-Inventory-Bot/1.0 (https://github.com/cobaltroad/mtg-inventory)"

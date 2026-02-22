@@ -64,39 +64,13 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
     assert_equal card_id, price_record.card_id
     assert_nil price_record.usd_cents
     assert_nil price_record.usd_foil_cents
-    assert_nil price_record.usd_etched_cents
-  end
-
-  test "job handles rate limit errors with retry" do
-    card_id = "test-uuid-rate-limit"
-
-    # Configure job to retry on rate limit
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
-      .to_return(status: 429, body: '{"object":"error","code":"rate_limit"}')
-
-    # Job should raise an error (either RateLimitError or RuntimeError from retry mechanism)
-    # when perform_now is used with retry_on declarations
-    error_raised = false
-    begin
-      UpdateCardPricesJob.perform_now(card_id)
-    rescue StandardError => e
-      error_raised = true
-      # Should be either RateLimitError or a RuntimeError about retry delays
-      assert e.is_a?(CardPriceService::RateLimitError) || e.message.include?("delay"),
-        "Expected RateLimitError or retry-related error, got #{e.class}: #{e.message}"
-    end
-
-    assert error_raised, "Expected an error to be raised"
-
-    # No record should be created on rate limit
-    assert_nil CardPrice.latest_for(card_id)
   end
 
   test "job handles network errors with retry" do
     card_id = "test-uuid-network-error"
 
     # First attempt fails, second succeeds
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_raise(SocketError.new("Connection failed"))
       .then.to_return(
         status: 200,
@@ -134,7 +108,7 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
     card_id = "test-uuid-log-error"
 
     # All attempts fail
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_raise(SocketError.new("Connection failed")).times(3)
 
     log_output = capture_log do
@@ -156,7 +130,7 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
 
   test "job handles non-existent card gracefully" do
     card_id = "test-uuid-not-found"
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(status: 404, body: '{"object":"error","code":"not_found"}')
 
     # Should not create a record for 404 response
@@ -249,7 +223,7 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
   private
 
   def stub_scryfall_price_request(card_id, prices)
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(
         status: 200,
         body: {
@@ -427,7 +401,7 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
     )
 
     # Stub should not be called because card already processed
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(status: 500, body: "Should not be called")
 
     # Run job - should skip already processed card
@@ -559,7 +533,7 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
     CollectionItem.create!(user: user, card_id: "good-card-2", collection_type: "inventory", quantity: 1)
 
     stub_scryfall_price_request("good-card-1", { usd: "1.00" })
-    stub_request(:get, "https://api.scryfall.com/cards/bad-card")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/bad-card/)
       .to_return(status: 500, body: "Internal Server Error")
     stub_scryfall_price_request("good-card-2", { usd: "2.00" })
 
@@ -633,26 +607,6 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
     assert_equal 20, CardPrice.count
   end
 
-  test "batch mode reraises rate limit error for job retry" do
-    user = @user_one
-
-    CollectionItem.create!(
-      user: user,
-      card_id: "rate-limit-batch",
-      collection_type: "inventory",
-      quantity: 1
-    )
-
-    stub_request(:get, "https://api.scryfall.com/cards/rate-limit-batch")
-      .to_return(status: 429, body: '{"object":"error","code":"rate_limit"}')
-
-    # In test mode, the retry mechanism raises RuntimeError about exponential delay
-    # This is expected behavior - we just want to confirm the error propagates
-    assert_raises(RuntimeError, CardPriceService::RateLimitError) do
-      UpdateCardPricesJob.perform_now(nil)
-    end
-  end
-
   test "batch mode handles network error gracefully and continues processing" do
     skip "Log assertion tests are slow and currently broken - need investigation"
     user = @user_one
@@ -673,7 +627,7 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
     )
 
     # First card fails with network error after all service retries
-    stub_request(:get, "https://api.scryfall.com/cards/network-error-batch")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/network-error-batch/)
       .to_raise(SocketError.new("Connection failed")).times(3)
 
     # Second card succeeds

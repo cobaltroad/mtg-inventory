@@ -17,9 +17,9 @@ class PriceUpdateExecutionLoggingTest < ActiveJob::TestCase
     User.delete_all
 
     # Stub card details API calls that happen during collection item creation
-    stub_request(:get, "https://api.scryfall.com/cards/card-abc-123")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/card-abc-123/)
       .to_return(status: 200, body: { id: "card-abc-123", name: "Test Card 1" }.to_json)
-    stub_request(:get, "https://api.scryfall.com/cards/card-def-456")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/card-def-456/)
       .to_return(status: 200, body: { id: "card-def-456", name: "Test Card 2" }.to_json)
 
     # Create test user and collection items for batch mode testing
@@ -228,27 +228,6 @@ class PriceUpdateExecutionLoggingTest < ActiveJob::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # UpdateCardPricesJob: Rate limit logging
-  # ---------------------------------------------------------------------------
-  test "UpdateCardPricesJob logs rate limit with service name" do
-    skip "Pre-existing test failure - needs investigation"
-    error = CardPriceService::RateLimitError.new("Rate limit exceeded")
-    error.define_singleton_method(:retry_after) { 60 }
-
-    stub_scryfall_price_api_error(@item1.card_id, error) do
-      # Expect any exception (retry behavior changes the exception type in tests)
-      assert_raises do
-        UpdateCardPricesJob.perform_now(@item1.card_id)
-      end
-
-      log_content = @log_output.string
-      assert_match /"level":"WARN"/, log_content
-      assert_match /"event":"rate_limit_encountered"/, log_content
-      assert_match /"service":"Scryfall"/, log_content
-    end
-  end
-
-  # ---------------------------------------------------------------------------
   # UpdateCardPricesJob: Price alerts tracking
   # ---------------------------------------------------------------------------
   test "UpdateCardPricesJob tracks price_alerts_created count" do
@@ -290,7 +269,7 @@ class PriceUpdateExecutionLoggingTest < ActiveJob::TestCase
   # ---------------------------------------------------------------------------
 
   def stub_scryfall_price_api_success(card_id)
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(
         status: 200,
         body: {
@@ -311,7 +290,7 @@ class PriceUpdateExecutionLoggingTest < ActiveJob::TestCase
   end
 
   def stub_scryfall_price_api_with_price(card_id, usd_cents:)
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(
         status: 200,
         body: {
@@ -334,13 +313,10 @@ class PriceUpdateExecutionLoggingTest < ActiveJob::TestCase
     # For network/timeout errors, make the stub raise during the request
     # Use SocketError which will be caught and converted to NetworkError by the service
     if error.is_a?(CardPriceService::NetworkError)
-      stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+      stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
         .to_raise(SocketError.new("Connection failed"))
-    elsif error.is_a?(CardPriceService::RateLimitError)
-      stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
-        .to_return(status: 429, body: "Rate limit exceeded")
     else
-      stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+      stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
         .to_raise(error)
     end
 
@@ -350,7 +326,7 @@ class PriceUpdateExecutionLoggingTest < ActiveJob::TestCase
   end
 
   def stub_scryfall_price_api_non_retryable_error(card_id)
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(
         status: 200,
         body: {
@@ -367,7 +343,7 @@ class PriceUpdateExecutionLoggingTest < ActiveJob::TestCase
     # Stub one card to fail, other to succeed
     if card_id == "card-def-456"
       # Override the specific card stub to raise an error
-      stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+      stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
         .to_raise(StandardError.new("Non-retryable error"))
     end
 

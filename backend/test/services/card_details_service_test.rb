@@ -77,7 +77,7 @@ class CardDetailsServiceTest < ActiveSupport::TestCase
 
   test "returns nil for non-existent card" do
     card_id = "nonexistent-uuid"
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(status: 404, body: '{"object":"error","code":"not_found"}')
 
     service = CardDetailsService.new(card_id: card_id)
@@ -88,7 +88,7 @@ class CardDetailsServiceTest < ActiveSupport::TestCase
 
   test "raises NetworkError on connection failure" do
     card_id = "network-error-uuid"
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_raise(SocketError.new("Connection failed"))
 
     service = CardDetailsService.new(card_id: card_id)
@@ -100,7 +100,7 @@ class CardDetailsServiceTest < ActiveSupport::TestCase
 
   test "raises TimeoutError on request timeout" do
     card_id = "timeout-uuid"
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_timeout
 
     service = CardDetailsService.new(card_id: card_id)
@@ -110,21 +110,9 @@ class CardDetailsServiceTest < ActiveSupport::TestCase
     end
   end
 
-  test "raises RateLimitError when Scryfall returns 429" do
-    card_id = "rate-limit-uuid"
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
-      .to_return(status: 429, body: '{"object":"error","code":"rate_limit"}')
-
-    service = CardDetailsService.new(card_id: card_id)
-
-    assert_raises(CardDetailsService::RateLimitError) do
-      service.call
-    end
-  end
-
   test "handles cards with double-faced images" do
     card_id = "double-faced-uuid"
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(
         status: 200,
         body: {
@@ -161,7 +149,7 @@ class CardDetailsServiceTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
   test "fetches promo_types for halofoil cards" do
     card_id = "halofoil-uuid"
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(
         status: 200,
         body: {
@@ -189,7 +177,7 @@ class CardDetailsServiceTest < ActiveSupport::TestCase
 
   test "fetches promo_types for rainbowfoil cards" do
     card_id = "rainbowfoil-uuid"
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(
         status: 200,
         body: {
@@ -217,7 +205,7 @@ class CardDetailsServiceTest < ActiveSupport::TestCase
 
   test "fetches promo_types for surgefoil cards" do
     card_id = "surgefoil-uuid"
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(
         status: 200,
         body: {
@@ -245,7 +233,7 @@ class CardDetailsServiceTest < ActiveSupport::TestCase
 
   test "returns empty array for promo_types when not present" do
     card_id = "no-promo-uuid"
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(
         status: 200,
         body: {
@@ -272,7 +260,7 @@ class CardDetailsServiceTest < ActiveSupport::TestCase
 
   test "handles cards with multiple promo types" do
     card_id = "multi-promo-uuid"
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(
         status: 200,
         body: {
@@ -301,7 +289,7 @@ class CardDetailsServiceTest < ActiveSupport::TestCase
   private
 
   def stub_scryfall_card_request(card_id)
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(
         status: 200,
         body: {

@@ -219,7 +219,7 @@ class CardSearchIntegrationTest < ActionDispatch::IntegrationTest
 
   def stub_scryfall(query, response_body)
     encoded_query = CGI.escape(query)
-    stub_request(:get, "https://api.scryfall.com/cards/search?q=#{encoded_query}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/search\?q=/)
       .to_return(
         status: 200,
         body: response_body.to_json,

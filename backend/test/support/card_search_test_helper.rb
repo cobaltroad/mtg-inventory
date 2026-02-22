@@ -3,14 +3,32 @@
 # Shared test helpers for CardSearchService tests
 # Provides common stubbing methods and response builders to reduce duplication
 module CardSearchTestHelper
-  # Helper: Build Scryfall API URL for a given query
-  def scryfall_url(query)
-    "https://api.scryfall.com/cards/search?q=#{CGI.escape(query)}"
+  # Helper: Get the configured Scryfall API base URL from Rails config
+  # In test environment this returns the test endpoint (test-scryfall.example.com)
+  def scryfall_api_base
+    Rails.application.config.api_endpoints.scryfall_base
   end
 
-  # Helper: Stub a successful Scryfall API response
+  # Helper: Build Scryfall API URL for a given query using configured base URL
+  def scryfall_url(query)
+    "#{Rails.application.config.api_endpoints.scryfall_base}/cards/search?q=#{CGI.escape(query)}"
+  end
+
+  # Helper: Stub a successful Scryfall API response using configured endpoint
   def stub_scryfall_request(query, response_body)
-    stub_request(:get, scryfall_url(query))
+    stub_request(:get, /#{Regexp.escape(Rails.application.config.api_endpoints.scryfall_base)}\/cards\/search/)
+      .to_return(
+        status: 200,
+        body: response_body.to_json,
+        headers: { "Content-Type" => "application/json" }
+      )
+  end
+
+  # Legacy helper for tests using old hardcoded URLs - redirects to test endpoint
+  # This provides backward compatibility while enforcing use of test endpoints
+  def stub_scryfall(query, response_body)
+    # Use regex to match the configured test endpoint
+    stub_request(:get, /#{Regexp.escape(Rails.application.config.api_endpoints.scryfall_base)}/)
       .to_return(
         status: 200,
         body: response_body.to_json,

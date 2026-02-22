@@ -26,7 +26,7 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
   test "fetches all printings for a card from Scryfall using two-step API flow" do
     card_id = "f3c42c51-2e0f-4c5e-b1b1-6e3e6e5e3e5e"
     oracle_id = "4457ed35-7c10-48c8-9776-456485fdf070"
-    prints_search_uri = "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A#{oracle_id}&unique=prints"
+    prints_search_uri = "#{ApiEndpoints.scryfall_base}/cards/search?order=released&q=oracleid%3A#{oracle_id}&unique=prints"
 
     # Step 1: Stub the card endpoint to return prints_search_uri
     card_response = {
@@ -83,7 +83,7 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
 
   test "formats card printing data correctly" do
     card_id = "test-card-id"
-    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+    prints_search_uri = "#{ApiEndpoints.scryfall_base}/cards/search?q=test"
 
     stub_two_step_flow(card_id, prints_search_uri, [
       {
@@ -116,7 +116,7 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
   test "includes finishes array in printing data when present" do
     card_id = "test-card-id"
-    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+    prints_search_uri = "#{ApiEndpoints.scryfall_base}/cards/search?q=test"
 
     # Stub card endpoint
     card_response = {
@@ -177,7 +177,7 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
 
   test "handles missing finishes array gracefully" do
     card_id = "no-finishes-card"
-    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+    prints_search_uri = "#{ApiEndpoints.scryfall_base}/cards/search?q=test"
 
     # Stub card endpoint
     card_response = {
@@ -216,7 +216,7 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
 
   test "sorts printings by release date, newest first" do
     card_id = "multi-printing-card"
-    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+    prints_search_uri = "#{ApiEndpoints.scryfall_base}/cards/search?q=test"
 
     stub_two_step_flow(card_id, prints_search_uri, [
       {
@@ -259,7 +259,7 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
 
   test "handles card with no image_uris by using nil" do
     card_id = "no-image-card"
-    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+    prints_search_uri = "#{ApiEndpoints.scryfall_base}/cards/search?q=test"
 
     # Stub card endpoint
     card_response = {
@@ -298,7 +298,7 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
   test "extracts image URL from card_faces for double-faced cards" do
     card_id = "double-faced-card"
-    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+    prints_search_uri = "#{ApiEndpoints.scryfall_base}/cards/search?q=test"
 
     # Stub card endpoint
     card_response = {
@@ -353,7 +353,7 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
 
   test "extracts image URL from top-level image_uris for single-faced cards" do
     card_id = "single-faced-card"
-    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+    prints_search_uri = "#{ApiEndpoints.scryfall_base}/cards/search?q=test"
 
     stub_two_step_flow(card_id, prints_search_uri, [
       {
@@ -376,7 +376,7 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
 
   test "card_faces takes precedence over top-level image_uris when both exist" do
     card_id = "both-images-card"
-    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+    prints_search_uri = "#{ApiEndpoints.scryfall_base}/cards/search?q=test"
 
     # Stub card endpoint
     card_response = {
@@ -424,7 +424,7 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
 
   test "handles empty card_faces array by falling back to top-level image_uris" do
     card_id = "empty-faces-card"
-    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+    prints_search_uri = "#{ApiEndpoints.scryfall_base}/cards/search?q=test"
 
     # Stub card endpoint
     card_response = {
@@ -464,7 +464,7 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
 
   test "handles card with no image data at all" do
     card_id = "no-images-card"
-    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+    prints_search_uri = "#{ApiEndpoints.scryfall_base}/cards/search?q=test"
 
     # Stub card endpoint
     card_response = {
@@ -503,7 +503,7 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
   test "caches printings results for identical card_id" do
     card_id = "cached-card"
-    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+    prints_search_uri = "#{ApiEndpoints.scryfall_base}/cards/search?q=test"
 
     stub_two_step_flow(card_id, prints_search_uri, [
       {
@@ -533,8 +533,8 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
   test "different card_ids generate separate cache entries" do
     card_id1 = "card-one"
     card_id2 = "card-two"
-    prints_search_uri1 = "https://api.scryfall.com/cards/search?q=one"
-    prints_search_uri2 = "https://api.scryfall.com/cards/search?q=two"
+    prints_search_uri1 = "#{ApiEndpoints.scryfall_base}/cards/search?q=one"
+    prints_search_uri2 = "#{ApiEndpoints.scryfall_base}/cards/search?q=two"
 
     stub_two_step_flow(card_id1, prints_search_uri1, [
       { id: "1", name: "Card One", set: "tst", set_name: "Test",
@@ -579,7 +579,7 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
 
   test "handles empty printings search results" do
     card_id = "no-printings-card"
-    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+    prints_search_uri = "#{ApiEndpoints.scryfall_base}/cards/search?q=test"
 
     # Card exists but has no printings
     card_response = {
@@ -617,7 +617,7 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
 
   test "raises NetworkError on connection failure in second API call" do
     card_id = "network-error-card"
-    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
+    prints_search_uri = "#{ApiEndpoints.scryfall_base}/cards/search?q=test"
 
     card_response = {
       "id" => card_id,
@@ -684,8 +684,8 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
 
   test "handles pagination when has_more is true" do
     card_id = "paginated-card"
-    prints_search_uri = "https://api.scryfall.com/cards/search?q=test"
-    next_page_uri = "https://api.scryfall.com/cards/search?q=test&page=2"
+    prints_search_uri = "#{ApiEndpoints.scryfall_base}/cards/search?q=test"
+    next_page_uri = "#{ApiEndpoints.scryfall_base}/cards/search?q=test&page=2"
 
     # Stub card endpoint
     card_response = {
@@ -749,12 +749,12 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
 
   # Helper to build Scryfall card API URL
   def scryfall_card_url(card_id)
-    "https://api.scryfall.com/cards/#{card_id}"
+    "#{ApiEndpoints.scryfall_base}/cards/#{card_id}"
   end
 
   # Helper to stub Scryfall card API request (first step)
   def stub_scryfall_card_request(card_id, response_body)
-    stub_request(:get, scryfall_card_url(card_id))
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(
         status: 200,
         body: response_body.to_json,
@@ -764,7 +764,7 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
 
   # Helper to stub Scryfall prints search API request (second step)
   def stub_prints_search_request(prints_search_uri, response_body)
-    stub_request(:get, prints_search_uri)
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/search/)
       .to_return(
         status: 200,
         body: response_body.to_json,

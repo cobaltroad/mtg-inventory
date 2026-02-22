@@ -12,8 +12,8 @@ class CardSearchService
   CACHE_TTL = (ENV.fetch("CARD_SEARCH_CACHE_TTL", 24.hours.to_s).to_i).seconds
 
   # Scryfall API configuration
-  SCRYFALL_API_BASE = "https://api.scryfall.com"
-  SCRYFALL_SEARCH_ENDPOINT = "#{SCRYFALL_API_BASE}/cards/search"
+  SCRYFALL_API_BASE = Rails.application.config.api_endpoints.scryfall_base
+  SCRYFALL_SEARCH_ENDPOINT = "#{Rails.application.config.api_endpoints.scryfall_base}/cards/search"
   REQUEST_TIMEOUT = 10 # seconds
   USER_AGENT = "mtg-inventory/1.0"
 
