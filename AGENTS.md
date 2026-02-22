@@ -215,6 +215,16 @@ Use conventional commits:
 - `fix/issue-{number}-{description}`
 - `refactor/{description}`
 
+### Working with Issues
+
+When asked to work on an issue, always retrieve the full issue including comments:
+
+```bash
+gh issue view <issue-number> --comments
+```
+
+This ensures you have the complete context including any discussion that clarifies requirements.
+
 ---
 
 ## Testing Guidelines
