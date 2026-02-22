@@ -181,6 +181,26 @@ end
 
 ## Git Workflow
 
+### GitHub Context Protocol
+
+Agents MUST interpret shorthand GitHub refs as context fetches:
+
+| Reference | Action | URL Template |
+|-----------|--------|--------------|
+| issue N   | Read full issue + comments | https://github.com/cobaltroad/mtg-inventory/issues/{N}  |
+| PR N      | Read PR description, diff, comments | https://github.com/cobaltroad/mtg-inventory/pull/{N} |
+| #N        | Same as issue N | (alias for issues/PRs) |
+
+- "issue N" → Read https://github.com/cobaltroad/mtg-inventory/issues/N fully (title, body, all comments chronologically, labels).
+- Fetch via browser, paste relevant excerpts.
+
+- Parse discussions for requirements, bugs, decisions.
+- Quote key excerpts with links.
+- For Kilo CLI: Leverage @git-changes or built-in git tools; manually fetch issues via browser/export if needed.  Use /init or skills if available; otherwise note "Context from issue N: [paste]".
+- Always confirm: "Incorporating context from issue 233: [summary + link]".
+- Cross-reference with code: e.g., "Fix issue 233 by updating src/lib/services/cardService.ts".
+
+
 ### Commit Messages
 
 Use conventional commits:
