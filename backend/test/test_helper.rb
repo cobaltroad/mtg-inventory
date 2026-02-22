@@ -36,9 +36,6 @@ require_relative "support/recurring_task_helper"
 # Load card search test helper for CardSearchService tests
 require_relative "support/card_search_test_helper"
 
-# Load fail-on-rate-limit helper to catch tests hitting real Scryfall API
-require_relative "support/fail_on_rate_limit"
-
 # In test environment, provide access to configured API endpoints
 # This allows tests to stub the correct endpoints
 module ApiEndpoints
