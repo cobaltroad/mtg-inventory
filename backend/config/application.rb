@@ -27,7 +27,6 @@ module Backend
     # Use a standard Rails app with sessions enabled (not API-only)
     # This is needed for cookie-based OAuth authentication
     config.middleware.use ActionDispatch::Cookies
-    config.middleware.use ActionDispatch::Session::CookieStore, key: '_mtg_inventory_session'
 
     # Honour the PUBLIC_API_PATH env var so that generated URLs (redirects,
     # url_for, etc.) include the API path prefix. When the var is absent

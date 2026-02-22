@@ -49,9 +49,16 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// the client → SvelteKit leg (e.g. host, connection).
 	const outgoingHeaders = filterHeaders(event.request.headers);
 
+	// Debug: log cookies being forwarded
+	if (event.url.pathname.includes('discord')) {
+		console.log(`[QA-DEBUG] Proxying ${event.request.method} ${event.url.pathname}`);
+		console.log(`[QA-DEBUG] Cookies sent to backend: ${outgoingHeaders.get('cookie')}`);
+	}
+
 	const proxyInit: RequestInit = {
 		method: event.request.method,
-		headers: outgoingHeaders
+		headers: outgoingHeaders,
+		redirect: 'manual' // Don't follow redirects - let the browser handle them
 	};
 
 	// Only attach a body for methods that carry one.
@@ -65,6 +72,33 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// headers that are meaningless once we re-emit the response on a new TCP
 	// connection back to the client.
 	const responseHeaders = filterHeaders(backendResponse.headers);
+
+	// [QA-DEBUG] Log proxy response details for redirect debugging
+	if (backendResponse.status >= 300 && backendResponse.status < 400) {
+		console.log(`[QA-DEBUG] Proxy redirect detected:`);
+		console.log(`  Request: ${event.request.method} ${event.url.pathname}`);
+		console.log(`  Backend URL: ${targetUrl}`);
+		console.log(`  Status: ${backendResponse.status}`);
+		console.log(`  Location: ${backendResponse.headers.get('location')}`);
+		console.log(`  Content-Type: ${backendResponse.headers.get('content-type')}`);
+		console.log(`  Content-Length: ${backendResponse.headers.get('content-length')}`);
+		console.log(`  Content-Encoding: ${backendResponse.headers.get('content-encoding')}`);
+		console.log(`  Forwarded headers:`);
+		responseHeaders.forEach((v, k) => console.log(`    ${k}: ${v}`));
+	}
+
+	// When using redirect: 'manual', explicitly handle redirects by creating a new
+	// Response with the Location header. This ensures browsers properly follow the redirect.
+	if (backendResponse.status === 301 || backendResponse.status === 302 || backendResponse.status === 303 || backendResponse.status === 307 || backendResponse.status === 308) {
+		const location = backendResponse.headers.get('location');
+		console.log(`[QA-DEBUG] Creating explicit redirect response to: ${location}`);
+		return new Response(null, {
+			status: backendResponse.status,
+			headers: {
+				'Location': location ?? ''
+			}
+		});
+	}
 
 	return new Response(backendResponse.body, {
 		status: backendResponse.status,

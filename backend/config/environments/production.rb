@@ -22,7 +22,7 @@ Rails.application.configure do
   config.active_storage.service = :local
 
   # Assume all access to the app is happening through a SSL-terminating reverse proxy.
-  # config.assume_ssl = true
+  config.assume_ssl = true
 
   # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
   # config.force_ssl = true
@@ -85,6 +85,6 @@ Rails.application.configure do
   # Skip DNS rebinding protection for the default health check endpoint.
   # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
 
-  # Configure same-site cookie settings for production
-  config.session_store :cookie_store, key: '_mtg_inventory_session', same_site: :lax, secure: true
+  # Configure session cookie for OAuth cross-site redirects
+  config.session_store :cookie_store, key: '_mtg_inventory_session', same_site: :none, secure: true
 end
