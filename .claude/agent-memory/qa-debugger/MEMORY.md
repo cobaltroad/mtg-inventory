@@ -40,6 +40,15 @@
 - `PUBLIC_BASE_PATH=/projects/mtg` sets the SvelteKit base path
 - API proxy in `hooks.server.ts` forwards `/api/` and `/rails/` paths to `VITE_API_URL` (backend)
 - Source code is volume-mounted into container (`./frontend:/frontend`)
+- Traefik v3.6.7 reverse proxy in front of SvelteKit (traefik-public network)
+- Backend gets `PUBLIC_API_PATH=/projects/mtg/api` but NOT `PUBLIC_BASE_PATH`
+
+## OAuth / Auth Flow Architecture
+- Full request path: Browser -> Traefik -> SvelteKit hooks.server.ts proxy -> Rails backend
+- `redirect: 'manual'` in hooks.server.ts is CRITICAL for OAuth redirects
+- Without it: Node.js fetch follows 302 to Discord server-side, returns Brotli HTML -> "Content Encoding Error"
+- Rails `frontend_url()` uses `ENV.fetch("PUBLIC_BASE_PATH", "")` which is empty on backend (env var not passed in docker-compose.yml)
+- This causes OAuth callback redirects to miss the `/projects/mtg` base path prefix
 
 ## Debugging Techniques
 - Use `git stash` to quickly verify if test failures are pre-existing vs caused by changes

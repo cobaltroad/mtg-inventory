@@ -1,4 +1,6 @@
 class ApplicationController < ActionController::API
+  include ActionController::Cookies
+
   class DefaultUserMissingError < StandardError
     def initialize
       super(
@@ -24,6 +26,9 @@ class ApplicationController < ActionController::API
       return user if user
     end
 
+    # TODO: Remove this fallback after all users have Discord accounts
+    # See issue #226
+    Rails.logger.warn("DEPRECATION WARNING: Using seeded default user. This fallback will be removed after migration to Discord OAuth is complete.")
     User.find_by(email: User::DEFAULT_EMAIL) || raise(DefaultUserMissingError)
   end
 

@@ -1,9 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, waitFor } from '@testing-library/svelte';
 
-// ---------------------------------------------------------------------------
 // Mock $app/paths so we can control `base` in tests
-// ---------------------------------------------------------------------------
 vi.mock('$app/paths', () => ({
 	base: process.env.PUBLIC_BASE_PATH || ''
 }));
@@ -31,12 +29,20 @@ import HomePage from './+page.svelte';
 // Tests
 // ---------------------------------------------------------------------------
 describe('Home Page', () => {
+	let originalEnv: NodeJS.ProcessEnv;
+
 	beforeEach(() => {
+		originalEnv = process.env;
 		cleanup();
 		vi.clearAllMocks();
 
-		// Mock API responses for widgets
 		mockFetch.mockImplementation((url) => {
+			if (url.includes('/api/auth/status')) {
+				return Promise.resolve({
+					ok: true,
+					json: async () => ({ authenticated: false, user: null })
+				});
+			}
 			if (url.includes('/api/price_alerts')) {
 				return Promise.resolve({
 					ok: true,
@@ -62,6 +68,11 @@ describe('Home Page', () => {
 		});
 	});
 
+	afterEach(() => {
+		process.env = originalEnv;
+		vi.resetModules();
+	});
+
 	it('renders the search link with the base path prepended', async () => {
 		render(HomePage);
 
@@ -77,9 +88,21 @@ describe('Home Page', () => {
 		await waitFor(() => {
 			const link = screen.getByRole('link', { name: /search cards/i });
 			const classNames = link.className;
-			// Should have Skeleton v4 primary button classes, not dead v3 classes
 			expect(classNames).toMatch(/bg-primary-/);
 			expect(classNames).not.toContain('variant-filled-primary');
 		});
+	});
+
+	it('redirects to login when not authenticated and auth is enabled', async () => {
+		process.env = { ...originalEnv, VITE_AUTH_ENABLED: 'true' };
+		vi.resetModules();
+
+		const { load } = await import('./+page.ts');
+
+		const mockUrl = {
+			pathname: '/'
+		} as any;
+
+		await expect(load({ url: mockUrl, fetch: mockFetch } as any)).rejects.toThrow();
 	});
 });

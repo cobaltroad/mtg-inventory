@@ -1,5 +1,7 @@
+# @deprecated The DEFAULT_EMAIL user is being phased out in favor of Discord OAuth.
+#             See issue #226 for migration details.
 class User < ApplicationRecord
-  DEFAULT_EMAIL = "default@mtg-inventory.local"
+  DEFAULT_EMAIL = "default@mtg-inventory.local" # @deprecated
   DISCORD_PROVIDER = "discord"
 
   has_many :oauth_providers, dependent: :destroy
@@ -22,6 +24,8 @@ class User < ApplicationRecord
         u.name = name
       end
 
+      migrate_seeded_inventory(user)
+
       OauthProvider.create!(
         provider: DISCORD_PROVIDER,
         uid: uid,
@@ -29,6 +33,29 @@ class User < ApplicationRecord
       )
 
       user
+    end
+  end
+
+  def self.migrate_seeded_inventory(new_user)
+    seeded_user = find_by(email: DEFAULT_EMAIL)
+    return unless seeded_user
+    return unless seeded_user.collection_items.any?
+
+    seeded_user.collection_items.each do |item|
+      new_user.collection_items.create!(
+        card_id: item.card_id,
+        collection_type: item.collection_type,
+        quantity: item.quantity,
+        finish: item.finish,
+        language: item.language,
+        acquired_date: item.acquired_date,
+        acquired_price_cents: item.acquired_price_cents,
+        card_name: item.card_name,
+        set_name: item.set_name,
+        released_at: item.released_at
+      )
+    rescue => e
+      Rails.logger.error("Failed to migrate collection item #{item.id}: #{e.message}")
     end
   end
 end

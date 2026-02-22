@@ -2,8 +2,9 @@ require "test_helper"
 
 class UserTest < ActiveSupport::TestCase
   test "has many oauth_providers" do
-    user = users(:one)
+    user = User.create!(email: "assoc_test@example.com", name: "Association Test")
     assert_respond_to user, :oauth_providers
+    assert_equal [], user.oauth_providers
   end
 
   # ---------------------------------------------------------------------------

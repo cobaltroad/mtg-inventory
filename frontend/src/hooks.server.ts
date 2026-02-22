@@ -51,7 +51,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	const proxyInit: RequestInit = {
 		method: event.request.method,
-		headers: outgoingHeaders
+		headers: outgoingHeaders,
+		redirect: 'manual' // Don't follow redirects - let the browser handle them
 	};
 
 	// Only attach a body for methods that carry one.
@@ -65,6 +66,27 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// headers that are meaningless once we re-emit the response on a new TCP
 	// connection back to the client.
 	const responseHeaders = filterHeaders(backendResponse.headers);
+
+	// When using redirect: 'manual', explicitly handle redirects by creating a new
+	// Response with the Location header. This ensures browsers properly follow the redirect.
+	// Also forward Set-Cookie headers for authentication.
+	if (backendResponse.status === 301 || backendResponse.status === 302 || backendResponse.status === 303 || backendResponse.status === 307 || backendResponse.status === 308) {
+		const location = backendResponse.headers.get('location');
+		const setCookie = backendResponse.headers.get('set-cookie');
+
+		const headers: Record<string, string> = {
+			'Location': location ?? ''
+		};
+
+		if (setCookie) {
+			headers['Set-Cookie'] = setCookie;
+		}
+
+		return new Response(null, {
+			status: backendResponse.status,
+			headers
+		});
+	}
 
 	return new Response(backendResponse.body, {
 		status: backendResponse.status,

@@ -49,8 +49,7 @@ export async function checkAuthStatus(): Promise<void> {
 }
 
 export function login(): void {
-	// eslint-disable-next-line svelte/no-navigation-without-resolve
-	goto(`${base}/api/auth/discord`);
+	window.location.href = `${base}/api/auth/discord`;
 }
 
 export async function logout(): Promise<void> {

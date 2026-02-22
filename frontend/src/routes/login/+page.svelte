@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { login } from '$lib/services/authService.svelte';
+	import { base } from '$app/paths';
 
 	const AUTH_ENABLED = import.meta.env.VITE_AUTH_ENABLED === 'true';
 </script>
@@ -10,7 +10,9 @@
 		<p class="subtitle">Sign in to manage your collection</p>
 
 		{#if AUTH_ENABLED}
-			<button class="login-btn" onclick={login}> Login with Discord </button>
+			<a href="{base}/api/auth/discord" class="login-btn" rel="external">
+				Login with Discord
+			</a>
 		{:else}
 			<p class="dev-notice">Authentication is disabled in development</p>
 		{/if}
@@ -79,6 +81,7 @@
 		cursor: pointer;
 		transition: all 0.2s;
 		width: 100%;
+		text-decoration: none;
 	}
 
 	.login-btn:hover {
