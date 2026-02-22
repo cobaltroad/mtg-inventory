@@ -1978,9 +1978,14 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET /api/inventory with sort parameter sorts by release date oldest first" do
-    CollectionItem.create!(user: @user, card_id: "uuid-old", collection_type: "inventory", quantity: 1)
-    CollectionItem.create!(user: @user, card_id: "uuid-new", collection_type: "inventory", quantity: 1)
-    CollectionItem.create!(user: @user, card_id: "uuid-mid", collection_type: "inventory", quantity: 1)
+    # Supply all metadata fields directly to bypass the Scryfall API callback,
+    # avoiding parallel test interference on shared card IDs.
+    CollectionItem.create!(user: @user, card_id: "uuid-old", collection_type: "inventory", quantity: 1,
+                           card_name: "Old Card", set_name: "Alpha", released_at: "1993-08-05")
+    CollectionItem.create!(user: @user, card_id: "uuid-new", collection_type: "inventory", quantity: 1,
+                           card_name: "New Card", set_name: "Brothers War", released_at: "2022-11-18")
+    CollectionItem.create!(user: @user, card_id: "uuid-mid", collection_type: "inventory", quantity: 1,
+                           card_name: "Mid Card", set_name: "Core 2021", released_at: "2020-07-03")
 
     stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-old")
       .to_return(status: 200, body: { id: "uuid-old", name: "Old Card", set: "LEA", set_name: "Alpha", collector_number: "1", released_at: "1993-08-05", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
@@ -2002,9 +2007,14 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET /api/inventory with sort parameter sorts by value highest first" do
-    item1 = CollectionItem.create!(user: @user, card_id: "uuid-cheap", collection_type: "inventory", quantity: 1, finish: "nonfoil")
-    item2 = CollectionItem.create!(user: @user, card_id: "uuid-expensive", collection_type: "inventory", quantity: 2, finish: "nonfoil")
-    item3 = CollectionItem.create!(user: @user, card_id: "uuid-medium", collection_type: "inventory", quantity: 1, finish: "nonfoil")
+    # Supply all metadata fields directly to bypass the Scryfall API callback,
+    # avoiding parallel test interference on shared card IDs.
+    item1 = CollectionItem.create!(user: @user, card_id: "uuid-cheap", collection_type: "inventory", quantity: 1, finish: "nonfoil",
+                                   card_name: "Cheap Card", set_name: "Test Set", released_at: "2020-01-01")
+    item2 = CollectionItem.create!(user: @user, card_id: "uuid-expensive", collection_type: "inventory", quantity: 2, finish: "nonfoil",
+                                   card_name: "Expensive Card", set_name: "Test Set", released_at: "2020-01-01")
+    item3 = CollectionItem.create!(user: @user, card_id: "uuid-medium", collection_type: "inventory", quantity: 1, finish: "nonfoil",
+                                   card_name: "Medium Card", set_name: "Test Set", released_at: "2020-01-01")
 
     CardPrice.create!(card_id: "uuid-cheap", fetched_at: 1.hour.ago, usd_cents: 50)
     CardPrice.create!(card_id: "uuid-expensive", fetched_at: 1.hour.ago, usd_cents: 1000)
