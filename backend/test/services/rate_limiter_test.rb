@@ -123,16 +123,6 @@ class RateLimiterTest < ActiveSupport::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # Test: EDHREC rate limiter uses 2000ms interval
-  # ---------------------------------------------------------------------------
-  test "creates EDHREC rate limiter with 2000ms interval" do
-    limiter = RateLimiter.for_edhrec
-
-    assert_equal 2000, limiter.min_interval_ms
-    assert_equal "edhrec", limiter.service_name
-  end
-
-  # ---------------------------------------------------------------------------
   # Test: Scryfall rate limiter uses 100ms interval
   # ---------------------------------------------------------------------------
   test "creates Scryfall rate limiter with 100ms interval" do

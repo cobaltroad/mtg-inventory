@@ -1,7 +1,4 @@
 class RateLimiter
-  # EDHREC rate limit: 2 seconds between requests
-  EDHREC_RATE_LIMIT_MS = 2000
-
   # Scryfall rate limit: 100ms between requests (documented API limit)
   SCRYFALL_RATE_LIMIT_MS = 100
 
@@ -11,6 +8,27 @@ class RateLimiter
 
   class << self
     attr_reader :last_request_times, :mutex
+  end
+
+  attr_reader :min_interval_ms, :service_name
+
+  # ---------------------------------------------------------------------------
+  # Initialize a new rate limiter for a specific service
+  #
+  # Arguments:
+  #   min_interval_ms (Integer) - Minimum milliseconds between requests
+  #   service_name (String) - Name of the service (used for state tracking)
+  # ---------------------------------------------------------------------------
+  def initialize(min_interval_ms:, service_name:)
+    @min_interval_ms = min_interval_ms
+    @service_name = service_name
+  end
+
+  # ---------------------------------------------------------------------------
+  # Factory method for Scryfall rate limiter
+  # ---------------------------------------------------------------------------
+  def self.for_scryfall
+    new(min_interval_ms: SCRYFALL_RATE_LIMIT_MS, service_name: "scryfall")
   end
 
   attr_reader :min_interval_ms, :service_name
