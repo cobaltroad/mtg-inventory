@@ -21,13 +21,12 @@ class ApplicationController < ActionController::API
   end
 
   def current_user
-    if session[:user_id]
-      user = User.find_by(id: session[:user_id])
+    user_id = cookies[:user_id]
+    if user_id
+      user = User.find_by(id: user_id.to_i)
       return user if user
     end
 
-    # TODO: Remove this fallback after all users have Discord accounts
-    # See issue #226
     Rails.logger.warn("DEPRECATION WARNING: Using seeded default user. This fallback will be removed after migration to Discord OAuth is complete.")
     User.find_by(email: User::DEFAULT_EMAIL) || raise(DefaultUserMissingError)
   end

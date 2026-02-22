@@ -10,14 +10,15 @@ class AuthController < ApplicationController
       value: state, 
       path: "/",
       secure: true, 
-      httponly: false 
+      httponly: true,
+      same_site: :none
     }
     cookies[:return_to] = { 
       value: params[:return_to], 
       path: "/",
       same_site: :none, 
       secure: true, 
-      httponly: false 
+      httponly: true 
     } if params[:return_to].present?
 
     redirect_uri = "https://#{ENV.fetch("APP_DOMAIN", "http://localhost")}#{ENV.fetch("PUBLIC_API_PATH", "")}/auth/discord/callback"
@@ -36,8 +37,8 @@ class AuthController < ApplicationController
 
     return redirect_to_frontend_with_error("Authorization denied") if params[:error]
 
-    # Skip state validation for now - third-party cookie issues
-    # TODO: Add proper CSRF protection later
+    state_error = verify_state
+    return redirect_to_frontend_with_error(state_error) if state_error
 
     code = params[:code]
     token = exchange_code_for_token(code)
@@ -56,7 +57,8 @@ class AuthController < ApplicationController
     response.set_cookie(:user_id, { 
       value: user.id.to_s, 
       secure: true, 
-      httponly: false, 
+      httponly: true, 
+      same_site: :lax,
       path: "/" 
     })
 
@@ -137,7 +139,7 @@ class AuthController < ApplicationController
 
   def verify_state
     return "Missing state parameter" if params[:state].blank?
-    return "State mismatch - possible CSRF attack" if params[:state] != session[:oauth_state]
+    return "State mismatch - possible CSRF attack" if params[:state] != cookies[:oauth_state]
     nil
   end
 
