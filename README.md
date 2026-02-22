@@ -1,12 +1,13 @@
 # MTG Inventory Management System
 
-A full-stack application for managing Magic: The Gathering card inventories with automated price tracking and EDH commander deck analysis.
+A full-stack application for managing Magic: The Gathering card inventories with automated price tracking, EDH commander deck analysis, and Discord OAuth authentication.
 
 ## Architecture Overview
 
 - **Backend**: Rails 8.1 API-only server (Ruby 3.4) → [backend/README.md](backend/README.md)
 - **Frontend**: SvelteKit 2 with TypeScript → [frontend/README.md](frontend/README.md)
 - **Database**: PostgreSQL 16
+- **Authentication**: Discord OAuth 2.0 with secure session management
 - **Job Queue**: Solid Queue for background processing
 - **Deployment**: Docker Compose
 
@@ -42,6 +43,37 @@ On first run, the database will be automatically created, migrated, and seeded. 
 ```bash
 docker compose exec backend rails db:reset
 ```
+
+### Authentication Setup (Optional for Development)
+
+The application supports **Discord OAuth 2.0** authentication. For production deployments or to enable authentication in development:
+
+1. **Create a Discord Application**:
+   - Go to [Discord Developer Portal](https://discord.com/developers/applications)
+   - Create a new application
+   - Navigate to OAuth2 settings
+   - Add redirect URI: `http://localhost:3001/auth/callback` (or your production URL)
+   - Copy the Client ID and Client Secret
+
+2. **Configure Environment Variables**:
+   ```bash
+   # In backend/.env
+   DISCORD_CLIENT_ID=your_client_id
+   DISCORD_CLIENT_SECRET=your_client_secret
+   DISCORD_REDIRECT_URI=http://localhost:3001/auth/callback
+   SESSION_SECRET=$(rails secret)  # Generate with: rails secret
+
+   # In frontend/.env
+   VITE_AUTH_ENABLED=true  # Set to false to disable auth in dev
+   ```
+
+3. **Toggle Development/Production Mode**:
+   ```bash
+   make dev   # Development mode (auth optional)
+   make prod  # Production mode (auth required)
+   ```
+
+**Note:** Authentication is **optional** in development mode for faster iteration. In production, authentication is strongly recommended for user data isolation.
 
 ## Background Jobs & Scheduled Tasks
 
@@ -188,8 +220,19 @@ cp .env.example .env
 ```
 
 Edit `.env` with your configuration. Key variables:
+
+**Backend (`backend/.env`):**
 - `DATABASE_URL` - PostgreSQL connection string
 - `RAILS_ENV` - Environment (development/production)
+- `APP_ENV` - Application environment for feature toggles
+- `DISCORD_CLIENT_ID` - Discord OAuth application ID (required for auth)
+- `DISCORD_CLIENT_SECRET` - Discord OAuth secret (required for auth)
+- `DISCORD_REDIRECT_URI` - OAuth callback URL
+- `SESSION_SECRET` - Secure random secret for sessions (generate with `rails secret`)
+
+**Frontend (`frontend/.env`):**
+- `VITE_BACKEND_URL` - Backend API URL (default: http://localhost:3000)
+- `VITE_AUTH_ENABLED` - Enable/disable authentication (true/false)
 - `NODE_ENV` - Node environment
 
 ## Project Structure

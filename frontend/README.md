@@ -82,18 +82,112 @@ SvelteKit uses file-based routing:
 - `+layout.svelte` - Layout component
 - `+error.svelte` - Error page
 
-## API Integration
+## Authentication
 
-### API Proxy Configuration
+The frontend implements **Discord OAuth 2.0** authentication with automatic session management.
 
-The frontend proxies API requests through `hooks.server.ts` to handle CORS and environment configuration:
+### Authentication Flow
+
+1. **Login Page** - User clicks "Login with Discord" button
+2. **OAuth Redirect** - Frontend redirects to backend `/auth/discord` endpoint
+3. **Discord Authorization** - User authorizes the application
+4. **Callback Handling** - Backend processes OAuth callback and sets session cookie
+5. **Redirect to App** - User redirected back to frontend with active session
+6. **Protected Routes** - Authenticated users can access all features
+
+### Authentication State Management
+
+The app uses SvelteKit's server-side hooks to manage authentication:
 
 ```typescript
 // hooks.server.ts
 export async function handle({ event, resolve }) {
-	if (event.url.pathname.startsWith('/api')) {
-		// Proxy to backend
+	// Check authentication status via backend
+	const authResponse = await fetch(`${BACKEND_URL}/auth/status`, {
+		headers: { cookie: event.request.headers.get('cookie') || '' }
+	});
+
+	event.locals.user = authResponse.ok ? await authResponse.json() : null;
+
+	// Protect routes
+	if (!event.locals.user && isProtectedRoute(event.url.pathname)) {
+		return redirect(302, '/login');
 	}
+
+	return resolve(event);
+}
+```
+
+### API Client with Session Management
+
+The `apiClient` utility (`lib/utils/apiClient.ts`) handles authenticated API requests:
+
+```typescript
+import { apiClient } from '$lib/utils/apiClient';
+
+// Automatically includes session cookies
+const inventory = await apiClient.get('/api/inventory');
+
+// POST with authentication
+const newItem = await apiClient.post('/api/inventory', {
+	card_id: '123',
+	quantity: 1
+});
+```
+
+### Environment Configuration
+
+Authentication can be disabled in development mode:
+
+```bash
+# .env or .env.development
+VITE_AUTH_ENABLED=false  # Disable authentication in dev
+```
+
+This allows for faster development without requiring Discord OAuth setup.
+
+### Login Page
+
+The login page (`routes/login/+page.svelte`) provides a simple Discord OAuth button:
+
+```svelte
+<script>
+	import { base } from '$app/paths';
+	const loginUrl = `${base}/auth/discord`;
+</script>
+
+<a href={loginUrl} class="btn variant-filled-primary">
+	Login with Discord
+</a>
+```
+
+### Protected Routes
+
+Routes are protected via server-side middleware. Unauthenticated users are automatically redirected to `/login`.
+
+## API Integration
+
+### API Proxy Configuration
+
+The frontend proxies API requests through `hooks.server.ts` to handle CORS, authentication, and environment configuration:
+
+```typescript
+// hooks.server.ts
+export async function handle({ event, resolve }) {
+	// Handle authentication (check session)
+	// ...
+
+	// Proxy API requests to backend
+	if (event.url.pathname.startsWith('/api') || event.url.pathname.startsWith('/auth')) {
+		const backendUrl = `${BACKEND_URL}${event.url.pathname}${event.url.search}`;
+		const response = await fetch(backendUrl, {
+			method: event.request.method,
+			headers: event.request.headers,
+			body: await event.request.arrayBuffer()
+		});
+		return response;
+	}
+
 	return resolve(event);
 }
 ```
@@ -110,6 +204,15 @@ const response = await fetch(`${base}/api/inventory`);
 
 // ❌ Wrong - hardcoded URLs break in Docker/production
 const response = await fetch('http://localhost:3000/api/inventory');
+```
+
+**For authenticated requests, use the apiClient utility:**
+
+```typescript
+import { apiClient } from '$lib/utils/apiClient';
+
+// Automatically includes credentials and handles auth
+const response = await apiClient.get('/api/inventory');
 ```
 
 ### Handling Race Conditions
@@ -430,6 +533,23 @@ export default {
 - Lazy load images below the fold
 - Use responsive images with `srcset`
 
+## Environment Variables
+
+Configure via `.env` file in the frontend directory:
+
+```bash
+# Backend API URL (for server-side proxy)
+VITE_BACKEND_URL=http://localhost:3000
+
+# Authentication (optional in development)
+VITE_AUTH_ENABLED=true  # Set to false to disable auth in dev
+
+# Public environment variables (accessible in browser)
+# Add VITE_ prefix to expose to client-side code
+```
+
+**Important:** Only variables prefixed with `VITE_` are exposed to the browser. Keep sensitive values (API keys, secrets) without the prefix.
+
 ## Troubleshooting
 
 ### Common Issues
@@ -456,6 +576,14 @@ npm run check
 - Verify backend is running on port 3000
 - Check `hooks.server.ts` configuration
 - Inspect network tab in browser DevTools
+
+**Authentication issues:**
+
+- Verify `VITE_BACKEND_URL` is set correctly
+- Check Discord OAuth credentials in backend `.env`
+- Ensure cookies are enabled in browser
+- Check browser console for authentication errors
+- Verify `DISCORD_REDIRECT_URI` matches your frontend URL
 
 ## Contributing
 

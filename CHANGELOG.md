@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-02-22
+
+### Added
+- **Discord OAuth Authentication** (#222, #223, #224, #226, #228, #229, #233)
+  - Full Discord OAuth 2.0 integration for user authentication
+  - Backend OAuth provider setup with session management
+  - Frontend authentication state management with SvelteKit
+  - API client with automatic session cookie handling
+  - Protected routes with automatic login redirects
+  - Seeded inventory migration for new Discord users
+  - Environment-based authentication (enabled in prod, optional in dev)
+  - `VITE_AUTH_ENABLED` flag for development mode control
+  - Makefile for easy dev/prod environment toggling
+  - User model with Discord integration and secure session handling
+- **Environment-Specific API Configuration** (#235)
+  - Support for different external API endpoints per environment
+  - Improved flexibility for development vs production deployments
+
+### Changed
+- Production deployment now uses cookie-based sessions for authentication
+- OAuth redirect flow uses full page navigation for better compatibility
+- Test suite improvements with better isolation and mocking
+- Gitignore updated to catch all `.env.*` files for better security
+
+### Fixed
+- OAuth security vulnerabilities including session fixation and CSRF protection (#234)
+- OAuth redirect and Set-Cookie header forwarding in production (#232)
+- Test suite failures related to rate limiting and API mocking (#231)
+- Test isolation issues with logging and singleton methods (#215)
+- CollectionItem metadata synchronization and test infrastructure
+- Error handling in OAuth callback page for better user experience
+
+### Security
+- Implemented secure session management with HttpOnly cookies
+- Added CSRF protection to OAuth flow
+- Fixed session fixation vulnerabilities
+- Improved environment variable handling and .env file security
+
 ## [0.6.0] - 2026-02-20
 
 ### Added
@@ -142,6 +180,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Earlier releases are not documented in this changelog.
 
+[0.7.0]: https://github.com/cobaltroad/mtg-inventory/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/cobaltroad/mtg-inventory/compare/v0.5.2...v0.6.0
 [0.4.0]: https://github.com/cobaltroad/mtg-inventory/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/cobaltroad/mtg-inventory/compare/v0.3.1...v0.3.3

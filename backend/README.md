@@ -127,6 +127,80 @@ The seed file (`db/seeds.rb`) includes:
 - Test commanders
 - Sample price alerts
 
+## Authentication
+
+The backend implements **Discord OAuth 2.0** authentication with secure session management.
+
+### OAuth Configuration
+
+Configure Discord OAuth in your `.env` file:
+
+```bash
+# Discord OAuth Application Credentials
+DISCORD_CLIENT_ID=your_client_id
+DISCORD_CLIENT_SECRET=your_client_secret
+DISCORD_REDIRECT_URI=http://localhost:3001/auth/callback
+
+# Session Configuration (production)
+SESSION_SECRET=your_secure_random_secret
+```
+
+### OAuth Flow
+
+1. **Login** - User clicks "Login with Discord"
+2. **Redirect** - Backend redirects to Discord OAuth page
+3. **Callback** - Discord redirects back with authorization code
+4. **Token Exchange** - Backend exchanges code for access token
+5. **User Creation** - User record created/updated with Discord data
+6. **Session** - Secure HttpOnly cookie set for session management
+
+### Authentication Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/auth/discord` | GET | Initiate Discord OAuth flow |
+| `/auth/callback` | GET | OAuth callback handler |
+| `/auth/status` | GET | Check authentication status |
+| `/auth/logout` | DELETE | Destroy user session |
+
+### Session Management
+
+- **Cookie-based sessions** with `HttpOnly` and `Secure` flags
+- **CSRF protection** using Rails built-in mechanisms
+- **Session fixation prevention** with session regeneration after login
+- Sessions stored in encrypted cookies (production) or cookie store (development)
+
+### User Model
+
+The `User` model integrates with Discord:
+
+```ruby
+class User < ApplicationRecord
+  validates :discord_id, presence: true, uniqueness: true
+  validates :username, presence: true
+
+  def self.find_or_create_by_discord(discord_data)
+    # Creates or updates user from Discord OAuth response
+  end
+end
+```
+
+### Environment-Based Authentication
+
+Authentication can be disabled in development mode:
+
+```bash
+# Disable auth in development (optional)
+VITE_AUTH_ENABLED=false
+```
+
+Use the provided `Makefile` to toggle between dev and prod modes:
+
+```bash
+make dev   # Development mode (auth optional)
+make prod  # Production mode (auth required)
+```
+
 ## API Endpoints
 
 The API is organized into namespaced controllers under `app/controllers/api/`.
@@ -144,6 +218,8 @@ The API is organized into namespaced controllers under `app/controllers/api/`.
 | `/api/commanders/:id` | GET | Get commander with decklist |
 | `/api/price_alerts` | GET | List price alerts |
 | `/api/cards/search` | GET | Search cards by name |
+
+**Note:** All API endpoints require authentication when running in production mode.
 
 See `config/routes.rb` for the complete API reference.
 
@@ -289,9 +365,25 @@ end
 Configure via `.env` file or environment:
 
 ```bash
+# Database
 DATABASE_URL=postgresql://user:pass@localhost:5432/mtg_inventory
+
+# Rails Environment
 RAILS_ENV=development
 RAILS_LOG_LEVEL=info
+APP_ENV=development  # Used for environment-specific configs
+
+# Discord OAuth (required for production)
+DISCORD_CLIENT_ID=your_client_id
+DISCORD_CLIENT_SECRET=your_client_secret
+DISCORD_REDIRECT_URI=http://localhost:3001/auth/callback
+
+# Session Security (required for production)
+SESSION_SECRET=your_secure_random_secret
+
+# External API Configuration
+EDHREC_BASE_URL=https://edhrec.com
+SCRYFALL_API_BASE=https://api.scryfall.com
 ```
 
 ### Credentials
@@ -308,11 +400,14 @@ The backend is containerized with Docker. See [main README](../README.md#quick-s
 
 ### Production Considerations
 
-- Set `RAILS_ENV=production`
+- Set `RAILS_ENV=production` and `APP_ENV=production`
 - Configure proper database credentials
-- Enable SSL in production
+- **Configure Discord OAuth credentials** (required for authentication)
+- **Set secure SESSION_SECRET** (generate with `rails secret`)
+- Enable SSL in production for secure cookies
 - Set up proper logging and monitoring
 - Configure rate limiting based on API quotas
+- Ensure `DISCORD_REDIRECT_URI` matches your production domain
 
 ## Troubleshooting
 
