@@ -14,10 +14,8 @@ end
 
 if Rails.env.test?
   base_url = Rails.application.config.api_endpoints.scryfall_base
-  edhrec_base = Rails.application.config.api_endpoints.edhrec_base
-  edhrec_json = Rails.application.config.api_endpoints.edhrec_json
 
-  $stderr.puts "VCR Setup: Configuring test endpoints - Scryfall: #{base_url}, EDHREC: #{edhrec_base}"
+  $stderr.puts "VCR Setup: Configuring test endpoints - Scryfall: #{base_url}"
 
   WebMock.enable!
   WebMock.disable_net_connect!(allow_localhost: true)

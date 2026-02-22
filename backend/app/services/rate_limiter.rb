@@ -31,34 +31,6 @@ class RateLimiter
     new(min_interval_ms: SCRYFALL_RATE_LIMIT_MS, service_name: "scryfall")
   end
 
-  attr_reader :min_interval_ms, :service_name
-
-  # ---------------------------------------------------------------------------
-  # Initialize a new rate limiter for a specific service
-  #
-  # Arguments:
-  #   min_interval_ms (Integer) - Minimum milliseconds between requests
-  #   service_name (String) - Name of the service (used for state tracking)
-  # ---------------------------------------------------------------------------
-  def initialize(min_interval_ms:, service_name:)
-    @min_interval_ms = min_interval_ms
-    @service_name = service_name
-  end
-
-  # ---------------------------------------------------------------------------
-  # Factory method for EDHREC rate limiter
-  # ---------------------------------------------------------------------------
-  def self.for_edhrec
-    new(min_interval_ms: EDHREC_RATE_LIMIT_MS, service_name: "edhrec")
-  end
-
-  # ---------------------------------------------------------------------------
-  # Factory method for Scryfall rate limiter
-  # ---------------------------------------------------------------------------
-  def self.for_scryfall
-    new(min_interval_ms: SCRYFALL_RATE_LIMIT_MS, service_name: "scryfall")
-  end
-
   # ---------------------------------------------------------------------------
   # Throttles request to ensure minimum interval is respected
   #
