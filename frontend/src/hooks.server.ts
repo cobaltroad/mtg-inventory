@@ -89,14 +89,25 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	// When using redirect: 'manual', explicitly handle redirects by creating a new
 	// Response with the Location header. This ensures browsers properly follow the redirect.
+	// Also forward Set-Cookie headers for authentication.
 	if (backendResponse.status === 301 || backendResponse.status === 302 || backendResponse.status === 303 || backendResponse.status === 307 || backendResponse.status === 308) {
 		const location = backendResponse.headers.get('location');
+		const setCookie = backendResponse.headers.get('set-cookie');
+		
 		console.log(`[QA-DEBUG] Creating explicit redirect response to: ${location}`);
+		console.log(`[QA-DEBUG] Set-Cookie header: ${setCookie}`);
+		
+		const headers: Record<string, string> = {
+			'Location': location ?? ''
+		};
+		
+		if (setCookie) {
+			headers['Set-Cookie'] = setCookie;
+		}
+		
 		return new Response(null, {
 			status: backendResponse.status,
-			headers: {
-				'Location': location ?? ''
-			}
+			headers
 		});
 	}
 
