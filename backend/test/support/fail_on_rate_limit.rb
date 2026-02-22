@@ -39,27 +39,48 @@ module RateLimitInterceptor
     
     # Check for rate limit errors
     if msg_str.include?("Scryfall rate limit exceeded") || msg_str.include?("Rate limit exceeded")
-      raise build_rate_limit_failure_message(msg_str)
+      puts "\n\n" + "="*80
+      puts "CRITICAL TEST FAILURE: Rate limit exceeded - stopping test run immediately"
+      puts "="*80
+      puts build_rate_limit_failure_message(msg_str)
+      puts "="*80 + "\n\n"
+      exit(1)
     end
     
     # Check for metadata sync failures (indicates API call failed)
     if msg_str.include?("Failed to sync card metadata")
-      raise "TEST FAILURE: Card metadata sync failed - test is hitting a real Scryfall API.\n" \
+      failure_msg = "TEST FAILURE: Card metadata sync failed - test is hitting a real Scryfall API.\n" \
             "This means the test is hitting a real Scryfall API instead of using WebMock stubs.\n\n" \
             "FIX:\n" \
             "Provide card metadata to skip API calls:\n" \
             "  CollectionItem.create!(..., card_name: 'Card Name', set_name: 'Set Name', released_at: Date.today)\n\n" \
             "Logged message: #{msg_str[0..200]}"
+      puts "\n\n" + "="*80
+      puts "CRITICAL TEST FAILURE: Stopping test run immediately"
+      puts "="*80
+      puts failure_msg
+      puts "="*80 + "\n\n"
+      exit(1)
     end
     
     # Check for VCR errors indicating unmocked HTTP requests
     if msg_str.include?("VCR") && msg_str.include?("HTTP request")
-      raise build_rate_limit_failure_message(msg_str, "External")
+      puts "\n\n" + "="*80
+      puts "CRITICAL TEST FAILURE: Unmocked HTTP request - stopping test run immediately"
+      puts "="*80
+      puts build_rate_limit_failure_message(msg_str, "External")
+      puts "="*80 + "\n\n"
+      exit(1)
     end
     
     # Check for ScryfallCardResolver unexpected errors (usually VCR errors)
     if msg_str.include?("Unexpected error") && msg_str.include?("VCR")
-      raise build_rate_limit_failure_message(msg_str, "Scryfall")
+      puts "\n\n" + "="*80
+      puts "CRITICAL TEST FAILURE: VCR error - stopping test run immediately"
+      puts "="*80
+      puts build_rate_limit_failure_message(msg_str, "Scryfall")
+      puts "="*80 + "\n\n"
+      exit(1)
     end
     
     # Check for ScryfallCardResolver "Could not resolve" - indicates real API call
