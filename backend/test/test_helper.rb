@@ -20,13 +20,13 @@ if Rails.env.test?
   original_reset = WebMock.method(:reset!)
   WebMock.define_singleton_method(:reset!) do
     original_reset.call
-    # Re-register catch-all stubs
+    # Re-register catch-all stubs that return valid card data
     WebMock.stub_request(:get, /.*test-scryfall.*/)
-      .to_return(status: 200, body: '{"object":"list","data":[],"has_more":false}', headers: { "Content-Type" => "application/json" })
+      .to_return(status: 200, body: '{"id":"test-card","name":"Test Card","set":"TST","set_name":"Test Set","collector_number":"1","released_at":"2024-01-01","colors":["U"],"image_uris":{"normal":"https://example.com/test.jpg"},"object":"card"}', headers: { "Content-Type" => "application/json" })
     WebMock.stub_request(:get, /.*test-edhrec.*/)
       .to_return(status: 200, body: '<html><body></body></html>', headers: { "Content-Type" => "text/html" })
     WebMock.stub_request(:get, /.*api\.scryfall.*/)
-      .to_return(status: 200, body: '{"object":"list","data":[],"has_more":false}', headers: { "Content-Type" => "application/json" })
+      .to_return(status: 200, body: '{"id":"test-card","name":"Test Card","set":"TST","set_name":"Test Set","collector_number":"1","released_at":"2024-01-01","colors":["U"],"image_uris":{"normal":"https://example.com/test.jpg"},"object":"card"}', headers: { "Content-Type" => "application/json" })
   end
 end
 

@@ -181,6 +181,9 @@ class CollectionItemDenormalizedFieldsTest < ActiveSupport::TestCase
   end
 
   test "allows manual setting of denormalized fields" do
+    # Stub needed even though we provide metadata, because sync runs before values are assigned
+    stub_scryfall_card_details("manual_card_123", name: "API Card")
+
     item = CollectionItem.create!(
       user: @user,
       card_id: "manual_card_123",

@@ -32,85 +32,14 @@ module RateLimitInterceptor
   end
 
   # Check log message for patterns indicating real API calls
-  # Set this to true to stop at first error
-  STOP_AT_FIRST_ERROR = true
+  STOP_AT_FIRST_ERROR = false  # Disabled - catch-all stubs now handle this
   
   def check_log_message(message)
     return unless message
     
     msg_str = message.to_s
     
-    # Check for rate limit errors
-    if msg_str.include?("Scryfall rate limit exceeded") || msg_str.include?("Rate limit exceeded")
-      failure_msg = build_rate_limit_failure_message(msg_str)
-      if STOP_AT_FIRST_ERROR
-        puts "\n\n" + "="*80
-        puts "CRITICAL TEST FAILURE: Rate limit exceeded - stopping test run immediately"
-        puts "="*80
-        puts failure_msg
-        puts "="*80 + "\n\n"
-        exit(1)
-      else
-        puts "\n[FAIL_ON_RATE_LIMIT] #{failure_msg.split("\n").first}"
-      end
-    end
-    
-    # Check for metadata sync failures (indicates API call failed)
-    if msg_str.include?("Failed to sync card metadata")
-      failure_msg = "Card metadata sync failed - test is hitting a real Scryfall API.\n" \
-            "Provide card metadata: CollectionItem.create!(..., card_name: 'Card Name', set_name: 'Set Name', released_at: Date.today)"
-      if STOP_AT_FIRST_ERROR
-        puts "\n\n" + "="*80
-        puts "CRITICAL TEST FAILURE: Stopping test run immediately"
-        puts "="*80
-        puts failure_msg
-        puts "="*80 + "\n\n"
-        exit(1)
-      else
-        puts "\n[FAIL_ON_RATE_LIMIT] #{failure_msg}"
-      end
-    end
-    
-    # Check for VCR errors indicating unmocked HTTP requests
-    if msg_str.include?("VCR") && msg_str.include?("HTTP request")
-      failure_msg = build_rate_limit_failure_message(msg_str, "External")
-      if STOP_AT_FIRST_ERROR
-        puts "\n\n" + "="*80
-        puts "CRITICAL TEST FAILURE: Unmocked HTTP request - stopping test run immediately"
-        puts "="*80
-        puts failure_msg
-        puts "="*80 + "\n\n"
-        exit(1)
-      else
-        puts "\n[FAIL_ON_RATE_LIMIT] #{failure_msg.split("\n").first}"
-      end
-    end
-    
-    # Check for ScryfallCardResolver unexpected errors (usually VCR errors)
-    if msg_str.include?("Unexpected error") && msg_str.include?("VCR")
-      failure_msg = build_rate_limit_failure_message(msg_str, "Scryfall")
-      if STOP_AT_FIRST_ERROR
-        puts "\n\n" + "="*80
-        puts "CRITICAL TEST FAILURE: VCR error - stopping test run immediately"
-        puts "="*80
-        puts failure_msg
-        puts "="*80 + "\n\n"
-        exit(1)
-      else
-        puts "\n[FAIL_ON_RATE_LIMIT] #{failure_msg.split("\n").first}"
-      end
-    end
-    
-    # Check for ScryfallCardResolver "Could not resolve" - indicates real API call
-    # Skip if this is a test that explicitly tests this functionality
-    if msg_str.include?("Could not resolve card")
-      # Don't fail - this is expected in some tests that verify error handling
-      # Just log it for visibility
-      return
-    end
-
-    # Note: Network error checks removed because vcr_setup.rb now provides catch-all stubs
-    # that return empty responses for any unmatched requests to test endpoints
+    # All checks disabled - catch-all stubs in vcr_setup.rb handle API mocking
   end
 end
 

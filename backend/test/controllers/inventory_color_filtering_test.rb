@@ -33,7 +33,10 @@ class InventoryColorFilteringTest < ActionDispatch::IntegrationTest
 
   # Stub Scryfall API with card details including colors
   def stub_card_with_colors(card_id, name:, colors:)
-    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
+    base = Rails.application.config.api_endpoints.scryfall_base
+    url_pattern = /#{Regexp.escape(base)}\/cards\/#{card_id}/
+    Rails.logger.info "[DEBUG] Registering stub for #{url_pattern}"
+    stub_request(:get, url_pattern)
       .to_return(
         status: 200,
         body: {
