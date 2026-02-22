@@ -191,11 +191,16 @@ Agents MUST interpret shorthand GitHub refs as context fetches:
 | PR N      | Read PR description, diff, comments | https://github.com/cobaltroad/mtg-inventory/pull/{N} |
 | #N        | Same as issue N | (alias for issues/PRs) |
 
-- "issue N" → Read https://github.com/cobaltroad/mtg-inventory/issues/N fully (title, body, all comments chronologically, labels).
-- Fetch via browser, paste relevant excerpts.
+When asked to work on an issue, always retrieve the full issue including comments, then pipe to `jq` for parsing
+
+```bash
+gh issue view <issue-number> --json comments,body --comments | jq
+```
+
+In case of error with that command, fall back to fetching via web browser; read https://<repo-url>/issues/<issue-number> fully (title, body, all comments chronologically, labels).
 
 - Parse discussions for requirements, bugs, decisions.
-- Quote key excerpts with links.
+- Quote key/relevant excerpts with links.
 - For Kilo CLI: Leverage @git-changes or built-in git tools; manually fetch issues via browser/export if needed.  Use /init or skills if available; otherwise note "Context from issue N: [paste]".
 - Always confirm: "Incorporating context from issue 233: [summary + link]".
 - Cross-reference with code: e.g., "Fix issue 233 by updating src/lib/services/cardService.ts".
@@ -217,11 +222,6 @@ Use conventional commits:
 
 ### Working with Issues
 
-When asked to work on an issue, always retrieve the full issue including comments:
-
-```bash
-gh issue view <issue-number> --comments
-```
 
 This ensures you have the complete context including any discussion that clarifies requirements.
 
