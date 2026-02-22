@@ -29,11 +29,9 @@ export function getAuthState(): AuthState {
 export async function checkAuthStatus(): Promise<void> {
 	loading = true;
 	try {
-		console.log('[Auth] Checking auth status...');
 		const data = await apiClient.get<{ authenticated: boolean; user: User | null }>(
 			'/api/auth/status'
 		);
-		console.log('[Auth] Auth status response:', data);
 
 		if (data.authenticated && data.user) {
 			user = data.user;
@@ -42,8 +40,7 @@ export async function checkAuthStatus(): Promise<void> {
 			user = null;
 			isAuthenticated = false;
 		}
-	} catch (error) {
-		console.error('[Auth] Auth status check failed:', error);
+	} catch {
 		user = null;
 		isAuthenticated = false;
 	} finally {

@@ -14,10 +14,13 @@ describe('Login Page', () => {
 	beforeEach(() => {
 		cleanup();
 		vi.clearAllMocks();
+		// Set VITE_AUTH_ENABLED for tests that need the login button
+		import.meta.env.VITE_AUTH_ENABLED = 'true';
 	});
 
 	afterEach(() => {
 		cleanup();
+		import.meta.env.VITE_AUTH_ENABLED = undefined;
 	});
 
 	it('renders the page title', () => {
@@ -30,19 +33,15 @@ describe('Login Page', () => {
 		expect(screen.getByText('Sign in to manage your collection')).toBeTruthy();
 	});
 
-	it('renders the login with Discord button', () => {
+	it('renders the login with Discord link', () => {
 		render(LoginPage);
-		const button = screen.getByRole('button', { name: /login with discord/i });
-		expect(button).toBeTruthy();
+		const link = screen.getByRole('link', { name: /login with discord/i });
+		expect(link).toBeTruthy();
 	});
 
-	it('calls login function when button is clicked', async () => {
-		const { login } = await import('$lib/services/authService.svelte');
+	it('link has correct href', () => {
 		render(LoginPage);
-
-		const button = screen.getByRole('button', { name: /login with discord/i });
-		await fireEvent.click(button);
-
-		expect(login).toHaveBeenCalledTimes(1);
+		const link = screen.getByRole('link', { name: /login with discord/i });
+		expect(link.getAttribute('href')).toBe('/api/auth/discord');
 	});
 });

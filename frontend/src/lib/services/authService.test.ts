@@ -85,9 +85,21 @@ describe('authService', () => {
 
 	describe('login', () => {
 		it('should redirect to Discord OAuth URL', () => {
+			// Store original location
+			const originalLocation = window.location;
+			Object.defineProperty(window, 'location', {
+				value: { href: '' },
+				writable: true
+			});
+
 			login();
 
-			expect(goto).toHaveBeenCalledWith(`${base}/api/auth/discord`);
+			expect(window.location.href).toBe(`${base}/api/auth/discord`);
+
+			// Restore original
+			Object.defineProperty(window, 'location', {
+				value: originalLocation
+			});
 		});
 	});
 

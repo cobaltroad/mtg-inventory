@@ -1,16 +1,11 @@
 require "cgi"
 
-# Build identifier for debugging
-BUILD_ID = "v2026-02-22-0108"
-
 class AuthController < ApplicationController
-  # Using signed cookies for state instead of session
-
   def discord
     return render json: { error: "OAuth not configured in development" }, status: :service_unavailable unless production?
 
     state = SecureRandom.hex(24)
-    # Store state in a plain cookie without domain - let browser handle it
+    # Store state in a plain cookie - validated on callback
     cookies[:oauth_state] = { 
       value: state, 
       path: "/",
@@ -25,10 +20,6 @@ class AuthController < ApplicationController
       httponly: false 
     } if params[:return_to].present?
 
-    Rails.logger.info "=== DISCORD ACTION ==="
-    Rails.logger.info "Stored oauth_state in cookie: #{state}"
-    Rails.logger.info "======================"
-
     redirect_uri = "https://#{ENV.fetch("APP_DOMAIN", "http://localhost")}#{ENV.fetch("PUBLIC_API_PATH", "")}/auth/discord/callback"
     oauth_url = oauth_client.auth_code.authorize_url(
       client_id: ENV["DISCORD_CLIENT_ID"],
@@ -36,7 +27,6 @@ class AuthController < ApplicationController
       scope: "identify email",
       state: state
     )
-    Rails.logger.debug { "OAuth authorization URL: #{oauth_url}" }
 
     redirect_to oauth_url, allow_other_host: true
   end
@@ -62,36 +52,25 @@ class AuthController < ApplicationController
     auth_info = build_auth_info(user_info)
     user = User.find_or_create_by_discord(auth_info)
 
-    Rails.logger.info "=== CALLBACK SUCCESS ==="
-    Rails.logger.info "User created/found: #{user.id} - #{user.email}"
-    Rails.logger.info "======================"
-
-    # Store user_id in a cookie - try with explicit cookie jar
+    # Store user_id in a cookie for authentication
     response.set_cookie(:user_id, { 
       value: user.id.to_s, 
       secure: true, 
       httponly: false, 
       path: "/" 
     })
-    Rails.logger.info "Cookies after setting: #{cookies.to_h.inspect}"
-    Rails.logger.info "Set-Cookie header: #{response.headers['Set-Cookie'].inspect}"
 
-    Rails.logger.debug { "Auth callback redirecting to: #{frontend_url("/auth/callback")}" }
     redirect_to frontend_url("/auth/callback"), allow_other_host: true
   end
 
   def logout
-    session.delete(:user_id)
+    cookies.delete(:user_id)
     redirect_url = frontend_url("/login")
-    Rails.logger.debug { "Logout redirecting to: #{redirect_url}" }
     redirect_to redirect_url, allow_other_host: true
   end
 
   def status
-    # Check user_id from cookie
     user_id = cookies[:user_id]
-    Rails.logger.info "=== STATUS CHECK [#{BUILD_ID}] ==="
-    Rails.logger.info "user_id cookie: #{user_id.inspect}"
     if user_id
       user = User.find_by(id: user_id.to_i)
       if user
@@ -168,14 +147,11 @@ class AuthController < ApplicationController
 
   def redirect_to_frontend_with_error(message)
     redirect_url = frontend_url("/login?error=#{CGI.escape(message)}")
-    Rails.logger.debug { "Redirecting to frontend with error: #{redirect_url}" }
     redirect_to redirect_url, allow_other_host: true
   end
 
   def frontend_url(path = "")
-    url = "https://#{ENV.fetch("APP_DOMAIN", "localhost")}#{ENV.fetch("PUBLIC_BASE_PATH", "")}#{path}"
-    Rails.logger.debug { "Generated frontend URL: #{url}" }
-    url
+    "https://#{ENV.fetch("APP_DOMAIN", "localhost")}#{ENV.fetch("PUBLIC_BASE_PATH", "")}#{path}"
   end
 
   def json_request?
