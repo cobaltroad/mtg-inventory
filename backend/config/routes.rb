@@ -36,23 +36,11 @@ Rails.application.routes.draw do
       end
     end
 
-    # Commanders
-    resources :commanders, only: [ :index, :show ]
-
     # Search
     get "search", to: "search#index"
 
-    # Reports
-    get "reports/inventory_stats", to: "reports#inventory_stats"
-
     # Admin - Execution history for background jobs
     namespace :admin do
-      resources :scraper_executions, only: [ :index, :show ] do
-        collection do
-          get :stats
-        end
-      end
-
       resources :price_update_executions, only: [ :index, :show ] do
         collection do
           get :stats

@@ -3,9 +3,7 @@
 	import {
 		House,
 		Search,
-		Medal,
 		Heart,
-		FileText,
 		LayoutGrid,
 		Menu,
 		PanelLeftOpen,
@@ -48,9 +46,7 @@
 	const navItems: NavItem[] = [
 		{ href: `${base}/`, label: 'Home', icon: House },
 		{ href: `${base}/search`, label: 'Search', icon: Search },
-		{ href: `${base}/metagame`, label: 'Metagame', icon: Medal },
 		{ href: `${base}/wishlist`, label: 'Wishlist', icon: Heart },
-		{ href: `${base}/reports`, label: 'Reports', icon: FileText },
 		{ href: `${base}/inventory`, label: 'Inventory', icon: LayoutGrid }
 	];
 

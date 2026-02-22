@@ -3,7 +3,7 @@ import type { LayoutLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
 import { getAuthState, checkAuthStatus } from '$lib/services/authService.svelte';
 
-const PROTECTED_ROUTES = ['/inventory', '/wishlist', '/reports'];
+const PROTECTED_ROUTES = ['/inventory', '/wishlist'];
 const PUBLIC_ROUTES = ['/login', '/auth/callback'];
 const AUTH_ENABLED = import.meta.env.VITE_AUTH_ENABLED === 'true';
 
