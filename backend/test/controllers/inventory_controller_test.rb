@@ -41,7 +41,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
 
   # Stubs Scryfall API to validate a card ID
   def stub_valid_card(card_id)
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/#{card_id}")
       .to_return(
         status: 200,
         body: { id: card_id, name: "Test Card" }.to_json,
@@ -51,13 +51,13 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
 
   # Stubs Scryfall API to return 404 for invalid card
   def stub_invalid_card(card_id)
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/#{card_id}")
       .to_return(status: 404, body: '{"object":"error","code":"not_found"}')
   end
 
   # Stubs Scryfall API to return card details
   def stub_scryfall_card_details(card_id, name: "Black Lotus")
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/#{card_id}")
       .to_return(
         status: 200,
         body: {
@@ -75,7 +75,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   def stub_scryfall_special_finish(card_id, name: "Special Card", promo_types: [])
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/#{card_id}")
       .to_return(
         status: 200,
         body: {
@@ -177,7 +177,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     CollectionItem.create!(user: @user, card_id: "uuid-missing", collection_type: "inventory", quantity: 2)
 
     stub_scryfall_card_details("uuid-valid")
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-missing")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-missing")
       .to_return(status: 404, body: '{"object":"error","code":"not_found"}')
 
     get api_path("/inventory")
@@ -376,7 +376,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   test "PATCH /api/inventory/:id updates quantity and returns updated item" do
     item = CollectionItem.create!(user: @user, card_id: "update_card", collection_type: "inventory", quantity: 1)
 
-    stub_request(:get, "https://api.scryfall.com/cards/update_card")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/update_card")
       .to_return(
         status: 200,
         body: {
@@ -414,7 +414,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   test "PATCH /api/inventory/:id accepts quantity of 1 (minimum valid)" do
     item = CollectionItem.create!(user: @user, card_id: "min_qty_card", collection_type: "inventory", quantity: 5)
 
-    stub_request(:get, "https://api.scryfall.com/cards/min_qty_card")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/min_qty_card")
       .to_return(
         status: 200,
         body: {
@@ -439,7 +439,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   test "PATCH /api/inventory/:id accepts quantity of 999 (maximum valid)" do
     item = CollectionItem.create!(user: @user, card_id: "max_qty_card", collection_type: "inventory", quantity: 1)
 
-    stub_request(:get, "https://api.scryfall.com/cards/max_qty_card")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/max_qty_card")
       .to_return(
         status: 200,
         body: {
@@ -536,7 +536,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
       language: "Japanese"
     )
 
-    stub_request(:get, "https://api.scryfall.com/cards/preserve_fields_card")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/preserve_fields_card")
       .to_return(
         status: 200,
         body: {
@@ -1019,7 +1019,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     card_id = "cache_with_url"
     image_url = "https://cards.scryfall.io/normal/front/t/e/test.jpg"
 
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/#{card_id}")
       .to_return(
         status: 200,
         body: {
@@ -1042,7 +1042,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   test "POST /api/inventory does not enqueue job when card has no image URL" do
     card_id = "no_image_card"
 
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/#{card_id}")
       .to_return(
         status: 200,
         body: {
@@ -1091,7 +1091,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     image_url = "https://cards.scryfall.io/normal/front/t/e/test.jpg"
 
     # Stub card validation
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/#{card_id}")
       .to_return(
         status: 200,
         body: {
@@ -1129,7 +1129,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     image_url = "https://cards.scryfall.io/normal/front/fail/fail.jpg"
 
     # Stub card validation
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/#{card_id}")
       .to_return(
         status: 200,
         body: {
@@ -1183,7 +1183,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     )
 
     # Stub Scryfall card details
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/#{card_id}")
       .to_return(
         status: 200,
         body: {
@@ -1222,7 +1222,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     )
 
     # Stub Scryfall card details
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/#{card_id}")
       .to_return(
         status: 200,
         body: {
@@ -1292,7 +1292,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   test "GET /api/inventory includes released_at field for sorting by release date" do
     CollectionItem.create!(user: @user, card_id: "uuid-release", collection_type: "inventory", quantity: 1)
 
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-release")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-release")
       .to_return(
         status: 200,
         body: {
@@ -1370,7 +1370,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
       created_at: 2.days.ago
     )
 
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-complete")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-complete")
       .to_return(
         status: 200,
         body: {
@@ -1934,11 +1934,11 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     CollectionItem.create!(user: @user, card_id: "uuid-2", collection_type: "inventory", quantity: 1)
     CollectionItem.create!(user: @user, card_id: "uuid-3", collection_type: "inventory", quantity: 1)
 
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-1")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-1")
       .to_return(status: 200, body: { id: "uuid-1", name: "Card 1", set: "ZNR", set_name: "Zendikar Rising", collector_number: "1", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-2")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-2")
       .to_return(status: 200, body: { id: "uuid-2", name: "Card 2", set: "AFR", set_name: "Adventures in the Forgotten Realms", collector_number: "2", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-3")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-3")
       .to_return(status: 200, body: { id: "uuid-3", name: "Card 3", set: "MID", set_name: "Midnight Hunt", collector_number: "3", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
 
     get api_path("/inventory?sort=set-asc")
@@ -1958,11 +1958,11 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     CollectionItem.create!(user: @user, card_id: "uuid-new", collection_type: "inventory", quantity: 1)
     CollectionItem.create!(user: @user, card_id: "uuid-mid", collection_type: "inventory", quantity: 1)
 
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-old")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-old")
       .to_return(status: 200, body: { id: "uuid-old", name: "Old Card", set: "LEA", set_name: "Alpha", collector_number: "1", released_at: "1993-08-05", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-new")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-new")
       .to_return(status: 200, body: { id: "uuid-new", name: "New Card", set: "BRO", set_name: "Brothers War", collector_number: "2", released_at: "2022-11-18", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-mid")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-mid")
       .to_return(status: 200, body: { id: "uuid-mid", name: "Mid Card", set: "M21", set_name: "Core 2021", collector_number: "3", released_at: "2020-07-03", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
 
     get api_path("/inventory?sort=release-newest")
@@ -1982,11 +1982,11 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     CollectionItem.create!(user: @user, card_id: "uuid-new", collection_type: "inventory", quantity: 1)
     CollectionItem.create!(user: @user, card_id: "uuid-mid", collection_type: "inventory", quantity: 1)
 
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-old")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-old")
       .to_return(status: 200, body: { id: "uuid-old", name: "Old Card", set: "LEA", set_name: "Alpha", collector_number: "1", released_at: "1993-08-05", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-new")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-new")
       .to_return(status: 200, body: { id: "uuid-new", name: "New Card", set: "BRO", set_name: "Brothers War", collector_number: "2", released_at: "2022-11-18", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-mid")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-mid")
       .to_return(status: 200, body: { id: "uuid-mid", name: "Mid Card", set: "M21", set_name: "Core 2021", collector_number: "3", released_at: "2020-07-03", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
 
     get api_path("/inventory?sort=release-oldest")
@@ -2220,9 +2220,9 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     CollectionItem.create!(user: @user, card_id: "uuid-with-date", collection_type: "inventory", quantity: 1)
     CollectionItem.create!(user: @user, card_id: "uuid-no-date", collection_type: "inventory", quantity: 1)
 
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-with-date")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-with-date")
       .to_return(status: 200, body: { id: "uuid-with-date", name: "With Date", set: "M21", set_name: "Core 2021", collector_number: "1", released_at: "2020-07-03", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-no-date")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-no-date")
       .to_return(status: 200, body: { id: "uuid-no-date", name: "No Date", set: "TST", set_name: "Test", collector_number: "2", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
 
     get api_path("/inventory?sort=release-newest")
