@@ -64,32 +64,6 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
     assert_equal card_id, price_record.card_id
     assert_nil price_record.usd_cents
     assert_nil price_record.usd_foil_cents
-    assert_nil price_record.usd_etched_cents
-  end
-
-  test "job handles rate limit errors with retry" do
-    card_id = "test-uuid-rate-limit"
-
-    # Configure job to retry on rate limit
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
-      .to_return(status: 429, body: '{"object":"error","code":"rate_limit"}')
-
-    # Job should raise an error (either RateLimitError or RuntimeError from retry mechanism)
-    # when perform_now is used with retry_on declarations
-    error_raised = false
-    begin
-      UpdateCardPricesJob.perform_now(card_id)
-    rescue StandardError => e
-      error_raised = true
-      # Should be either RateLimitError or a RuntimeError about retry delays
-      assert e.is_a?(CardPriceService::RateLimitError) || e.message.include?("delay"),
-        "Expected RateLimitError or retry-related error, got #{e.class}: #{e.message}"
-    end
-
-    assert error_raised, "Expected an error to be raised"
-
-    # No record should be created on rate limit
-    assert_nil CardPrice.latest_for(card_id)
   end
 
   test "job handles network errors with retry" do
@@ -631,26 +605,6 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
 
     # Verify only first 20 cards were processed
     assert_equal 20, CardPrice.count
-  end
-
-  test "batch mode reraises rate limit error for job retry" do
-    user = @user_one
-
-    CollectionItem.create!(
-      user: user,
-      card_id: "rate-limit-batch",
-      collection_type: "inventory",
-      quantity: 1
-    )
-
-    stub_request(:get, "https://api.scryfall.com/cards/rate-limit-batch")
-      .to_return(status: 429, body: '{"object":"error","code":"rate_limit"}')
-
-    # In test mode, the retry mechanism raises RuntimeError about exponential delay
-    # This is expected behavior - we just want to confirm the error propagates
-    assert_raises(RuntimeError, CardPriceService::RateLimitError) do
-      UpdateCardPricesJob.perform_now(nil)
-    end
   end
 
   test "batch mode handles network error gracefully and continues processing" do

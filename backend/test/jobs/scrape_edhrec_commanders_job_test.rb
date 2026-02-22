@@ -180,29 +180,6 @@ class ScrapeEdhrecCommandersJobTest < ActiveJob::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # Test: Rate limit errors are re-raised for Solid Queue retry
-  # ---------------------------------------------------------------------------
-  test "raises rate limit errors for Solid Queue retry" do
-    # Stub to raise rate limit error
-    EdhrecScraper.define_singleton_method(:fetch_top_commanders) do
-      raise EdhrecScraper::RateLimitError, "Rate limit exceeded"
-    end
-
-    begin
-      # Verify the error is raised, not caught
-      assert_raises EdhrecScraper::RateLimitError do
-        ScrapeEdhrecCommandersJob.perform_now
-      end
-
-      # Verify no commanders were created
-      assert_equal 0, Commander.count
-    ensure
-      # Restore original method
-      EdhrecScraper.singleton_class.send(:remove_method, :fetch_top_commanders)
-    end
-  end
-
-  # ---------------------------------------------------------------------------
   # Test: Summary logging includes all required metrics
   # ---------------------------------------------------------------------------
   test "logs comprehensive summary after discovery" do

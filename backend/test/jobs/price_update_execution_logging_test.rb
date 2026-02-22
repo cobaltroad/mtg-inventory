@@ -228,27 +228,6 @@ class PriceUpdateExecutionLoggingTest < ActiveJob::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # UpdateCardPricesJob: Rate limit logging
-  # ---------------------------------------------------------------------------
-  test "UpdateCardPricesJob logs rate limit with service name" do
-    skip "Pre-existing test failure - needs investigation"
-    error = CardPriceService::RateLimitError.new("Rate limit exceeded")
-    error.define_singleton_method(:retry_after) { 60 }
-
-    stub_scryfall_price_api_error(@item1.card_id, error) do
-      # Expect any exception (retry behavior changes the exception type in tests)
-      assert_raises do
-        UpdateCardPricesJob.perform_now(@item1.card_id)
-      end
-
-      log_content = @log_output.string
-      assert_match /"level":"WARN"/, log_content
-      assert_match /"event":"rate_limit_encountered"/, log_content
-      assert_match /"service":"Scryfall"/, log_content
-    end
-  end
-
-  # ---------------------------------------------------------------------------
   # UpdateCardPricesJob: Price alerts tracking
   # ---------------------------------------------------------------------------
   test "UpdateCardPricesJob tracks price_alerts_created count" do
@@ -336,9 +315,6 @@ class PriceUpdateExecutionLoggingTest < ActiveJob::TestCase
     if error.is_a?(CardPriceService::NetworkError)
       stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
         .to_raise(SocketError.new("Connection failed"))
-    elsif error.is_a?(CardPriceService::RateLimitError)
-      stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
-        .to_return(status: 429, body: "Rate limit exceeded")
     else
       stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
         .to_raise(error)

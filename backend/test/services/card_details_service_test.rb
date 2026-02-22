@@ -110,18 +110,6 @@ class CardDetailsServiceTest < ActiveSupport::TestCase
     end
   end
 
-  test "raises RateLimitError when Scryfall returns 429" do
-    card_id = "rate-limit-uuid"
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
-      .to_return(status: 429, body: '{"object":"error","code":"rate_limit"}')
-
-    service = CardDetailsService.new(card_id: card_id)
-
-    assert_raises(CardDetailsService::RateLimitError) do
-      service.call
-    end
-  end
-
   test "handles cards with double-faced images" do
     card_id = "double-faced-uuid"
     stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")

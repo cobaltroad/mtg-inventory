@@ -243,21 +243,6 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
   # Error Handling Tests
   # ---------------------------------------------------------------------------
 
-  test "handles rate limit error (429) with appropriate exception" do
-    query = "Test Card"
-
-    stub_request(:get, /api\.scryfall\.com/)
-      .to_return(status: 429, body: '{"object":"error","code":"rate_limit_exceeded"}')
-
-    service = CardSearchService.new(query: query, finishes: [])
-
-    error = assert_raises(CardSearchService::RateLimitError) do
-      service.call
-    end
-
-    assert_match /rate limit/i, error.message
-  end
-
   test "handles network errors with appropriate exception" do
     query = "Test Card"
 

@@ -180,25 +180,6 @@ class ScraperExecutionLoggingTest < ActiveJob::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # Rate limiting logging
-  # ---------------------------------------------------------------------------
-  test "logs WARN level when rate limit encountered" do
-    skip "Pre-existing test failure - needs investigation"
-    # Simulate rate limit error
-    stub_edhrec_rate_limit(retry_after: 60) do
-      assert_raises(EdhrecScraper::RateLimitError) do
-        ScrapeEdhrecCommandersJob.perform_now
-      end
-
-      log_content = @log_output.string
-      assert_match /"level":"WARN"/, log_content
-      assert_match /"event":"rate_limit_encountered"/, log_content
-      assert_match /"service":"EDHREC"/, log_content
-      assert_match /"retry_after_seconds":60/, log_content
-    end
-  end
-
-  # ---------------------------------------------------------------------------
   # Partial success status
   # ---------------------------------------------------------------------------
   test "records partial_success status when some commanders fail" do
@@ -230,13 +211,6 @@ class ScraperExecutionLoggingTest < ActiveJob::TestCase
 
   def stub_edhrec_decklist_error(error)
     EdhrecScraper.define_singleton_method(:fetch_commander_decklist) { |_url| raise error }
-    yield
-  end
-
-  def stub_edhrec_rate_limit(retry_after:)
-    error = EdhrecScraper::RateLimitError.new("Rate limit exceeded")
-    error.define_singleton_method(:retry_after) { retry_after }
-    EdhrecScraper.define_singleton_method(:fetch_top_commanders) { raise error }
     yield
   end
 

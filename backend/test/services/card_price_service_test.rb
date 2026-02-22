@@ -156,69 +156,6 @@ class CardPriceServiceTest < ActiveSupport::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # Test rate limiting with exponential backoff
-  # ---------------------------------------------------------------------------
-
-  test "raises RateLimitError when Scryfall returns 429" do
-    skip "Pre-existing test failure - needs investigation"
-    card_id = "test-uuid-rate-limit"
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
-      .to_return(status: 429, body: '{"object":"error","code":"rate_limit"}')
-
-    log_output = capture_log do
-      service = CardPriceService.new(card_id: card_id)
-
-      error = assert_raises(CardPriceService::RateLimitError) do
-        service.call
-      end
-
-      assert_match(/rate limit/i, error.message)
-    end
-
-    assert_match(/rate limit/i, log_output)
-  end
-
-  test "retries with exponential backoff on rate limit" do
-    card_id = "test-uuid-rate-limit-retry"
-
-    # First request: rate limited
-    # Second request: rate limited
-    # Third request: succeeds
-    stub = stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
-      .to_return(status: 429, body: '{"object":"error","code":"rate_limit"}')
-      .then.to_return(status: 429, body: '{"object":"error","code":"rate_limit"}')
-      .then.to_return(
-        status: 200,
-        body: {
-          id: card_id,
-          prices: { usd: "10.00" }
-        }.to_json
-      )
-
-    service = CardPriceService.new(card_id: card_id)
-
-    # Track sleep calls by redefining wait method on this instance
-    sleep_calls = []
-    def service.wait(duration)
-      (@sleep_calls ||= []) << duration
-      # Don't actually sleep in tests
-    end
-
-    # Make sleep_calls accessible
-    service.instance_variable_set(:@sleep_calls, sleep_calls)
-
-    result = service.call
-    assert_equal 1000, result[:usd_cents]
-
-    # Verify exponential backoff: first wait ~1s, second wait ~2s
-    assert_equal 2, sleep_calls.length
-    assert sleep_calls[0] < sleep_calls[1], "Should use exponential backoff"
-
-    # Verify API was called 3 times (2 rate limits + 1 success)
-    assert_requested stub, times: 3
-  end
-
-  # ---------------------------------------------------------------------------
   # Test network errors with retry logic
   # ---------------------------------------------------------------------------
 

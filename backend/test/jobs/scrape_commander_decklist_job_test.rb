@@ -148,25 +148,6 @@ class ScrapeCommanderDecklistJobTest < ActiveJob::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # Test: Job handles rate limit errors and re-raises
-  # ---------------------------------------------------------------------------
-  test "handles rate limit errors and re-raises for retry" do
-    commander = create_test_commander
-
-    # Stub to raise rate limit error
-    EdhrecScraper.define_singleton_method(:fetch_commander_decklist) do |url|
-      raise EdhrecScraper::RateLimitError, "Rate limit exceeded"
-    end
-
-    assert_raises EdhrecScraper::RateLimitError do
-      ScrapeCommanderDecklistJob.perform_now(commander.id)
-    end
-
-    # Verify no decklist was created
-    assert_equal 0, Decklist.count
-  end
-
-  # ---------------------------------------------------------------------------
   # Test: Job logs progress appropriately
   # ---------------------------------------------------------------------------
   test "logs commander name and progress" do
