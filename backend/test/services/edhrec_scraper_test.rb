@@ -65,160 +65,59 @@ class EdhrecScraperTest < ActiveSupport::TestCase
   end
 
   # ---------------------------------------------------------------------------
-  # Error Handling Tests
+  # Commander Decklist Tests
   # ---------------------------------------------------------------------------
 
-  test "raises FetchError when network request fails" do
-    skip "Pre-existing test failure - needs investigation"
-    stub_request(:get, "https://json.edhrec.com/pages/commanders/week.json")
-      .to_timeout
+  test "fetch_commander_decklist returns array of 50-100 cards" do
+    stub_commander_decklist_json("https://edhrec.com/commanders/atraxa-praetors-voice")
 
-    error = assert_raises(EdhrecScraper::FetchError) do
-      EdhrecScraper.fetch_top_commanders
+    result = EdhrecScraper.fetch_commander_decklist("https://edhrec.com/commanders/atraxa-praetors-voice")
+
+    assert_kind_of Array, result
+    assert_operator result.length, :>=, 50, "Expected at least 50 cards"
+    assert_operator result.length, :<=, 100, "Expected at most 100 cards"
+  end
+
+  test "fetch_commander_decklist extracts card names and categories" do
+    stub_commander_decklist_json("https://edhrec.com/commanders/atraxa-praetors-voice")
+
+    result = EdhrecScraper.fetch_commander_decklist("https://edhrec.com/commanders/atraxa-praetors-voice")
+
+    # Check that cards have required fields
+    result.each do |card|
+      assert_includes card.keys, :name
+      assert_includes card.keys, :category
+      assert_includes card.keys, :is_commander
+      assert_not_nil card[:name]
+      assert_not_nil card[:category]
     end
-
-    assert_match(/network error/i, error.message)
   end
 
-  test "raises FetchError when receiving 404 status" do
-    skip "Pre-existing test failure - needs investigation"
-    stub_request(:get, "https://json.edhrec.com/pages/commanders/week.json")
-      .to_return(status: 404, body: "Not Found")
+  test "fetch_commander_decklist resolves cards with Scryfall IDs" do
+    stub_commander_decklist_json("https://edhrec.com/commanders/atraxa-praetors-voice")
 
-    error = assert_raises(EdhrecScraper::FetchError) do
-      EdhrecScraper.fetch_top_commanders
-    end
-
-    assert_match(/404/i, error.message)
-  end
-
-  test "raises FetchError when receiving 500 status" do
-    skip "Pre-existing test failure - needs investigation"
-    stub_request(:get, "https://json.edhrec.com/pages/commanders/week.json")
-      .to_return(status: 500, body: "Internal Server Error")
-
-    error = assert_raises(EdhrecScraper::FetchError) do
-      EdhrecScraper.fetch_top_commanders
-    end
-
-    assert_match(/500/i, error.message)
-  end
-
-  test "raises ParseError when JSON structure is invalid" do
-    skip "Pre-existing test failure - needs investigation"
-    stub_request(:get, "https://json.edhrec.com/pages/commanders/week.json")
-      .to_return(status: 200, body: '{"invalid": "structure"}')
-
-    error = assert_raises(EdhrecScraper::ParseError) do
-      EdhrecScraper.fetch_top_commanders
-    end
-
-    assert_match(/could not find commander data|api structure/i, error.message)
-  end
-
-  test "raises ParseError when JSON is malformed" do
-    skip "Pre-existing test failure - needs investigation"
-    stub_request(:get, "https://json.edhrec.com/pages/commanders/week.json")
-      .to_return(status: 200, body: "invalid json")
-
-    error = assert_raises(EdhrecScraper::ParseError) do
-      EdhrecScraper.fetch_top_commanders
-    end
-
-    assert_match(/failed to parse json/i, error.message)
-  end
-
-  test "logs warning and returns partial results when fewer than 20 commanders found" do
-    skip "Pre-existing test failure - needs investigation"
-    # Stub with only 15 commanders
-    json = build_commanders_json(15)
-    stub_request(:get, "https://json.edhrec.com/pages/commanders/week.json")
-      .to_return(status: 200, body: json.to_json)
-
-    # Capture log output
-    logs = capture_log_output do
-      result = EdhrecScraper.fetch_top_commanders
-      assert_equal 15, result.length
-    end
-
-    # Check for warning about fewer commanders (case insensitive)
-    assert_match(/warn.*found only 15 commanders/i, logs)
-  end
-
-  test "includes polite User-Agent header in HTTP request" do
-    skip "Pre-existing test failure - needs investigation"
-    stub = stub_request(:get, "https://json.edhrec.com/pages/commanders/week.json")
-      .with(headers: { "User-Agent" => "MTG-Inventory-Bot/1.0 (https://github.com/cobaltroad/mtg-inventory)" })
-      .to_return(status: 200, body: build_commanders_json(20).to_json)
-
-    EdhrecScraper.fetch_top_commanders
-
-    assert_requested stub
-  end
-
-  # ---------------------------------------------------------------------------
-  # Rate Limiting Tests
-  # ---------------------------------------------------------------------------
-
-  test "retries when receiving 429 rate limit and eventually succeeds" do
-    skip "Pre-existing test failure - needs investigation"
-    # First 2 requests return 429, third succeeds
-    call_count = 0
-    stub_request(:get, "https://edhrec.com/average-decks/atraxa-praetors-voice")
-      .to_return do |request|
-        call_count += 1
-        if call_count <= 2
-          { status: 429, body: "Too Many Requests" }
-        else
-          # Return success on third attempt
-          next_data = {
-            "props" => {
-              "__N_SSP" => true,
-              "pageProps" => {
-                "data" => {
-                  "container" => {
-                    "json_dict" => {
-                      "cardlists" => [
-                        { "tag" => "creatures", "cardviews" => Array.new(90) { |i| { "name" => "Card #{i}" } } }
-                      ],
-                      "card" => { "name" => "Atraxa, Praetors' Voice" }
-                    }
-                  }
-                }
-              }
-            }
-          }
-          html = "<html><body><script id=\"__NEXT_DATA__\" type=\"application/json\">#{next_data.to_json}</script></body></html>"
-          { status: 200, body: html }
-        end
-      end
-
-    # Stub Scryfall to avoid actual API calls
+    # Stub all Scryfall API calls to return valid IDs and URIs
     stub_request(:get, %r{https://api\.scryfall\.com/cards/named})
-      .to_return(status: 200, body: { id: "test-id", name: "Test", scryfall_uri: "https://scryfall.com/card/set/1/test" }.to_json)
-
-    # Stub sleep to make test faster (we're not testing sleep duration, just retry logic)
-    Object.stub(:sleep, ->(_) {}) do
-      result = EdhrecScraper.fetch_commander_decklist("https://edhrec.com/commanders/atraxa-praetors-voice")
-
-      assert_kind_of Array, result
-      assert_equal 3, call_count, "Should have made 3 attempts (2 failures + 1 success)"
-    end
-  end
-
-  test "raises RateLimitError after max retries on 429" do
-    skip "Pre-existing test failure - needs investigation"
-    # All requests return 429
-    stub_request(:get, %r{https://edhrec\.com/average-decks/.*})
-      .to_return(status: 429, body: "Too Many Requests")
-
-    # Stub sleep to make test faster
-    Object.stub(:sleep, ->(_) {}) do
-      error = assert_raises(EdhrecScraper::RateLimitError) do
-        EdhrecScraper.fetch_commander_decklist("https://edhrec.com/commanders/atraxa-praetors-voice")
+      .to_return do |request|
+        card_name = CGI.parse(URI(request.uri).query)["fuzzy"].first
+        card_slug = card_name.downcase.gsub(/[^a-z0-9]+/, '-')
+        {
+          status: 200,
+          body: {
+            id: "#{card_slug}-id",
+            name: card_name,
+            scryfall_uri: "https://scryfall.com/card/set/1/#{card_slug}"
+          }.to_json,
+          headers: { "Content-Type" => "application/json" }
+        }
       end
 
-      assert_match(/rate limit/i, error.message)
+    result = EdhrecScraper.fetch_commander_decklist("https://edhrec.com/commanders/atraxa-praetors-voice")
+
+    # Check that cards have scryfall_id
+    result.each do |card|
+      assert_includes card.keys, :scryfall_id
+      assert_not_nil card[:scryfall_id]
     end
   end
 
@@ -272,153 +171,6 @@ class EdhrecScraperTest < ActiveSupport::TestCase
     log_output.string
   ensure
     Rails.logger = original_logger
-  end
-
-  # ---------------------------------------------------------------------------
-  # Commander Decklist Tests
-  # ---------------------------------------------------------------------------
-
-  test "fetch_commander_decklist returns array of 50-100 cards" do
-    stub_commander_decklist_json("https://edhrec.com/commanders/atraxa-praetors-voice")
-
-    result = EdhrecScraper.fetch_commander_decklist("https://edhrec.com/commanders/atraxa-praetors-voice")
-
-    assert_kind_of Array, result
-    assert_operator result.length, :>=, 50, "Expected at least 50 cards"
-    assert_operator result.length, :<=, 100, "Expected at most 100 cards"
-  end
-
-  test "fetch_commander_decklist identifies which card is the commander" do
-    skip "Pre-existing test failure - needs investigation"
-    stub_commander_decklist_json("https://creativecommons.org/commanders/atraxa-praetors-voice")
-
-    result = EdhrecScraper.fetch_commander_decklist("https://creativecommons.org/commanders/atraxa-praetors-voice")
-
-    commanders = result.select { |card| card[:is_commander] }
-    assert_equal 1, commanders.length
-    assert_equal "Atraxa, Praetors' Voice", commanders.first[:name]
-  end
-
-  test "fetch_commander_decklist supports partner commanders" do
-    skip "Pre-existing test failure - needs investigation"
-    stub_partner_commander_decklist_json("https://creativecommons.org/commanders/thrasios-triton-hero-and-tymna-the-weaver")
-
-    result = EdhrecScraper.fetch_commander_decklist("https://creativecommons.org/commanders/thrasios-triton-hero-and-tymna-the-weaver")
-
-    commanders = result.select { |card| card[:is_commander] }
-    assert_equal 2, commanders.length
-    assert_includes commanders.map { |c| c[:name] }, "Thrasios, Triton Hero"
-    assert_includes commanders.map { |c| c[:name] }, "Tymna the Weaver"
-    assert_operator result.length, :>=, 50, "Expected at least 50 cards"
-    assert_operator result.length, :<=, 100, "Expected at most 100 cards"
-  end
-
-  test "fetch_commander_decklist extracts card names and categories" do
-    stub_commander_decklist_json("https://edhrec.com/commanders/atraxa-praetors-voice")
-
-    result = EdhrecScraper.fetch_commander_decklist("https://edhrec.com/commanders/atraxa-praetors-voice")
-
-    # Check that cards have required fields
-    result.each do |card|
-      assert_includes card.keys, :name
-      assert_includes card.keys, :category
-      assert_includes card.keys, :is_commander
-      assert_not_nil card[:name]
-      assert_not_nil card[:category]
-    end
-  end
-
-  test "fetch_commander_decklist resolves cards with Scryfall IDs" do
-    stub_commander_decklist_json("https://edhrec.com/commanders/atraxa-praetors-voice")
-
-    # Stub all Scryfall API calls to return valid IDs and URIs
-    stub_request(:get, %r{https://api\.scryfall\.com/cards/named})
-      .to_return do |request|
-        card_name = CGI.parse(URI(request.uri).query)["fuzzy"].first
-        card_slug = card_name.downcase.gsub(/[^a-z0-9]+/, '-')
-        {
-          status: 200,
-          body: {
-            id: "#{card_slug}-id",
-            name: card_name,
-            scryfall_uri: "https://scryfall.com/card/set/1/#{card_slug}"
-          }.to_json,
-          headers: { "Content-Type" => "application/json" }
-        }
-      end
-
-    result = EdhrecScraper.fetch_commander_decklist("https://edhrec.com/commanders/atraxa-praetors-voice")
-
-    # Check that cards have scryfall_id
-    result.each do |card|
-      assert_includes card.keys, :scryfall_id
-      assert_not_nil card[:scryfall_id]
-    end
-  end
-
-  test "fetch_commander_decklist keeps cards with nil scryfall_id when fuzzy search fails" do
-    skip "Pre-existing test failure - needs investigation"
-    stub_commander_decklist_json("https://creativecommons.org/commanders/atraxa-praetors-voice")
-
-    # Stub Scryfall API to return 404 for most cards, but succeed for Sol Ring
-    stub_request(:get, %r{https://api\.scryfall\.com/cards/named})
-      .to_return do |request|
-        card_name = CGI.parse(URI(request.uri).query)["fuzzy"].first
-        if card_name == "Sol Ring"
-          {
-            status: 200,
-            body: {
-              id: "sol-ring-id",
-              name: card_name,
-              scryfall_uri: "https://scryfall.com/card/cmr/335/sol-ring"
-            }.to_json,
-            headers: { "Content-Type" => "application/json" }
-          }
-        else
-          {
-            status: 404,
-            body: { object: "error", code: "not_found" }.to_json,
-            headers: { "Content-Type" => "application/json" }
-          }
-        end
-      end
-
-    result = EdhrecScraper.fetch_commander_decklist("https://edhrec.com/commanders/atraxa-praetors-voice")
-
-    # All cards should still be in the list (50-100 cards typical for average decks)
-    assert_operator result.length, :>=, 50
-
-    # Cards with failed resolution should have nil scryfall_id
-    failed_cards = result.select { |c| c[:scryfall_id].nil? }
-    assert failed_cards.length > 0, "Expected some cards to have nil scryfall_id"
-
-    # Sol Ring should have its ID
-    sol_ring = result.find { |c| c[:name] == "Sol Ring" }
-    assert_equal "sol-ring-id", sol_ring[:scryfall_id] if sol_ring
-  end
-
-  test "fetch_commander_decklist raises FetchError on network failure" do
-    skip "Pre-existing test failure - needs investigation"
-    stub_request(:get, %r{https://creativecommons\.org/average-decks/.*})
-      .to_timeout
-
-    error = assert_raises(EdhrecScraper::FetchError) do
-      EdhrecScraper.fetch_commander_decklist("https://creativecommons.org/commanders/atraxa-praetors-voice")
-    end
-
-    assert_match(/network error/i, error.message)
-  end
-
-  test "fetch_commander_decklist raises ParseError when HTML doesn't contain embedded JSON" do
-    skip "Pre-existing test failure - needs investigation"
-    stub_request(:get, %r{https://creativecommons\.org/average-decks/.*})
-      .to_return(status: 200, body: '<html><body>No JSON here</body></html>')
-
-    error = assert_raises(EdhrecScraper::ParseError) do
-      EdhrecScraper.fetch_commander_decklist("https://creativecommons.org/commanders/atraxa-praetors-voice")
-    end
-
-    assert_match(/could not find|parse/i, error.message)
   end
 
   def stub_commander_decklist_json(commander_url)

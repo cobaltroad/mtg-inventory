@@ -10,6 +10,10 @@ VCR.configure do |config|
   # Allow connections to localhost for test server
   config.ignore_localhost = true
 
+  # Allow real HTTP connections when no cassette is in use
+  # This is needed for tests that use WebMock stubs directly
+  config.allow_http_connections_when_no_cassette = true
+
   # Configure request matching
   config.default_cassette_options = {
     record: :once,  # Record only if cassette doesn't exist
