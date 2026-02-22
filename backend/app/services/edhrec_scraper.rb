@@ -4,8 +4,8 @@ require "json"
 require "nokogiri"
 
 class EdhrecScraper
-  BASE_URL = "https://edhrec.com"
-  JSON_API_URL = "https://json.edhrec.com/pages/commanders/week.json"
+  BASE_URL = Rails.application.config.api_endpoints.edhrec_base
+  JSON_API_URL = "#{Rails.application.config.api_endpoints.edhrec_json}/pages/commanders/week.json"
   USER_AGENT = "MTG-Inventory-Bot/1.0 (https://github.com/cobaltroad/mtg-inventory)"
   REQUEST_TIMEOUT = 10 # seconds
   EXPECTED_COMMANDER_COUNT = 20

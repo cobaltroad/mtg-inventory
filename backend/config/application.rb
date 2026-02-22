@@ -28,6 +28,12 @@ module Backend
     # This is needed for cookie-based OAuth authentication
     config.middleware.use ActionDispatch::Cookies
 
+    # External API endpoint configuration
+    config.api_endpoints = ActiveSupport::OrderedOptions.new
+    config.api_endpoints.scryfall_base = "https://api.scryfall.com"
+    config.api_endpoints.edhrec_base = "https://edhrec.com"
+    config.api_endpoints.edhrec_json = "https://json.edhrec.com"
+
     # Honour the PUBLIC_API_PATH env var so that generated URLs (redirects,
     # url_for, etc.) include the API path prefix. When the var is absent
     # (local dev without Docker) ENV returns nil, which is Rails' default

@@ -3,7 +3,7 @@ require "uri"
 require "json"
 
 class ScryfallCardResolver
-  SCRYFALL_API_BASE = "https://api.scryfall.com"
+  SCRYFALL_API_BASE = Rails.application.config.api_endpoints.scryfall_base
   RATE_LIMIT_MS = 100
   MAX_RETRIES = 3
   INITIAL_BACKOFF_MS = 500

@@ -8,7 +8,7 @@ class CardPrintingsService
   CACHE_TTL = (ENV.fetch("CARD_PRINTINGS_CACHE_TTL", 24.hours.to_s).to_i).seconds
 
   # Scryfall API configuration
-  SCRYFALL_API_BASE = "https://api.scryfall.com"
+  SCRYFALL_API_BASE = Rails.application.config.api_endpoints.scryfall_base
   REQUEST_TIMEOUT = 10 # seconds
   USER_AGENT = "mtg-inventory/1.0"
 

@@ -4,7 +4,7 @@ require "json"
 
 # Validates that a card ID exists in the Scryfall database
 class CardValidatorService
-  SCRYFALL_API_BASE = "https://api.scryfall.com"
+  SCRYFALL_API_BASE = Rails.application.config.api_endpoints.scryfall_base
   REQUEST_TIMEOUT = 5 # seconds
 
   class CardNotFoundError < StandardError; end
