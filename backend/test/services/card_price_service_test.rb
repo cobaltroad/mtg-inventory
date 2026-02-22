@@ -162,7 +162,7 @@ class CardPriceServiceTest < ActiveSupport::TestCase
   test "raises NetworkError on connection failure" do
     skip "Pre-existing test failure - needs investigation"
     card_id = "test-uuid-network-error"
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_raise(SocketError.new("Connection failed"))
 
     log_output = capture_log do
@@ -182,7 +182,7 @@ class CardPriceServiceTest < ActiveSupport::TestCase
     card_id = "test-uuid-retry"
 
     # First two requests fail, third succeeds
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_raise(SocketError.new("Connection failed"))
       .then.to_raise(SocketError.new("Connection failed"))
       .then.to_return(
@@ -204,7 +204,7 @@ class CardPriceServiceTest < ActiveSupport::TestCase
     card_id = "test-uuid-retry-exhausted"
 
     # All requests fail
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_raise(SocketError.new("Connection failed")).times(3)
 
     log_output = capture_log do
@@ -223,7 +223,7 @@ class CardPriceServiceTest < ActiveSupport::TestCase
 
   test "raises TimeoutError on request timeout" do
     card_id = "test-uuid-timeout"
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_timeout
 
     service = CardPriceService.new(card_id: card_id)
@@ -235,7 +235,7 @@ class CardPriceServiceTest < ActiveSupport::TestCase
 
   test "handles invalid JSON response" do
     card_id = "test-uuid-invalid-json"
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(status: 200, body: "not valid json")
 
     service = CardPriceService.new(card_id: card_id)
@@ -247,7 +247,7 @@ class CardPriceServiceTest < ActiveSupport::TestCase
 
   test "returns nil for non-existent card (404)" do
     card_id = "test-uuid-not-found"
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(status: 404, body: '{"object":"error","code":"not_found"}')
 
     service = CardPriceService.new(card_id: card_id)
@@ -310,7 +310,7 @@ class CardPriceServiceTest < ActiveSupport::TestCase
   private
 
   def stub_scryfall_price_request(card_id, prices)
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(
         status: 200,
         body: {

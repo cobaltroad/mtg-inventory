@@ -16,7 +16,7 @@ class ImageCacheExecutionLoggingTest < ActiveJob::TestCase
     User.delete_all
 
     # Stub card details API call that happens during collection item creation
-    stub_request(:get, "https://api.scryfall.com/cards/test-card-123")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/test-card-123/)
       .to_return(status: 200, body: { id: "test-card-123", name: "Test Card" }.to_json)
 
     # Create test user and collection item

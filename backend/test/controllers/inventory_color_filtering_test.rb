@@ -33,7 +33,7 @@ class InventoryColorFilteringTest < ActionDispatch::IntegrationTest
 
   # Stub Scryfall API with card details including colors
   def stub_card_with_colors(card_id, name:, colors:)
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(
         status: 200,
         body: {
@@ -209,7 +209,7 @@ class InventoryColorFilteringTest < ActionDispatch::IntegrationTest
 
     stub_card_with_colors("colorless_1", name: "Sol Ring", colors: [])
     # Simulate double-faced card with null colors but U color_identity
-    stub_request(:get, "https://api.scryfall.com/cards/dfc_blue")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/dfc_blue/)
       .to_return(
         status: 200,
         body: {

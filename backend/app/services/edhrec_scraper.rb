@@ -202,7 +202,7 @@ class EdhrecScraper
   # ---------------------------------------------------------------------------
   private_class_method def self.build_average_deck_url(commander_url)
     slug = commander_url.split("/").last
-    "https://edhrec.com/average-decks/#{slug}"
+    "#{BASE_URL}/average-decks/#{slug}"
   end
 
   # ---------------------------------------------------------------------------

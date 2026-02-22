@@ -14,6 +14,22 @@ require "json"
 vcr_setup = File.expand_path("support/vcr_setup.rb", __dir__)
 require vcr_setup if File.exist?(vcr_setup)
 
+# Patch WebMock.reset! to re-register catch-all stubs after reset
+# This ensures tests that call WebMock.reset! still have default stubs
+if Rails.env.test?
+  original_reset = WebMock.method(:reset!)
+  WebMock.define_singleton_method(:reset!) do
+    original_reset.call
+    # Re-register catch-all stubs
+    WebMock.stub_request(:get, /.*test-scryfall.*/)
+      .to_return(status: 200, body: '{"object":"list","data":[],"has_more":false}', headers: { "Content-Type" => "application/json" })
+    WebMock.stub_request(:get, /.*test-edhrec.*/)
+      .to_return(status: 200, body: '<html><body></body></html>', headers: { "Content-Type" => "text/html" })
+    WebMock.stub_request(:get, /.*api\.scryfall.*/)
+      .to_return(status: 200, body: '{"object":"list","data":[],"has_more":false}', headers: { "Content-Type" => "application/json" })
+  end
+end
+
 # Load recurring task helper for tests
 require_relative "support/recurring_task_helper"
 
@@ -22,6 +38,22 @@ require_relative "support/card_search_test_helper"
 
 # Load fail-on-rate-limit helper to catch tests hitting real Scryfall API
 require_relative "support/fail_on_rate_limit"
+
+# In test environment, provide access to configured API endpoints
+# This allows tests to stub the correct endpoints
+module ApiEndpoints
+  def self.scryfall_base
+    Rails.application.config.api_endpoints.scryfall_base
+  end
+
+  def self.edhrec_base
+    Rails.application.config.api_endpoints.edhrec_base
+  end
+
+  def self.edhrec_json
+    Rails.application.config.api_endpoints.edhrec_json
+  end
+end
 
 # ---------------------------------------------------------------------------
 # Minitest 6 removed Object#stub (it was extracted to a separate gem that

@@ -70,7 +70,7 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
     card_id = "test-uuid-network-error"
 
     # First attempt fails, second succeeds
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_raise(SocketError.new("Connection failed"))
       .then.to_return(
         status: 200,
@@ -108,7 +108,7 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
     card_id = "test-uuid-log-error"
 
     # All attempts fail
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_raise(SocketError.new("Connection failed")).times(3)
 
     log_output = capture_log do
@@ -130,7 +130,7 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
 
   test "job handles non-existent card gracefully" do
     card_id = "test-uuid-not-found"
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(status: 404, body: '{"object":"error","code":"not_found"}')
 
     # Should not create a record for 404 response
@@ -223,7 +223,7 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
   private
 
   def stub_scryfall_price_request(card_id, prices)
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(
         status: 200,
         body: {
@@ -401,7 +401,7 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
     )
 
     # Stub should not be called because card already processed
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(status: 500, body: "Should not be called")
 
     # Run job - should skip already processed card
@@ -533,7 +533,7 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
     CollectionItem.create!(user: user, card_id: "good-card-2", collection_type: "inventory", quantity: 1)
 
     stub_scryfall_price_request("good-card-1", { usd: "1.00" })
-    stub_request(:get, "https://api.scryfall.com/cards/bad-card")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/bad-card/)
       .to_return(status: 500, body: "Internal Server Error")
     stub_scryfall_price_request("good-card-2", { usd: "2.00" })
 
@@ -627,7 +627,7 @@ class UpdateCardPricesJobTest < ActiveJob::TestCase
     )
 
     # First card fails with network error after all service retries
-    stub_request(:get, "https://api.scryfall.com/cards/network-error-batch")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/network-error-batch/)
       .to_raise(SocketError.new("Connection failed")).times(3)
 
     # Second card succeeds

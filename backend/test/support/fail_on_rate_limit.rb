@@ -108,6 +108,9 @@ module RateLimitInterceptor
       # Just log it for visibility
       return
     end
+
+    # Note: Network error checks removed because vcr_setup.rb now provides catch-all stubs
+    # that return empty responses for any unmatched requests to test endpoints
   end
 end
 

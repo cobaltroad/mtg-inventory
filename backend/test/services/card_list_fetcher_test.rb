@@ -378,7 +378,7 @@ class CardListFetcherTest < ActiveSupport::TestCase
       "Time Walk"
     ])
 
-    stub_request(:get, %r{https://api\.scryfall\.com/cards/search\?q=is:reserved})
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/search\?q=is:reserved/)
       .to_return(status: 200, body: json, headers: { "Content-Type" => "application/json" })
   end
 
@@ -387,7 +387,7 @@ class CardListFetcherTest < ActiveSupport::TestCase
     page1_json = build_scryfall_json_with_pagination(
       (1..175).map { |i| "Reserved Card #{i}" },
       has_more: true,
-      next_page: "https://api.scryfall.com/cards/search?q=is:reserved&page=2"
+      next_page: "#{ApiEndpoints.scryfall_base}/cards/search?q=is:reserved&page=2"
     )
 
     # Second page
@@ -396,10 +396,10 @@ class CardListFetcherTest < ActiveSupport::TestCase
       has_more: false
     )
 
-    stub_request(:get, "https://api.scryfall.com/cards/search?q=is:reserved")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/search\?q=is:reserved/)
       .to_return(status: 200, body: page1_json, headers: { "Content-Type" => "application/json" })
 
-    stub_request(:get, "https://api.scryfall.com/cards/search?q=is:reserved&page=2")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/search\?q=is:reserved&page=2/)
       .to_return(status: 200, body: page2_json, headers: { "Content-Type" => "application/json" })
   end
 
@@ -411,7 +411,7 @@ class CardListFetcherTest < ActiveSupport::TestCase
       "Gaea's Cradle"
     ])
 
-    stub_request(:get, %r{https://api\.scryfall\.com/cards/search\?q=is:reserved})
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/search\?q=is:reserved/)
       .to_return(status: 200, body: json)
   end
 

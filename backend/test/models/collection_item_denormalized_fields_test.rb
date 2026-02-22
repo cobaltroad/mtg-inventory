@@ -19,7 +19,7 @@ class CollectionItemDenormalizedFieldsTest < ActiveSupport::TestCase
   end
 
   def stub_scryfall_card_details(card_id, name: "Test Card", set: "TST", set_name: "Test Set", released_at: "2024-01-01")
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(
         status: 200,
         body: {
@@ -129,7 +129,7 @@ class CollectionItemDenormalizedFieldsTest < ActiveSupport::TestCase
 
   test "handles Scryfall API errors gracefully during create" do
     card_id = "error_card_999"
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_return(status: 500, body: "Internal Server Error")
 
     # Should still create the item even if denormalization fails
@@ -148,7 +148,7 @@ class CollectionItemDenormalizedFieldsTest < ActiveSupport::TestCase
 
   test "handles network timeout during denormalization" do
     card_id = "timeout_card_000"
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/#{card_id}/)
       .to_timeout
 
     # Should still create the item

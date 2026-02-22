@@ -58,7 +58,7 @@ class ScryfallCardResolverTest < ActiveSupport::TestCase
   end
 
   test "resolve_cards uses fuzzy search endpoint" do
-    stub = stub_request(:get, "https://api.scryfall.com/cards/named")
+    stub = stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/named/)
       .with(query: { "fuzzy" => "Sol Ring" })
       .to_return(
         status: 200,
@@ -72,7 +72,7 @@ class ScryfallCardResolverTest < ActiveSupport::TestCase
   end
 
   test "resolve_cards handles Scryfall 500 error gracefully" do
-    stub_request(:get, "https://api.scryfall.com/cards/named")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/named/)
       .with(query: { "fuzzy" => "Error Card" })
       .to_return(status: 500, body: "Internal Server Error")
 
@@ -82,7 +82,7 @@ class ScryfallCardResolverTest < ActiveSupport::TestCase
   end
 
   test "resolve_cards handles Scryfall timeout gracefully" do
-    stub_request(:get, "https://api.scryfall.com/cards/named")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/named/)
       .with(query: { "fuzzy" => "Timeout Card" })
       .to_timeout
 
@@ -93,7 +93,7 @@ class ScryfallCardResolverTest < ActiveSupport::TestCase
 
   test "resolve_cards handles card name variations with fuzzy search" do
     # Scryfall fuzzy search should handle apostrophe variations
-    stub_request(:get, "https://api.scryfall.com/cards/named")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/named/)
       .with(query: { "fuzzy" => "Atraxa, Praetors' Voice" })
       .to_return(
         status: 200,
@@ -122,7 +122,7 @@ class ScryfallCardResolverTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
 
   test "resolve_cards includes card_type, rarity, edh_rank, release_date, and usd_price" do
-    stub_request(:get, "https://api.scryfall.com/cards/named")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/named/)
       .with(query: { "fuzzy" => "Atraxa, Praetors' Voice" })
       .to_return(
         status: 200,
@@ -156,7 +156,7 @@ class ScryfallCardResolverTest < ActiveSupport::TestCase
   end
 
   test "resolve_cards handles missing optional metadata gracefully" do
-    stub_request(:get, "https://api.scryfall.com/cards/named")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/named/)
       .with(query: { "fuzzy" => "Basic Land" })
       .to_return(
         status: 200,
@@ -187,7 +187,7 @@ class ScryfallCardResolverTest < ActiveSupport::TestCase
   end
 
   test "resolve_cards handles missing price gracefully" do
-    stub_request(:get, "https://api.scryfall.com/cards/named")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/named/)
       .with(query: { "fuzzy" => "No Price Card" })
       .to_return(
         status: 200,
@@ -215,7 +215,7 @@ class ScryfallCardResolverTest < ActiveSupport::TestCase
   private
 
   def stub_scryfall_card(card_name, scryfall_id, scryfall_uri)
-    stub_request(:get, "https://api.scryfall.com/cards/named")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/named/)
       .with(query: { "fuzzy" => card_name })
       .to_return(
         status: 200,
@@ -225,7 +225,7 @@ class ScryfallCardResolverTest < ActiveSupport::TestCase
   end
 
   def stub_scryfall_card_not_found(card_name)
-    stub_request(:get, "https://api.scryfall.com/cards/named")
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/named/)
       .with(query: { "fuzzy" => card_name })
       .to_return(
         status: 404,

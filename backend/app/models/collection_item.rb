@@ -85,18 +85,26 @@ class CollectionItem < ApplicationRecord
 
   # Populates denormalized card fields from Scryfall API.
   # Handles errors gracefully - failures won't prevent record save.
+  # Only syncs if values aren't already provided (allows manual override).
   def sync_card_metadata
     return if card_id.blank?
+
+    # Skip sync if any metadata was explicitly provided (not from API)
+    # Check both database values and pending changes
+    has_existing_name = card_name.present? || (will_save_change_to_card_name? && card_name_before_last_save.nil?)
+    has_existing_set = set_name.present? || (will_save_change_to_set_name? && set_name_before_last_save.nil?)
+    has_existing_date = released_at.present? || (will_save_change_to_released_at? && released_at_before_last_save.nil?)
+
+    return if has_existing_name && has_existing_set && has_existing_date
 
     card_details = fetch_card_details_for_sync
     return unless card_details
 
-    self.card_name = card_details[:name]
-    self.set_name = card_details[:set_name]
-    self.released_at = Date.parse(card_details[:released_at]) if card_details[:released_at]
+    self.card_name = card_details[:name] if !card_name.present?
+    self.set_name = card_details[:set_name] if !set_name.present?
+    self.released_at = Date.parse(card_details[:released_at]) if !released_at.present? && card_details[:released_at]
   rescue StandardError => e
     Rails.logger.warn("Failed to sync card metadata for #{card_id}: #{e.message}")
-    # Don't raise - allow save to proceed even if metadata sync fails
   end
 
   # Fetches card details from CardDetailsService with error handling

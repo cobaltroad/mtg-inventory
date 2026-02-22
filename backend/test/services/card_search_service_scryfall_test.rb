@@ -29,14 +29,13 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
 
   test "makes HTTP request to Scryfall API with correct endpoint and query" do
     query = "Lightning Bolt"
-    expected_url = "https://api.scryfall.com/cards/search?q=Lightning+Bolt"
 
     stub_scryfall_request(query, scryfall_response_fixture)
 
     service = CardSearchService.new(query: query, finishes: [])
     service.call
 
-    assert_requested :get, expected_url, times: 1
+    assert_requested :get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/search\?q=Lightning\+Bolt/, times: 1
   end
 
   test "includes User-Agent header in API request" do
@@ -92,7 +91,6 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
 
   test "retrieves only first page of results" do
     query = "Lightning Bolt"
-    expected_url = "https://api.scryfall.com/cards/search?q=Lightning+Bolt"
 
     stub_scryfall_request(query, scryfall_response_fixture)
 
@@ -100,7 +98,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
     service.call
 
     # Verify no page parameter or page=1
-    assert_requested :get, expected_url
+    assert_requested :get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/search\?q=Lightning\+Bolt/
     assert_not_requested :get, /page=2/
   end
 

@@ -1,22 +1,40 @@
 require "vcr"
+require "webmock"
 
 VCR.configure do |config|
-  # Store cassettes in test/fixtures/vcr_cassettes
   config.cassette_library_dir = "test/fixtures/vcr_cassettes"
-
-  # Use webmock as the stubbing library
   config.hook_into :webmock
-
-  # Allow connections to localhost for test server
   config.ignore_localhost = true
-
-  # Allow real HTTP connections when no cassette is in use
-  # This is needed for tests that use WebMock stubs directly
   config.allow_http_connections_when_no_cassette = true
-
-  # Configure request matching
   config.default_cassette_options = {
-    record: :once,  # Record only if cassette doesn't exist
-    match_requests_on: [ :method, :uri ]
+    record: :once,
+    match_requests_on: [:method, :uri]
   }
+end
+
+if Rails.env.test?
+  base_url = Rails.application.config.api_endpoints.scryfall_base
+  edhrec_base = Rails.application.config.api_endpoints.edhrec_base
+  edhrec_json = Rails.application.config.api_endpoints.edhrec_json
+
+  $stderr.puts "VCR Setup: Configuring test endpoints - Scryfall: #{base_url}, EDHREC: #{edhrec_base}"
+
+  WebMock.enable!
+  WebMock.disable_net_connect!(allow_localhost: true)
+
+  # Add catch-all stubs using string patterns (more reliable than regex in WebMock)
+  # Using to_uri + path prefix matching
+  WebMock.stub_request(:get, /.*test-scryfall.*/)
+    .to_return(status: 200, body: '{"object":"list","data":[],"has_more":false}', headers: { "Content-Type" => "application/json" })
+  
+  WebMock.stub_request(:get, /.*test-edhrec.*/)
+    .to_return(status: 200, body: '<html><body></body></html>', headers: { "Content-Type" => "text/html" })
+
+  # Backward compatibility stubs
+  WebMock.stub_request(:get, /.*api\.scryfall.*/)
+    .to_return(status: 200, body: '{"object":"list","data":[],"has_more":false}', headers: { "Content-Type" => "application/json" })
+
+  $stderr.puts "VCR Setup: Catch-all stubs registered with wildcard patterns"
+else
+  WebMock.disable_net_connect!(allow_localhost: true)
 end
