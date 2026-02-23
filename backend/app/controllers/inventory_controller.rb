@@ -394,7 +394,7 @@ class InventoryController < ApplicationController
       price_updated_at: price_updated_at,
       colors: card_details[:colors] || [],
       promo_types: card_details[:promo_types] || [],
-      created_at: item.created_at,
+      created_at: item.acquired_date || item.created_at,
       updated_at: item.updated_at,
       user_id: item.user_id,
       collection_type: item.collection_type
@@ -598,9 +598,9 @@ class InventoryController < ApplicationController
     when "value-low"
       items.sort_by { |item| item[:total_price_cents] || 0 }
     when "date-newest"
-      items.sort_by { |item| item[:created_at] }.reverse
+      items.sort_by { |item| item[:acquired_date] || item[:created_at] }.reverse
     when "date-oldest"
-      items.sort_by { |item| item[:created_at] }
+      items.sort_by { |item| item[:acquired_date] || item[:created_at] }
     else
       # Fallback to default
       items.sort_by { |item| item[:card_name]&.downcase || "" }
