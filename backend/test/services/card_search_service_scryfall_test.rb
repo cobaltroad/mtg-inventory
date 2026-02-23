@@ -28,7 +28,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
 
   test "makes HTTP request to Scryfall API with correct endpoint and query" do
-    query = "Lightning Bolt"
+    query = "Lightning"
 
     stub_scryfall_request(query, scryfall_response_fixture)
 
@@ -90,7 +90,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
   end
 
   test "retrieves only first page of results" do
-    query = "Lightning Bolt"
+    query = "Lightning"
 
     stub_scryfall_request(query, scryfall_response_fixture)
 
