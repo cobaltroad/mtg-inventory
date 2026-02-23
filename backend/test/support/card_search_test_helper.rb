@@ -14,9 +14,11 @@ module CardSearchTestHelper
     "#{Rails.application.config.api_endpoints.scryfall_base}/cards/search?q=#{CGI.escape(query)}"
   end
 
-  # Helper: Stub a successful Scryfall API response using configured endpoint
+  # Helper: Stub a successful Scryfall API response using configured endpoint.
+  # Uses the exact query URL so multiple stubs for different queries don't
+  # shadow each other when registered in the same test.
   def stub_scryfall_request(query, response_body)
-    stub_request(:get, /#{Regexp.escape(Rails.application.config.api_endpoints.scryfall_base)}\/cards\/search/)
+    stub_request(:get, scryfall_url(query))
       .to_return(
         status: 200,
         body: response_body.to_json,

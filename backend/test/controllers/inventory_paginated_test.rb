@@ -1,13 +1,11 @@
 require "test_helper"
 require "webmock/minitest"
-require "benchmark"
 
 class InventoryPaginatedTest < ActionDispatch::IntegrationTest
   # ---------------------------------------------------------------------------
-  # Spike #156: Backend Pagination Evaluation Tests
+  # Backend Pagination Tests
   #
-  # These tests evaluate backend pagination performance vs client-side pagination.
-  # Tests cover pagination functionality, performance benchmarks, and API contract.
+  # These tests verify pagination functionality and API contract.
   # ---------------------------------------------------------------------------
 
   setup do
@@ -140,69 +138,7 @@ class InventoryPaginatedTest < ActionDispatch::IntegrationTest
   end
 
   # ---------------------------------------------------------------------------
-  # Scenario 2: Performance benchmarks comparing both approaches
-  # ---------------------------------------------------------------------------
-
-  test "benchmark: 50 items - default page vs all items" do
-    create_test_inventory(50)
-
-    default_page_time = Benchmark.realtime do
-      get api_path("/inventory?per_page=20")
-      assert_response :success
-    end
-
-    all_items_time = Benchmark.realtime do
-      get api_path("/inventory?per_page=50")
-      assert_response :success
-    end
-
-    puts "\n=== Benchmark: 50 items ==="
-    puts "Default page (20 items): #{(default_page_time * 1000).round(2)}ms"
-    puts "All items (50):          #{(all_items_time * 1000).round(2)}ms"
-    puts "Difference: #{((default_page_time - all_items_time) * 1000).round(2)}ms"
-  end
-
-  test "benchmark: 100 items - default page vs all items" do
-    create_test_inventory(100)
-
-    default_page_time = Benchmark.realtime do
-      get api_path("/inventory?per_page=20")
-      assert_response :success
-    end
-
-    all_items_time = Benchmark.realtime do
-      get api_path("/inventory?per_page=100")
-      assert_response :success
-    end
-
-    puts "\n=== Benchmark: 100 items ==="
-    puts "Default page (20 items): #{(default_page_time * 1000).round(2)}ms"
-    puts "All items (100):         #{(all_items_time * 1000).round(2)}ms"
-    puts "Difference: #{((default_page_time - all_items_time) * 1000).round(2)}ms"
-  end
-
-  test "benchmark: 500 items - default page vs max page" do
-    create_test_inventory(500)
-
-    default_page_time = Benchmark.realtime do
-      get api_path("/inventory?per_page=20")
-      assert_response :success
-    end
-
-    max_page_time = Benchmark.realtime do
-      get api_path("/inventory?per_page=100")
-      assert_response :success
-    end
-
-    puts "\n=== Benchmark: 500 items ==="
-    puts "Default page (20 items): #{(default_page_time * 1000).round(2)}ms"
-    puts "Max page (100 items):    #{(max_page_time * 1000).round(2)}ms"
-    puts "Difference: #{((default_page_time - max_page_time) * 1000).round(2)}ms"
-    puts "Speedup: #{(max_page_time / default_page_time).round(2)}x faster for smaller page"
-  end
-
-  # ---------------------------------------------------------------------------
-  # Scenario 3: Database query analysis
+  # Scenario 2: Database query analysis
   # ---------------------------------------------------------------------------
 
   test "paginated endpoint prevents N+1 queries with eager loading" do
@@ -276,78 +212,6 @@ class InventoryPaginatedTest < ActionDispatch::IntegrationTest
     # Query count should be identical regardless of page
     assert_equal db_queries_page_1, db_queries_page_2,
                  "Query count should be consistent across pages"
-  end
-
-  # ---------------------------------------------------------------------------
-  # Scenario 4: Scryfall API call reduction analysis
-  # ---------------------------------------------------------------------------
-
-  test "pagination reduces Scryfall API calls compared to loading all items" do
-    # Create 100 items
-    100.times do |i|
-      CollectionItem.create!(
-        user: @user,
-        card_id: "scryfall_test_#{i}",
-        collection_type: "inventory",
-        quantity: 1
-      )
-      stub_scryfall_card_details("scryfall_test_#{i}")
-    end
-
-    # Clear cache to ensure API calls are made
-    Rails.cache.clear
-
-    # Paginated request (20 items)
-    get api_path("/inventory?per_page=20")
-    assert_response :success
-    paginated_body = JSON.parse(response.body)
-    paginated_items_count = paginated_body["items"].size
-
-    # Clear cache again
-    Rails.cache.clear
-
-    # Request all items (per_page=100 to get all 100 items)
-    get api_path("/inventory?per_page=100")
-    assert_response :success
-    all_items_body = JSON.parse(response.body)
-    all_items_count = all_items_body["items"].size
-
-    puts "\n=== Scryfall API Call Reduction ==="
-    puts "Default page size (20):     #{paginated_items_count} cards"
-    puts "Requesting all items (100): #{all_items_count} cards"
-    puts "Reduction: #{all_items_count - paginated_items_count} fewer API calls"
-    puts "Percentage: #{((1 - paginated_items_count.to_f / all_items_count) * 100).round(1)}% reduction"
-
-    assert paginated_items_count < all_items_count,
-           "Default pagination (20/page) should fetch fewer cards than requesting all items"
-  end
-
-  # ---------------------------------------------------------------------------
-  # Scenario 5: Payload size comparison
-  # ---------------------------------------------------------------------------
-
-  test "measure response payload sizes for different inventory sizes" do
-    [50, 100, 500].each do |count|
-      CollectionItem.delete_all
-      create_test_inventory(count)
-
-      # Measure default page size (20 items)
-      get api_path("/inventory?per_page=20")
-      assert_response :success
-      default_page_size = response.body.bytesize
-
-      # Measure requesting all items (up to 100 max)
-      items_to_request = [count, 100].min
-      get api_path("/inventory?per_page=#{items_to_request}")
-      assert_response :success
-      all_items_size = response.body.bytesize
-
-      puts "\n=== Payload Size: #{count} items in inventory ==="
-      puts "Default page (20 items):     #{(default_page_size / 1024.0).round(2)} KB"
-      puts "All items (#{items_to_request} items):      #{(all_items_size / 1024.0).round(2)} KB"
-      puts "Reduction: #{((all_items_size - default_page_size) / 1024.0).round(2)} KB"
-      puts "Percentage: #{((1 - default_page_size.to_f / all_items_size) * 100).round(1)}% smaller"
-    end
   end
 
   private

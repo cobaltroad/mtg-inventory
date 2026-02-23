@@ -28,14 +28,14 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
 
   test "makes HTTP request to Scryfall API with correct endpoint and query" do
-    query = "Lightning Bolt"
+    query = "Lightning"
 
     stub_scryfall_request(query, scryfall_response_fixture)
 
     service = CardSearchService.new(query: query, finishes: [])
     service.call
 
-    assert_requested :get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/search\?q=Lightning\+Bolt/, times: 1
+    assert_requested :get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/search\?q=Lightning/, times: 1
   end
 
   test "includes User-Agent header in API request" do
@@ -46,7 +46,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
     service = CardSearchService.new(query: query, finishes: [])
     service.call
 
-    assert_requested :get, /api\.scryfall\.com/, headers: {
+    assert_requested :get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}/, headers: {
       "User-Agent" => /mtg-inventory/
     }
   end
@@ -90,7 +90,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
   end
 
   test "retrieves only first page of results" do
-    query = "Lightning Bolt"
+    query = "Lightning"
 
     stub_scryfall_request(query, scryfall_response_fixture)
 
@@ -98,7 +98,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
     service.call
 
     # Verify no page parameter or page=1
-    assert_requested :get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/search\?q=Lightning\+Bolt/
+    assert_requested :get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/search\?q=Lightning/
     assert_not_requested :get, /page=2/
   end
 
@@ -244,7 +244,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
   test "handles network errors with appropriate exception" do
     query = "Test Card"
 
-    stub_request(:get, /api\.scryfall\.com/)
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}/)
       .to_raise(SocketError.new("Failed to open TCP connection"))
 
     service = CardSearchService.new(query: query, finishes: [])
@@ -259,7 +259,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
   test "handles timeout errors with appropriate exception" do
     query = "Test Card"
 
-    stub_request(:get, /api\.scryfall\.com/)
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}/)
       .to_timeout
 
     service = CardSearchService.new(query: query, finishes: [])
@@ -274,7 +274,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
   test "handles 404 not found with empty results" do
     query = "NonexistentCard99999"
 
-    stub_request(:get, /api\.scryfall\.com/)
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}/)
       .to_return(
         status: 404,
         body: '{"object":"error","code":"not_found","details":"No cards found"}'
@@ -289,7 +289,7 @@ class CardSearchServiceScryfallTest < ActiveSupport::TestCase
   test "handles invalid JSON response with appropriate exception" do
     query = "Test Card"
 
-    stub_request(:get, /api\.scryfall\.com/)
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}/)
       .to_return(status: 200, body: "Invalid JSON {{{")
 
     service = CardSearchService.new(query: query, finishes: [])

@@ -4,103 +4,9 @@ namespace :jobs do
   desc "Run all scheduled jobs manually (for testing/maintenance)"
   task all: :environment do
     puts "Running all scheduled jobs..."
-    Rake::Task["jobs:scrape_commanders"].invoke
     Rake::Task["jobs:update_prices"].invoke
     Rake::Task["jobs:clear_finished"].invoke
     puts "\nAll jobs completed!"
-  end
-
-  namespace :scrape do
-    desc "Scrape EDHREC top commanders and their decklists"
-    task commanders: :environment do
-      puts "=" * 80
-      puts "SCRAPING EDHREC COMMANDERS"
-      puts "=" * 80
-      puts "Schedule: Every Saturday at 8am (development) / Sunday at 8am (production)"
-      puts "Started at: #{Time.current}"
-      puts "-" * 80
-
-      # Check for duplicate execution
-      if ScrapeEdhrecCommandersJob.already_running?
-        info = ScrapeEdhrecCommandersJob.running_job_info
-        puts "\n⚠️  SKIPPING: ScrapeEdhrecCommandersJob is already running"
-        puts "   Job ID: #{info[:id]}"
-        puts "   Started: #{info[:created_at]}"
-        puts "   Queue: #{info[:queue_name]}"
-        puts "\nPlease wait for the current job to complete before running again."
-        puts "=" * 80
-        exit 0
-      end
-
-      # Configure logger to also output to STDOUT for interactive progress
-      console_logger = Logger.new($stdout)
-      console_logger.level = Logger::INFO
-      console_logger.formatter = proc do |severity, datetime, progname, msg|
-        # Clean output without timestamp prefix for better readability
-        "#{msg}\n"
-      end
-
-      # Broadcast logs to both file and console
-      Rails.logger.broadcast_to(console_logger)
-
-      begin
-        ScrapeEdhrecCommandersJob.perform_now
-      ensure
-        # Stop broadcasting to console
-        Rails.logger.stop_broadcasting_to(console_logger)
-      end
-
-      puts "-" * 80
-      puts "Completed at: #{Time.current}"
-      puts "=" * 80
-    end
-
-    desc "Scrape decklist for a single commander by ID"
-    task :commander_decklist, [ :commander_id ] => :environment do |_t, args|
-      if args[:commander_id].blank?
-        puts "ERROR: commander_id is required"
-        puts "Usage: rails jobs:scrape:commander_decklist[COMMANDER_ID]"
-        exit 1
-      end
-
-      # Find the commander first to show helpful error if not found
-      begin
-        commander = Commander.find(args[:commander_id])
-      rescue ActiveRecord::RecordNotFound
-        puts "ERROR: Commander with ID #{args[:commander_id]} not found"
-        puts "Use 'rails console' and run 'Commander.pluck(:id, :name)' to see available commanders"
-        exit 1
-      end
-
-      puts "=" * 80
-      puts "SCRAPING COMMANDER DECKLIST"
-      puts "=" * 80
-      puts "Commander ID:   #{commander.id}"
-      puts "Commander Name: #{commander.name}"
-      puts "Rank:           ##{commander.rank}"
-      puts "EDHREC URL:     #{commander.edhrec_url}"
-      puts "Started at:     #{Time.current}"
-      puts "-" * 80
-
-      # Configure logger to also output to STDOUT
-      console_logger = Logger.new($stdout)
-      console_logger.level = Logger::INFO
-      console_logger.formatter = proc do |severity, datetime, progname, msg|
-        "#{msg}\n"
-      end
-
-      Rails.logger.broadcast_to(console_logger)
-
-      begin
-        ScrapeCommanderDecklistJob.perform_now(args[:commander_id].to_i)
-      ensure
-        Rails.logger.stop_broadcasting_to(console_logger)
-      end
-
-      puts "-" * 80
-      puts "Completed at: #{Time.current}"
-      puts "=" * 80
-    end
   end
 
   namespace :prices do
@@ -418,10 +324,6 @@ namespace :jobs do
           puts "   Cards:        #{failure[:cards_succeeded] || 0} succeeded / #{failure[:cards_attempted] || 0} attempted"
         end
 
-        if failure[:commanders_attempted]
-          puts "   Commanders:   #{failure[:commanders_succeeded] || 0} succeeded / #{failure[:commanders_attempted] || 0} attempted"
-        end
-
         # Show error with word wrapping for readability
         if failure[:error_summary].present?
           puts "   Error:"
@@ -571,13 +473,6 @@ namespace :jobs do
   end
 
   # Convenience aliases
-  task scrape_commanders: "scrape:commanders"
-
-  # Alias with argument forwarding
-  task :scrape_commander_decklist, [ :commander_id ] => :environment do |_t, args|
-    Rake::Task["jobs:scrape:commander_decklist"].invoke(args[:commander_id])
-  end
-
   task update_prices: "prices:update"
   task clear_finished: "maintenance:clear_finished"
   task stats: "maintenance:stats"

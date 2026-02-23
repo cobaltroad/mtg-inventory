@@ -67,19 +67,19 @@ class RateLimiterTest < ActiveSupport::TestCase
   # Test: Different service names maintain independent rate limits
   # ---------------------------------------------------------------------------
   test "maintains independent rate limits for different services" do
-    edhrec_limiter = RateLimiter.new(min_interval_ms: 2000, service_name: "edhrec")
-    scryfall_limiter = RateLimiter.new(min_interval_ms: 100, service_name: "scryfall")
+    slow_limiter = RateLimiter.new(min_interval_ms: 2000, service_name: "slow_service")
+    fast_limiter = RateLimiter.new(min_interval_ms: 100, service_name: "fast_service")
 
-    # Make request to EDHREC
-    edhrec_limiter.throttle
+    # Make request to slow service
+    slow_limiter.throttle
 
-    # Immediately make request to Scryfall - should not be delayed by EDHREC's limit
+    # Immediately make request to fast service - should not be delayed by slow service's limit
     start_time = Time.now
-    scryfall_limiter.throttle
+    fast_limiter.throttle
     elapsed_ms = (Time.now - start_time) * 1000
 
     # Should be immediate (< 50ms)
-    assert elapsed_ms < 50, "Scryfall request should not be delayed by EDHREC limiter, but took #{elapsed_ms}ms"
+    assert elapsed_ms < 50, "Fast service request should not be delayed by slow service limiter, but took #{elapsed_ms}ms"
   end
 
   # ---------------------------------------------------------------------------
@@ -120,16 +120,6 @@ class RateLimiterTest < ActiveSupport::TestCase
 
     # Should be immediate since we already waited 150ms
     assert elapsed_ms < 50, "Should not delay when sufficient time has passed, but took #{elapsed_ms}ms"
-  end
-
-  # ---------------------------------------------------------------------------
-  # Test: EDHREC rate limiter uses 2000ms interval
-  # ---------------------------------------------------------------------------
-  test "creates EDHREC rate limiter with 2000ms interval" do
-    limiter = RateLimiter.for_edhrec
-
-    assert_equal 2000, limiter.min_interval_ms
-    assert_equal "edhrec", limiter.service_name
   end
 
   # ---------------------------------------------------------------------------

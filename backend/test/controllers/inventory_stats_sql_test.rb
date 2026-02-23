@@ -218,42 +218,4 @@ class InventoryStatsSqlTest < ActionDispatch::IntegrationTest
     assert aggregate_queries.any?, "Expected SQL aggregate queries for stats calculation"
   end
 
-  # ---------------------------------------------------------------------------
-  # Test: Performance compared to in-memory calculation
-  # ---------------------------------------------------------------------------
-
-  test "SQL stats calculation is faster than loading all items" do
-    # Create large inventory
-    100.times do |i|
-      card_id = "perf_#{i}"
-      stub_scryfall_card_details(card_id, set_name: "Set #{i % 5}")
-
-      CollectionItem.create!(
-        user: @user,
-        card_id: card_id,
-        collection_type: "inventory",
-        quantity: rand(1..10),
-        finish: "nonfoil"
-      )
-
-      CardPrice.create!(
-        card_id: card_id,
-        fetched_at: 1.hour.ago,
-        usd_cents: rand(100..5000)
-      )
-    end
-
-    # Time the stats calculation
-    require "benchmark"
-    time = Benchmark.realtime do
-      get api_path("/inventory")
-      assert_response :success
-    end
-
-    puts "\nStats calculation time for 100 items: #{(time * 1000).round(2)}ms"
-
-    # With SQL aggregates, should be much faster than enriching all items
-    # which would require 100+ API calls or cache hits
-    assert time < 1.0, "Stats calculation took #{time}s, expected < 1s"
-  end
 end

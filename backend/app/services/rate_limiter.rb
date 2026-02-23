@@ -1,7 +1,4 @@
 class RateLimiter
-  # EDHREC rate limit: 2 seconds between requests
-  EDHREC_RATE_LIMIT_MS = 2000
-
   # Scryfall rate limit: 100ms between requests (documented API limit)
   SCRYFALL_RATE_LIMIT_MS = 100
 
@@ -25,13 +22,6 @@ class RateLimiter
   def initialize(min_interval_ms:, service_name:)
     @min_interval_ms = min_interval_ms
     @service_name = service_name
-  end
-
-  # ---------------------------------------------------------------------------
-  # Factory method for EDHREC rate limiter
-  # ---------------------------------------------------------------------------
-  def self.for_edhrec
-    new(min_interval_ms: EDHREC_RATE_LIMIT_MS, service_name: "edhrec")
   end
 
   # ---------------------------------------------------------------------------

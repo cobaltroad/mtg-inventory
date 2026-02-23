@@ -41,7 +41,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
 
   # Stubs Scryfall API to validate a card ID
   def stub_valid_card(card_id)
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/#{card_id}")
       .to_return(
         status: 200,
         body: { id: card_id, name: "Test Card" }.to_json,
@@ -51,13 +51,13 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
 
   # Stubs Scryfall API to return 404 for invalid card
   def stub_invalid_card(card_id)
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/#{card_id}")
       .to_return(status: 404, body: '{"object":"error","code":"not_found"}')
   end
 
   # Stubs Scryfall API to return card details
   def stub_scryfall_card_details(card_id, name: "Black Lotus")
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/#{card_id}")
       .to_return(
         status: 200,
         body: {
@@ -75,7 +75,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   def stub_scryfall_special_finish(card_id, name: "Special Card", promo_types: [])
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/#{card_id}")
       .to_return(
         status: 200,
         body: {
@@ -177,7 +177,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     CollectionItem.create!(user: @user, card_id: "uuid-missing", collection_type: "inventory", quantity: 2)
 
     stub_scryfall_card_details("uuid-valid")
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-missing")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-missing")
       .to_return(status: 404, body: '{"object":"error","code":"not_found"}')
 
     get api_path("/inventory")
@@ -376,7 +376,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   test "PATCH /api/inventory/:id updates quantity and returns updated item" do
     item = CollectionItem.create!(user: @user, card_id: "update_card", collection_type: "inventory", quantity: 1)
 
-    stub_request(:get, "https://api.scryfall.com/cards/update_card")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/update_card")
       .to_return(
         status: 200,
         body: {
@@ -414,7 +414,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   test "PATCH /api/inventory/:id accepts quantity of 1 (minimum valid)" do
     item = CollectionItem.create!(user: @user, card_id: "min_qty_card", collection_type: "inventory", quantity: 5)
 
-    stub_request(:get, "https://api.scryfall.com/cards/min_qty_card")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/min_qty_card")
       .to_return(
         status: 200,
         body: {
@@ -439,7 +439,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   test "PATCH /api/inventory/:id accepts quantity of 999 (maximum valid)" do
     item = CollectionItem.create!(user: @user, card_id: "max_qty_card", collection_type: "inventory", quantity: 1)
 
-    stub_request(:get, "https://api.scryfall.com/cards/max_qty_card")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/max_qty_card")
       .to_return(
         status: 200,
         body: {
@@ -536,7 +536,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
       language: "Japanese"
     )
 
-    stub_request(:get, "https://api.scryfall.com/cards/preserve_fields_card")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/preserve_fields_card")
       .to_return(
         status: 200,
         body: {
@@ -1019,7 +1019,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     card_id = "cache_with_url"
     image_url = "https://cards.scryfall.io/normal/front/t/e/test.jpg"
 
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/#{card_id}")
       .to_return(
         status: 200,
         body: {
@@ -1042,7 +1042,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   test "POST /api/inventory does not enqueue job when card has no image URL" do
     card_id = "no_image_card"
 
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/#{card_id}")
       .to_return(
         status: 200,
         body: {
@@ -1091,7 +1091,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     image_url = "https://cards.scryfall.io/normal/front/t/e/test.jpg"
 
     # Stub card validation
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/#{card_id}")
       .to_return(
         status: 200,
         body: {
@@ -1129,7 +1129,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     image_url = "https://cards.scryfall.io/normal/front/fail/fail.jpg"
 
     # Stub card validation
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/#{card_id}")
       .to_return(
         status: 200,
         body: {
@@ -1183,7 +1183,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     )
 
     # Stub Scryfall card details
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/#{card_id}")
       .to_return(
         status: 200,
         body: {
@@ -1222,7 +1222,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
     )
 
     # Stub Scryfall card details
-    stub_request(:get, "https://api.scryfall.com/cards/#{card_id}")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/#{card_id}")
       .to_return(
         status: 200,
         body: {
@@ -1292,7 +1292,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   test "GET /api/inventory includes released_at field for sorting by release date" do
     CollectionItem.create!(user: @user, card_id: "uuid-release", collection_type: "inventory", quantity: 1)
 
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-release")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-release")
       .to_return(
         status: 200,
         body: {
@@ -1370,7 +1370,7 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
       created_at: 2.days.ago
     )
 
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-complete")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-complete")
       .to_return(
         status: 200,
         body: {
@@ -1888,9 +1888,12 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   # ---------------------------------------------------------------------------
 
   test "GET /api/inventory with sort parameter sorts by card name ascending" do
-    CollectionItem.create!(user: @user, card_id: "uuid-zzz", collection_type: "inventory", quantity: 1)
-    CollectionItem.create!(user: @user, card_id: "uuid-aaa", collection_type: "inventory", quantity: 1)
-    CollectionItem.create!(user: @user, card_id: "uuid-mmm", collection_type: "inventory", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "uuid-zzz", collection_type: "inventory", quantity: 1,
+                           card_name: "Zombie Token", set_name: "Test Set", released_at: "2020-01-01")
+    CollectionItem.create!(user: @user, card_id: "uuid-aaa", collection_type: "inventory", quantity: 1,
+                           card_name: "Ancient Tomb", set_name: "Test Set", released_at: "2020-01-01")
+    CollectionItem.create!(user: @user, card_id: "uuid-mmm", collection_type: "inventory", quantity: 1,
+                           card_name: "Mox Pearl", set_name: "Test Set", released_at: "2020-01-01")
 
     stub_scryfall_card_details("uuid-zzz", name: "Zombie Token")
     stub_scryfall_card_details("uuid-aaa", name: "Ancient Tomb")
@@ -1909,9 +1912,12 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET /api/inventory with sort parameter sorts by card name descending" do
-    CollectionItem.create!(user: @user, card_id: "uuid-zzz", collection_type: "inventory", quantity: 1)
-    CollectionItem.create!(user: @user, card_id: "uuid-aaa", collection_type: "inventory", quantity: 1)
-    CollectionItem.create!(user: @user, card_id: "uuid-mmm", collection_type: "inventory", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "uuid-zzz", collection_type: "inventory", quantity: 1,
+                           card_name: "Zombie Token", set_name: "Test Set", released_at: "2020-01-01")
+    CollectionItem.create!(user: @user, card_id: "uuid-aaa", collection_type: "inventory", quantity: 1,
+                           card_name: "Ancient Tomb", set_name: "Test Set", released_at: "2020-01-01")
+    CollectionItem.create!(user: @user, card_id: "uuid-mmm", collection_type: "inventory", quantity: 1,
+                           card_name: "Mox Pearl", set_name: "Test Set", released_at: "2020-01-01")
 
     stub_scryfall_card_details("uuid-zzz", name: "Zombie Token")
     stub_scryfall_card_details("uuid-aaa", name: "Ancient Tomb")
@@ -1930,15 +1936,18 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET /api/inventory with sort parameter sorts by set name ascending" do
-    CollectionItem.create!(user: @user, card_id: "uuid-1", collection_type: "inventory", quantity: 1)
-    CollectionItem.create!(user: @user, card_id: "uuid-2", collection_type: "inventory", quantity: 1)
-    CollectionItem.create!(user: @user, card_id: "uuid-3", collection_type: "inventory", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "uuid-1", collection_type: "inventory", quantity: 1,
+                           card_name: "Card 1", set_name: "Zendikar Rising", released_at: "2020-09-25")
+    CollectionItem.create!(user: @user, card_id: "uuid-2", collection_type: "inventory", quantity: 1,
+                           card_name: "Card 2", set_name: "Adventures in the Forgotten Realms", released_at: "2021-07-23")
+    CollectionItem.create!(user: @user, card_id: "uuid-3", collection_type: "inventory", quantity: 1,
+                           card_name: "Card 3", set_name: "Midnight Hunt", released_at: "2021-09-24")
 
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-1")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-1")
       .to_return(status: 200, body: { id: "uuid-1", name: "Card 1", set: "ZNR", set_name: "Zendikar Rising", collector_number: "1", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-2")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-2")
       .to_return(status: 200, body: { id: "uuid-2", name: "Card 2", set: "AFR", set_name: "Adventures in the Forgotten Realms", collector_number: "2", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-3")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-3")
       .to_return(status: 200, body: { id: "uuid-3", name: "Card 3", set: "MID", set_name: "Midnight Hunt", collector_number: "3", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
 
     get api_path("/inventory?sort=set-asc")
@@ -1954,15 +1963,20 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET /api/inventory with sort parameter sorts by release date newest first" do
-    CollectionItem.create!(user: @user, card_id: "uuid-old", collection_type: "inventory", quantity: 1)
-    CollectionItem.create!(user: @user, card_id: "uuid-new", collection_type: "inventory", quantity: 1)
-    CollectionItem.create!(user: @user, card_id: "uuid-mid", collection_type: "inventory", quantity: 1)
+    # Supply all metadata fields directly to bypass the Scryfall API callback,
+    # avoiding parallel test interference on shared card IDs.
+    CollectionItem.create!(user: @user, card_id: "uuid-old", collection_type: "inventory", quantity: 1,
+                           card_name: "Old Card", set_name: "Alpha", released_at: "1993-08-05")
+    CollectionItem.create!(user: @user, card_id: "uuid-new", collection_type: "inventory", quantity: 1,
+                           card_name: "New Card", set_name: "Brothers War", released_at: "2022-11-18")
+    CollectionItem.create!(user: @user, card_id: "uuid-mid", collection_type: "inventory", quantity: 1,
+                           card_name: "Mid Card", set_name: "Core 2021", released_at: "2020-07-03")
 
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-old")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-old")
       .to_return(status: 200, body: { id: "uuid-old", name: "Old Card", set: "LEA", set_name: "Alpha", collector_number: "1", released_at: "1993-08-05", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-new")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-new")
       .to_return(status: 200, body: { id: "uuid-new", name: "New Card", set: "BRO", set_name: "Brothers War", collector_number: "2", released_at: "2022-11-18", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-mid")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-mid")
       .to_return(status: 200, body: { id: "uuid-mid", name: "Mid Card", set: "M21", set_name: "Core 2021", collector_number: "3", released_at: "2020-07-03", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
 
     get api_path("/inventory?sort=release-newest")
@@ -1978,15 +1992,20 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET /api/inventory with sort parameter sorts by release date oldest first" do
-    CollectionItem.create!(user: @user, card_id: "uuid-old", collection_type: "inventory", quantity: 1)
-    CollectionItem.create!(user: @user, card_id: "uuid-new", collection_type: "inventory", quantity: 1)
-    CollectionItem.create!(user: @user, card_id: "uuid-mid", collection_type: "inventory", quantity: 1)
+    # Supply all metadata fields directly to bypass the Scryfall API callback,
+    # avoiding parallel test interference on shared card IDs.
+    CollectionItem.create!(user: @user, card_id: "uuid-old", collection_type: "inventory", quantity: 1,
+                           card_name: "Old Card", set_name: "Alpha", released_at: "1993-08-05")
+    CollectionItem.create!(user: @user, card_id: "uuid-new", collection_type: "inventory", quantity: 1,
+                           card_name: "New Card", set_name: "Brothers War", released_at: "2022-11-18")
+    CollectionItem.create!(user: @user, card_id: "uuid-mid", collection_type: "inventory", quantity: 1,
+                           card_name: "Mid Card", set_name: "Core 2021", released_at: "2020-07-03")
 
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-old")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-old")
       .to_return(status: 200, body: { id: "uuid-old", name: "Old Card", set: "LEA", set_name: "Alpha", collector_number: "1", released_at: "1993-08-05", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-new")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-new")
       .to_return(status: 200, body: { id: "uuid-new", name: "New Card", set: "BRO", set_name: "Brothers War", collector_number: "2", released_at: "2022-11-18", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-mid")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-mid")
       .to_return(status: 200, body: { id: "uuid-mid", name: "Mid Card", set: "M21", set_name: "Core 2021", collector_number: "3", released_at: "2020-07-03", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
 
     get api_path("/inventory?sort=release-oldest")
@@ -2002,9 +2021,14 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET /api/inventory with sort parameter sorts by value highest first" do
-    item1 = CollectionItem.create!(user: @user, card_id: "uuid-cheap", collection_type: "inventory", quantity: 1, finish: "nonfoil")
-    item2 = CollectionItem.create!(user: @user, card_id: "uuid-expensive", collection_type: "inventory", quantity: 2, finish: "nonfoil")
-    item3 = CollectionItem.create!(user: @user, card_id: "uuid-medium", collection_type: "inventory", quantity: 1, finish: "nonfoil")
+    # Supply all metadata fields directly to bypass the Scryfall API callback,
+    # avoiding parallel test interference on shared card IDs.
+    item1 = CollectionItem.create!(user: @user, card_id: "uuid-cheap", collection_type: "inventory", quantity: 1, finish: "nonfoil",
+                                   card_name: "Cheap Card", set_name: "Test Set", released_at: "2020-01-01")
+    item2 = CollectionItem.create!(user: @user, card_id: "uuid-expensive", collection_type: "inventory", quantity: 2, finish: "nonfoil",
+                                   card_name: "Expensive Card", set_name: "Test Set", released_at: "2020-01-01")
+    item3 = CollectionItem.create!(user: @user, card_id: "uuid-medium", collection_type: "inventory", quantity: 1, finish: "nonfoil",
+                                   card_name: "Medium Card", set_name: "Test Set", released_at: "2020-01-01")
 
     CardPrice.create!(card_id: "uuid-cheap", fetched_at: 1.hour.ago, usd_cents: 50)
     CardPrice.create!(card_id: "uuid-expensive", fetched_at: 1.hour.ago, usd_cents: 1000)
@@ -2033,9 +2057,12 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET /api/inventory with sort parameter sorts by value lowest first" do
-    item1 = CollectionItem.create!(user: @user, card_id: "uuid-cheap", collection_type: "inventory", quantity: 1, finish: "nonfoil")
-    item2 = CollectionItem.create!(user: @user, card_id: "uuid-expensive", collection_type: "inventory", quantity: 2, finish: "nonfoil")
-    item3 = CollectionItem.create!(user: @user, card_id: "uuid-medium", collection_type: "inventory", quantity: 1, finish: "nonfoil")
+    item1 = CollectionItem.create!(user: @user, card_id: "uuid-cheap", collection_type: "inventory", quantity: 1, finish: "nonfoil",
+                                   card_name: "Cheap Card", set_name: "Test Set", released_at: "2020-01-01")
+    item2 = CollectionItem.create!(user: @user, card_id: "uuid-expensive", collection_type: "inventory", quantity: 2, finish: "nonfoil",
+                                   card_name: "Expensive Card", set_name: "Test Set", released_at: "2020-01-01")
+    item3 = CollectionItem.create!(user: @user, card_id: "uuid-medium", collection_type: "inventory", quantity: 1, finish: "nonfoil",
+                                   card_name: "Medium Card", set_name: "Test Set", released_at: "2020-01-01")
 
     CardPrice.create!(card_id: "uuid-cheap", fetched_at: 1.hour.ago, usd_cents: 50)
     CardPrice.create!(card_id: "uuid-expensive", fetched_at: 1.hour.ago, usd_cents: 1000)
@@ -2058,9 +2085,12 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET /api/inventory with sort parameter sorts by date added newest first" do
-    CollectionItem.create!(user: @user, card_id: "uuid-old", collection_type: "inventory", quantity: 1, created_at: 7.days.ago)
-    CollectionItem.create!(user: @user, card_id: "uuid-new", collection_type: "inventory", quantity: 1, created_at: 1.day.ago)
-    CollectionItem.create!(user: @user, card_id: "uuid-mid", collection_type: "inventory", quantity: 1, created_at: 3.days.ago)
+    CollectionItem.create!(user: @user, card_id: "uuid-old", collection_type: "inventory", quantity: 1, created_at: 7.days.ago,
+                           card_name: "Old Card", set_name: "Test Set", released_at: "2020-01-01")
+    CollectionItem.create!(user: @user, card_id: "uuid-new", collection_type: "inventory", quantity: 1, created_at: 1.day.ago,
+                           card_name: "New Card", set_name: "Test Set", released_at: "2020-01-01")
+    CollectionItem.create!(user: @user, card_id: "uuid-mid", collection_type: "inventory", quantity: 1, created_at: 3.days.ago,
+                           card_name: "Mid Card", set_name: "Test Set", released_at: "2020-01-01")
 
     stub_scryfall_card_details("uuid-old", name: "Old Card")
     stub_scryfall_card_details("uuid-new", name: "New Card")
@@ -2079,9 +2109,12 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET /api/inventory with sort parameter sorts by date added oldest first" do
-    CollectionItem.create!(user: @user, card_id: "uuid-old", collection_type: "inventory", quantity: 1, created_at: 7.days.ago)
-    CollectionItem.create!(user: @user, card_id: "uuid-new", collection_type: "inventory", quantity: 1, created_at: 1.day.ago)
-    CollectionItem.create!(user: @user, card_id: "uuid-mid", collection_type: "inventory", quantity: 1, created_at: 3.days.ago)
+    CollectionItem.create!(user: @user, card_id: "uuid-old", collection_type: "inventory", quantity: 1, created_at: 7.days.ago,
+                           card_name: "Old Card", set_name: "Test Set", released_at: "2020-01-01")
+    CollectionItem.create!(user: @user, card_id: "uuid-new", collection_type: "inventory", quantity: 1, created_at: 1.day.ago,
+                           card_name: "New Card", set_name: "Test Set", released_at: "2020-01-01")
+    CollectionItem.create!(user: @user, card_id: "uuid-mid", collection_type: "inventory", quantity: 1, created_at: 3.days.ago,
+                           card_name: "Mid Card", set_name: "Test Set", released_at: "2020-01-01")
 
     stub_scryfall_card_details("uuid-old", name: "Old Card")
     stub_scryfall_card_details("uuid-new", name: "New Card")
@@ -2102,14 +2135,17 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   test "GET /api/inventory with pagination and sort applies sort globally before pagination" do
     # Create 25 cards to test pagination (more than default page size of 20)
     25.times do |i|
+      name = "Card #{i.to_s.rjust(2, "0")}"
       CollectionItem.create!(
         user: @user,
         card_id: "uuid-#{i}",
         collection_type: "inventory",
-        quantity: 1
+        quantity: 1,
+        card_name: name,
+        set_name: "Test Set",
+        released_at: "2020-01-01"
       )
-      # Name them so they sort alphabetically: "Card 00", "Card 01", ..., "Card 24"
-      stub_scryfall_card_details("uuid-#{i}", name: "Card #{i.to_s.rjust(2, '0')}")
+      stub_scryfall_card_details("uuid-#{i}", name: name)
     end
 
     # Request page 2 sorted by name descending
@@ -2128,8 +2164,10 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET /api/inventory defaults to name-asc when sort parameter not provided" do
-    CollectionItem.create!(user: @user, card_id: "uuid-zzz", collection_type: "inventory", quantity: 1)
-    CollectionItem.create!(user: @user, card_id: "uuid-aaa", collection_type: "inventory", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "uuid-zzz", collection_type: "inventory", quantity: 1,
+                           card_name: "Zombie Token", set_name: "Test Set", released_at: "2020-01-01")
+    CollectionItem.create!(user: @user, card_id: "uuid-aaa", collection_type: "inventory", quantity: 1,
+                           card_name: "Ancient Tomb", set_name: "Test Set", released_at: "2020-01-01")
 
     stub_scryfall_card_details("uuid-zzz", name: "Zombie Token")
     stub_scryfall_card_details("uuid-aaa", name: "Ancient Tomb")
@@ -2146,8 +2184,10 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET /api/inventory handles invalid sort parameter by defaulting to name-asc" do
-    CollectionItem.create!(user: @user, card_id: "uuid-zzz", collection_type: "inventory", quantity: 1)
-    CollectionItem.create!(user: @user, card_id: "uuid-aaa", collection_type: "inventory", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "uuid-zzz", collection_type: "inventory", quantity: 1,
+                           card_name: "Zombie Token", set_name: "Test Set", released_at: "2020-01-01")
+    CollectionItem.create!(user: @user, card_id: "uuid-aaa", collection_type: "inventory", quantity: 1,
+                           card_name: "Ancient Tomb", set_name: "Test Set", released_at: "2020-01-01")
 
     stub_scryfall_card_details("uuid-zzz", name: "Zombie Token")
     stub_scryfall_card_details("uuid-aaa", name: "Ancient Tomb")
@@ -2165,8 +2205,10 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET /api/inventory handles cards without price data when sorting by value" do
-    item1 = CollectionItem.create!(user: @user, card_id: "uuid-priced", collection_type: "inventory", quantity: 1, finish: "nonfoil")
-    item2 = CollectionItem.create!(user: @user, card_id: "uuid-no-price", collection_type: "inventory", quantity: 1)
+    item1 = CollectionItem.create!(user: @user, card_id: "uuid-priced", collection_type: "inventory", quantity: 1, finish: "nonfoil",
+                                   card_name: "Priced Card", set_name: "Test Set", released_at: "2020-01-01")
+    item2 = CollectionItem.create!(user: @user, card_id: "uuid-no-price", collection_type: "inventory", quantity: 1,
+                                   card_name: "No Price Card", set_name: "Test Set", released_at: "2020-01-01")
 
     CardPrice.create!(card_id: "uuid-priced", fetched_at: 1.hour.ago, usd_cents: 500)
     # No price for uuid-no-price
@@ -2188,9 +2230,12 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
 
   test "GET /api/inventory sorts foil cards by regular price when foil price is NULL" do
     # Bug fix: When a foil card has NULL usd_foil_cents, it should fall back to usd_cents for sorting
-    item1 = CollectionItem.create!(user: @user, card_id: "uuid-foil-expensive", collection_type: "inventory", quantity: 1, finish: "foil")
-    item2 = CollectionItem.create!(user: @user, card_id: "uuid-cheap", collection_type: "inventory", quantity: 1, finish: "nonfoil")
-    item3 = CollectionItem.create!(user: @user, card_id: "uuid-foil-medium", collection_type: "inventory", quantity: 1, finish: "foil")
+    item1 = CollectionItem.create!(user: @user, card_id: "uuid-foil-expensive", collection_type: "inventory", quantity: 1, finish: "foil",
+                                   card_name: "Deadly Rollick", set_name: "Test Set", released_at: "2020-01-01")
+    item2 = CollectionItem.create!(user: @user, card_id: "uuid-cheap", collection_type: "inventory", quantity: 1, finish: "nonfoil",
+                                   card_name: "Bearscape", set_name: "Test Set", released_at: "2020-01-01")
+    item3 = CollectionItem.create!(user: @user, card_id: "uuid-foil-medium", collection_type: "inventory", quantity: 1, finish: "foil",
+                                   card_name: "Heartless Hidetsugu", set_name: "Test Set", released_at: "2020-01-01")
 
     # Foil cards have NULL foil prices but valid regular prices
     CardPrice.create!(card_id: "uuid-foil-expensive", fetched_at: 1.hour.ago, usd_cents: 2181, usd_foil_cents: nil)
@@ -2217,12 +2262,14 @@ class InventoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "GET /api/inventory handles cards without release_at when sorting by release date" do
-    CollectionItem.create!(user: @user, card_id: "uuid-with-date", collection_type: "inventory", quantity: 1)
-    CollectionItem.create!(user: @user, card_id: "uuid-no-date", collection_type: "inventory", quantity: 1)
+    CollectionItem.create!(user: @user, card_id: "uuid-with-date", collection_type: "inventory", quantity: 1,
+                           card_name: "With Date", set_name: "Core 2021", released_at: "2020-07-03")
+    CollectionItem.create!(user: @user, card_id: "uuid-no-date", collection_type: "inventory", quantity: 1,
+                           card_name: "No Date", set_name: "Test")
 
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-with-date")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-with-date")
       .to_return(status: 200, body: { id: "uuid-with-date", name: "With Date", set: "M21", set_name: "Core 2021", collector_number: "1", released_at: "2020-07-03", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
-    stub_request(:get, "https://api.scryfall.com/cards/uuid-no-date")
+    stub_request(:get, "#{ApiEndpoints.scryfall_base}/cards/uuid-no-date")
       .to_return(status: 200, body: { id: "uuid-no-date", name: "No Date", set: "TST", set_name: "Test", collector_number: "2", image_uris: { normal: "url" } }.to_json, headers: { "Content-Type" => "application/json" })
 
     get api_path("/inventory?sort=release-newest")

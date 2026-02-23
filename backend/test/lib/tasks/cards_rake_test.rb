@@ -63,7 +63,7 @@ class CardsRakeTest < ActiveSupport::TestCase
     assert_kind_of Array, yaml["cards"]
     assert_operator yaml["cards"].length, :>, 0
     assert_equal Date.today.iso8601, yaml["last_updated"]
-    assert_match(/scryfall\.com/, yaml["source"])
+    assert_match(/#{Regexp.escape(ApiEndpoints.scryfall_base)}/, yaml["source"])
   end
 
   test "update_static_lists task prints progress messages" do
@@ -152,7 +152,7 @@ class CardsRakeTest < ActiveSupport::TestCase
     WebMock.reset!
     stub_wizards_game_changers
 
-    stub_request(:get, %r{https://api\.scryfall\.com/cards/search\?q=is:reserved})
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/search\?q=is:reserved/)
       .to_timeout
 
     output = capture_io do
@@ -170,7 +170,7 @@ class CardsRakeTest < ActiveSupport::TestCase
     WebMock.reset!
     stub_wizards_game_changers
 
-    stub_request(:get, %r{https://api\.scryfall\.com/cards/search\?q=is:reserved})
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/search\?q=is:reserved/)
       .to_return(status: 500, body: "Server Error")
 
     output = capture_io do

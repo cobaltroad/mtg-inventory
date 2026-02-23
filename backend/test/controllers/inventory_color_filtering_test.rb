@@ -2,24 +2,23 @@ require "test_helper"
 require "webmock/minitest"
 
 class InventoryColorFilteringTest < ActionDispatch::IntegrationTest
+  # Disable parallelization to avoid cache conflicts between tests
+  parallelize(workers: 1)
   # ---------------------------------------------------------------------------
   # Color Filtering Tests for Issue #207
   # Testing color-based filtering of inventory items with TDD methodology
   # ---------------------------------------------------------------------------
 
   setup do
+    # Use NullStore to completely disable caching during tests
+    # This ensures each test gets fresh data from stubs
+    Rails.cache = ActiveSupport::Cache::NullStore.new
+    
     CollectionItem.delete_all
     User.delete_all
     load Rails.root.join("db", "seeds.rb")
     @user = User.find_by!(email: User::DEFAULT_EMAIL)
     WebMock.reset!
-
-    @original_cache = Rails.cache
-    Rails.cache = ActiveSupport::Cache::MemoryStore.new
-  end
-
-  teardown do
-    Rails.cache = @original_cache
   end
 
   def api_path(path)
@@ -35,7 +34,6 @@ class InventoryColorFilteringTest < ActionDispatch::IntegrationTest
   def stub_card_with_colors(card_id, name:, colors:)
     base = Rails.application.config.api_endpoints.scryfall_base
     url_pattern = /#{Regexp.escape(base)}\/cards\/#{card_id}/
-    Rails.logger.info "[DEBUG] Registering stub for #{url_pattern}"
     stub_request(:get, url_pattern)
       .to_return(
         status: 200,
@@ -60,23 +58,27 @@ class InventoryColorFilteringTest < ActionDispatch::IntegrationTest
   # ---------------------------------------------------------------------------
 
   test "GET /api/inventory?colors=W returns only white cards" do
-    # Create test cards with different colors
-    white_card = CollectionItem.create!(user: @user, card_id: "white_1", collection_type: "inventory", quantity: 1)
-    blue_card = CollectionItem.create!(user: @user, card_id: "blue_1", collection_type: "inventory", quantity: 1)
+    # Use unique card IDs to avoid cache conflicts with other tests
+    Rails.cache.clear
+    
+    white_card = CollectionItem.create!(user: @user, card_id: "white_test_001", collection_type: "inventory", quantity: 1)
+    blue_card = CollectionItem.create!(user: @user, card_id: "blue_test_001", collection_type: "inventory", quantity: 1)
 
-    stub_card_with_colors("white_1", name: "Plains Walker", colors: ["W"])
-    stub_card_with_colors("blue_1", name: "Island Sage", colors: ["U"])
+    stub_card_with_colors("white_test_001", name: "Plains Walker", colors: ["W"])
+    stub_card_with_colors("blue_test_001", name: "Island Sage", colors: ["U"])
 
     get api_path("/inventory?colors=W")
 
     assert_response :success
     items = parse_inventory_response
     assert_equal 1, items.size, "Should return only white cards"
-    assert_equal "white_1", items.first["card_id"]
+    assert_equal "white_test_001", items.first["card_id"]
     assert_equal "Plains Walker", items.first["card_name"]
   end
 
   test "GET /api/inventory?colors=U returns only blue cards" do
+    Rails.cache.clear
+    
     blue_card = CollectionItem.create!(user: @user, card_id: "blue_1", collection_type: "inventory", quantity: 1)
     red_card = CollectionItem.create!(user: @user, card_id: "red_1", collection_type: "inventory", quantity: 1)
 

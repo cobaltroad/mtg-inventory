@@ -215,7 +215,7 @@ class JobStats
     failures = []
 
     # Collect failures from all execution tracking models
-    [ ScraperExecution, PriceUpdateExecution, ImageCacheExecution ].each do |execution_class|
+    [ PriceUpdateExecution, ImageCacheExecution ].each do |execution_class|
       failed = execution_class
         .where(status: :failure)
         .where("started_at >= ?", since)
@@ -253,8 +253,6 @@ class JobStats
   # @return [Class, nil] Execution class or nil
   def execution_class_for_job(job_class)
     case job_class.name
-    when "ScrapeEdhrecCommandersJob", "ScrapeCommanderDecklistJob"
-      ScraperExecution
     when "UpdateCardPricesJob"
       PriceUpdateExecution
     when "CacheCardImageJob"
@@ -270,8 +268,6 @@ class JobStats
   # @return [String] Job class name
   def job_class_for_execution(execution)
     case execution.class.name
-    when "ScraperExecution"
-      execution.mode == "discovery" ? "ScrapeEdhrecCommandersJob" : "ScrapeCommanderDecklistJob"
     when "PriceUpdateExecution"
       "UpdateCardPricesJob"
     when "ImageCacheExecution"

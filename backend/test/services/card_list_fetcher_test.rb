@@ -230,7 +230,7 @@ class CardListFetcherTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
 
   test "fetch_reserved_list raises FetchError on network timeout" do
-    stub_request(:get, %r{https://api\.scryfall\.com/cards/search\?q=is:reserved})
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/search\?q=is:reserved/)
       .to_timeout
 
     error = assert_raises(CardListFetcher::FetchError) do
@@ -241,7 +241,7 @@ class CardListFetcherTest < ActiveSupport::TestCase
   end
 
   test "fetch_reserved_list raises FetchError on 404 status" do
-    stub_request(:get, %r{https://api\.scryfall\.com/cards/search\?q=is:reserved})
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/search\?q=is:reserved/)
       .to_return(status: 404, body: '{"object":"error","code":"not_found"}')
 
     error = assert_raises(CardListFetcher::FetchError) do
@@ -252,7 +252,7 @@ class CardListFetcherTest < ActiveSupport::TestCase
   end
 
   test "fetch_reserved_list raises FetchError on 500 status" do
-    stub_request(:get, %r{https://api\.scryfall\.com/cards/search\?q=is:reserved})
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/search\?q=is:reserved/)
       .to_return(status: 500, body: '{"object":"error"}')
 
     error = assert_raises(CardListFetcher::FetchError) do
@@ -263,7 +263,7 @@ class CardListFetcherTest < ActiveSupport::TestCase
   end
 
   test "fetch_reserved_list raises ParseError when JSON structure is invalid" do
-    stub_request(:get, %r{https://api\.scryfall\.com/cards/search\?q=is:reserved})
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/search\?q=is:reserved/)
       .to_return(status: 200, body: '{"invalid": "structure"}')
 
     error = assert_raises(CardListFetcher::ParseError) do
@@ -274,7 +274,7 @@ class CardListFetcherTest < ActiveSupport::TestCase
   end
 
   test "fetch_reserved_list raises ParseError when JSON is malformed" do
-    stub_request(:get, %r{https://api\.scryfall\.com/cards/search\?q=is:reserved})
+    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/search\?q=is:reserved/)
       .to_return(status: 200, body: "invalid json")
 
     error = assert_raises(CardListFetcher::ParseError) do
@@ -285,7 +285,7 @@ class CardListFetcherTest < ActiveSupport::TestCase
   end
 
   test "fetch_reserved_list includes polite User-Agent header" do
-    stub = stub_request(:get, %r{https://api\.scryfall\.com/cards/search\?q=is:reserved})
+    stub = stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/search\?q=is:reserved/)
       .with(headers: { "User-Agent" => "MTG-Inventory-Bot/1.0 (https://github.com/cobaltroad/mtg-inventory)" })
       .to_return(status: 200, body: build_scryfall_json(["Mox Ruby"]))
 
@@ -383,11 +383,13 @@ class CardListFetcherTest < ActiveSupport::TestCase
   end
 
   def stub_scryfall_reserved_list_paginated
+    page2_url = "#{ApiEndpoints.scryfall_base}/cards/search?q=is:reserved&page=2"
+
     # First page
     page1_json = build_scryfall_json_with_pagination(
       (1..175).map { |i| "Reserved Card #{i}" },
       has_more: true,
-      next_page: "#{ApiEndpoints.scryfall_base}/cards/search?q=is:reserved&page=2"
+      next_page: page2_url
     )
 
     # Second page
@@ -396,11 +398,13 @@ class CardListFetcherTest < ActiveSupport::TestCase
       has_more: false
     )
 
+    # Register page 2 stub first so the more specific URL matches before the
+    # broad page 1 regex, which would otherwise shadow it.
+    stub_request(:get, page2_url)
+      .to_return(status: 200, body: page2_json, headers: { "Content-Type" => "application/json" })
+
     stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/search\?q=is:reserved/)
       .to_return(status: 200, body: page1_json, headers: { "Content-Type" => "application/json" })
-
-    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/search\?q=is:reserved&page=2/)
-      .to_return(status: 200, body: page2_json, headers: { "Content-Type" => "application/json" })
   end
 
   def stub_scryfall_reserved_list_with_duplicates

@@ -1,8 +1,11 @@
 require "test_helper"
+require "webmock/minitest"
 
 class CardListFetcherIntegrationTest < ActiveSupport::TestCase
-  # These tests use VCR to record actual HTTP responses from external services
-  # Run with cassettes deleted to re-record: rm -rf test/fixtures/vcr_cassettes/card_list_*
+  # These tests use WebMock to stub the Scryfall API responses.
+  # The stubs mirror the real Scryfall paginated list response structure.
+
+  SCRYFALL_BASE = ApiEndpoints.scryfall_base
 
   # ---------------------------------------------------------------------------
   # Wizards Game Changers Integration Tests
@@ -12,110 +15,83 @@ class CardListFetcherIntegrationTest < ActiveSupport::TestCase
     skip "Wizards.com uses JavaScript to render the Game Changers list (client-side only). " \
          "The HTML response doesn't contain the card data. " \
          "Use manual YAML file: config/card_lists/game_changers.yml"
-
-    VCR.use_cassette("card_list_fetcher/wizards_game_changers") do
-      result = CardListFetcher.fetch_game_changers
-
-      # Basic structure validation
-      assert_kind_of Array, result
-      assert_operator result.length, :>, 0, "Should fetch at least one card"
-
-      # All items should be strings
-      assert result.all? { |card| card.is_a?(String) }, "All cards should be strings"
-
-      # Should be alphabetically sorted
-      assert_equal result.sort, result, "Cards should be sorted alphabetically"
-
-      # Should not have duplicates
-      assert_equal result.uniq, result, "Should not contain duplicates"
-
-      # Known Game Changers (as of February 2026)
-      # These cards are confirmed to be on the list
-      expected_cards = [
-        "Dockside Extortionist",
-        "Jeweled Lotus",
-        "Mana Crypt"
-      ]
-
-      expected_cards.each do |card|
-        assert_includes result, card, "Expected Game Changers list to include #{card}"
-      end
-
-      # All cards should be normalized (no leading/trailing whitespace)
-      result.each do |card|
-        assert_equal card.strip, card, "Card name should have no leading/trailing whitespace"
-        refute_match(/\s{2,}/, card, "Card name should not have multiple consecutive spaces")
-      end
-    end
   end
 
   # ---------------------------------------------------------------------------
-  # Scryfall Reserved List Integration Tests
+  # Scryfall Reserved List Tests
   # ---------------------------------------------------------------------------
 
-  test "fetch_reserved_list retrieves real data from Scryfall" do
-    VCR.use_cassette("card_list_fetcher/scryfall_reserved_list") do
-      result = CardListFetcher.fetch_reserved_list
+  test "fetch_reserved_list retrieves data from Scryfall" do
+    stub_scryfall_reserved_list_paginated
 
-      # Basic structure validation
-      assert_kind_of Array, result
-      assert_operator result.length, :>, 200, "Reserved list should have more than 200 cards"
+    result = CardListFetcher.fetch_reserved_list
 
-      # All items should be strings
-      assert result.all? { |card| card.is_a?(String) }, "All cards should be strings"
+    assert_kind_of Array, result
+    assert_operator result.length, :>, 0, "Should fetch at least one card"
+    assert result.all? { |card| card.is_a?(String) }, "All cards should be strings"
+    assert_equal result.sort, result, "Cards should be sorted alphabetically"
+    assert_equal result.uniq, result, "Should not contain duplicates"
 
-      # Should be alphabetically sorted
-      assert_equal result.sort, result, "Cards should be sorted alphabetically"
+    # Known Reserved List cards present in our stub data
+    assert_includes result, "Black Lotus"
+    assert_includes result, "Mox Ruby"
+    assert_includes result, "Time Walk"
 
-      # Should not have duplicates
-      assert_equal result.uniq, result, "Should not contain duplicates"
-
-      # Known Reserved List cards (these are guaranteed to be on the list)
-      expected_cards = [
-        "Black Lotus",
-        "Gaea's Cradle",
-        "Lion's Eye Diamond",
-        "Mox Ruby",
-        "Time Walk"
-      ]
-
-      expected_cards.each do |card|
-        assert_includes result, card, "Expected Reserved List to include #{card}"
-      end
-
-      # All cards should be normalized
-      result.each do |card|
-        assert_equal card.strip, card, "Card name should have no leading/trailing whitespace"
-        refute_match(/\s{2,}/, card, "Card name should not have multiple consecutive spaces")
-      end
+    result.each do |card|
+      assert_equal card.strip, card, "Card name should have no leading/trailing whitespace"
+      refute_match(/\s{2,}/, card, "Card name should not have multiple consecutive spaces")
     end
   end
-
-  # ---------------------------------------------------------------------------
-  # Error Handling with Real Responses
-  # ---------------------------------------------------------------------------
 
   test "handles Wizards HTML structure correctly" do
     skip "Wizards.com uses JavaScript rendering - no cards in initial HTML response"
-
-    VCR.use_cassette("card_list_fetcher/wizards_game_changers") do
-      # This test verifies we can parse the actual HTML structure
-      # If Wizards changes their HTML, this test will fail and we'll know to update the parser
-      assert_nothing_raised do
-        CardListFetcher.fetch_game_changers
-      end
-    end
   end
 
   test "handles Scryfall pagination correctly" do
-    VCR.use_cassette("card_list_fetcher/scryfall_reserved_list") do
-      # Scryfall returns paginated results (175 cards per page)
-      # This test verifies we're fetching all pages
-      result = CardListFetcher.fetch_reserved_list
+    stub_scryfall_reserved_list_paginated
 
-      # Reserved list has approximately 572 cards (as of 2024)
-      # If we get significantly fewer, pagination is broken
-      assert_operator result.length, :>=, 500, "Should fetch all pages from Scryfall (expected 500+ cards)"
-    end
+    result = CardListFetcher.fetch_reserved_list
+
+    # Verify we collected cards from both pages of our stub
+    assert_operator result.length, :>=, 4, "Should collect cards across all stubbed pages"
+    assert_includes result, "Black Lotus",  "Should include cards from page 1"
+    assert_includes result, "Volcanic Island", "Should include cards from page 2"
+  end
+
+  private
+
+  # Stubs a two-page Scryfall reserved list response using the configured test base URL.
+  # Page 1 returns a `next_page` pointing to page 2; page 2 has no `next_page`.
+  def stub_scryfall_reserved_list_paginated
+    page2_url = "#{SCRYFALL_BASE}/cards/search?order=name&page=2&q=is%3Areserved&unique=cards"
+
+    page1_body = {
+      "object" => "list",
+      "total_cards" => 6,
+      "has_more" => true,
+      "next_page" => page2_url,
+      "data" => [
+        { "name" => "Black Lotus" },
+        { "name" => "Mox Ruby" },
+        { "name" => "Time Walk" }
+      ]
+    }.to_json
+
+    page2_body = {
+      "object" => "list",
+      "total_cards" => 6,
+      "has_more" => false,
+      "data" => [
+        { "name" => "Ancestral Recall" },
+        { "name" => "Timetwister" },
+        { "name" => "Volcanic Island" }
+      ]
+    }.to_json
+
+    stub_request(:get, /#{Regexp.escape(SCRYFALL_BASE)}\/cards\/search\?q=is:reserved/)
+      .to_return(status: 200, body: page1_body, headers: { "Content-Type" => "application/json" })
+
+    stub_request(:get, page2_url)
+      .to_return(status: 200, body: page2_body, headers: { "Content-Type" => "application/json" })
   end
 end

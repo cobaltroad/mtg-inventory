@@ -10,45 +10,19 @@
 #     schedule: at 5am every day
 
 test:
-  # Same configuration as development for test coverage
-  weekly_commander_scrape:
-    class: ScrapeEdhrecCommandersJob
-    queue: default
-    schedule: every saturday at 8am
-    args: []
-
+  # Update card prices every other day in test
   card_price_update:
     class: UpdateCardPricesJob
     queue: default
     schedule: every 2 days at 7am
     args: []
 
-  weekly_edhrec_analytics:
-    class: ConsolidateEdhrecAnalyticsJob
-    queue: default
-    schedule: every sunday at 6am
-    args: []
-
 development:
-  # Run commander scrape weekly on Saturday at 8am in development
-  weekly_commander_scrape:
-    class: ScrapeEdhrecCommandersJob
-    queue: default
-    schedule: every saturday at 8am
-    args: []
-
   # Update card prices every other day in development
   card_price_update:
     class: UpdateCardPricesJob
     queue: default
     schedule: every 2 days at 7am
-    args: []
-
-  # Consolidate EDHREC analytics after commander scraping completes (~20 hours after discovery)
-  weekly_edhrec_analytics:
-    class: ConsolidateEdhrecAnalyticsJob
-    queue: default
-    schedule: every sunday at 6am
     args: []
 
 production:
@@ -60,16 +34,4 @@ production:
     class: UpdateCardPricesJob
     queue: default
     schedule: every day at 7am
-    args: []
-
-  weekly_commander_scrape:
-    class: ScrapeEdhrecCommandersJob
-    queue: default
-    schedule: every sunday at 8am
-    args: []
-
-  weekly_edhrec_analytics:
-    class: ConsolidateEdhrecAnalyticsJob
-    queue: default
-    schedule: every monday at 6am
     args: []

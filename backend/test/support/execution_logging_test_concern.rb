@@ -231,11 +231,11 @@ module ExecutionLoggingTestConcern
   def setup_logging_capture
     @original_logger = Rails.logger
     @log_output = StringIO.new
-    
+
     # Create an ActiveSupport::Logger that writes to our StringIO
     new_logger = ActiveSupport::Logger.new(@log_output)
     new_logger.level = :info
-    
+
     Rails.logger = new_logger
   end
 
@@ -244,3 +244,4 @@ module ExecutionLoggingTestConcern
     Rails.logger = @original_logger
   end
 end
+

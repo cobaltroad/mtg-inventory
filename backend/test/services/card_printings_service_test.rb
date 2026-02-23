@@ -762,9 +762,11 @@ class CardPrintingsServiceTest < ActiveSupport::TestCase
       )
   end
 
-  # Helper to stub Scryfall prints search API request (second step)
+  # Helper to stub Scryfall prints search API request (second step).
+  # Uses the exact URI so multiple stubs for different search URLs don't
+  # shadow each other when registered in the same test.
   def stub_prints_search_request(prints_search_uri, response_body)
-    stub_request(:get, /#{Regexp.escape(ApiEndpoints.scryfall_base)}\/cards\/search/)
+    stub_request(:get, prints_search_uri)
       .to_return(
         status: 200,
         body: response_body.to_json,
